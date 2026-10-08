@@ -26,7 +26,7 @@ use crate::prototypes_info::PrototypeInfo;
 use anyhow::{anyhow, bail, Result};
 use std::collections::{HashMap, HashSet};
 
-const PROT_MAGIC: [u8; 4] = [b'P', b'R', b'O', b'T'];
+const PROT_MAGIC: [u8; 4] = *b"PROT";
 const HEADER_LEN: usize = 20;
 
 /// One PROT-format node file's parsed contents.

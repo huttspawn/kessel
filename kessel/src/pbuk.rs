@@ -33,8 +33,8 @@
 
 use anyhow::{bail, Context, Result};
 
-const PBUK_MAGIC: [u8; 4] = [b'P', b'B', b'U', b'K'];
-const DBLB_MAGIC: [u8; 4] = [b'D', b'B', b'L', b'B'];
+const PBUK_MAGIC: [u8; 4] = *b"PBUK";
+const DBLB_MAGIC: [u8; 4] = *b"DBLB";
 const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
 
 // Object size bounds based on observed SWTOR data
