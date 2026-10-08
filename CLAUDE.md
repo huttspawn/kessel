@@ -31,6 +31,17 @@ cargo fmt --check
 cargo build --release -p kessel-discovery --bin <name>  # one-off recon tool
 ```
 
+## Acceptance scenarios
+
+- Runner: rstest-bdd. `cargo test` runs them; `kessel/tests/acceptance.rs` is the harness.
+- `.feature` files mirror `src/`: behaviour entered at `src/a/b.rs` has its scenarios
+  in `tests/a/b.feature`, step code beside it in `tests/a/b.rs`. Declare each step
+  module in `tests/acceptance.rs` with `#[path]`, and add its fixture to `fixtures = [...]`.
+- `.feature` files are generated from the legion requirement. Never hand-edit them.
+- A step with no step code fails `cargo test`, naming the feature and scenario.
+- `kessel-discovery` holds one-off tools and has no scenarios; `cargo test` at the
+  root covers `kessel` only.
+
 ## Run extraction
 
 ```bash
