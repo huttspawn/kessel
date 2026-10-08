@@ -44,6 +44,11 @@ rayon = "1.8"
 image = { version = "0.25", features = ["webp"] }
 image_dds = "0.4"
 
+# Acceptance scenarios (BDD). Dev-only: the runner never ships in the binary.
+rstest = "0.26"
+rstest-bdd = "0.6"
+rstest-bdd-macros = "0.6"
+
 [profile.release]
 lto = true
 codegen-units = 1

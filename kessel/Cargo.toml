@@ -37,5 +37,10 @@ rayon.workspace = true
 image.workspace = true
 image_dds.workspace = true
 
+[dev-dependencies]
+rstest.workspace = true
+rstest-bdd.workspace = true
+rstest-bdd-macros.workspace = true
+
 [lints]
 workspace = true
