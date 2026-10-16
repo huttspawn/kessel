@@ -42,7 +42,7 @@ ureq = "2.9"
 indicatif = "0.17"
 rayon = "1.8"
 image = { version = "0.25", features = ["webp"] }
-image_dds = "0.4"
+image_dds = { version = "0.4", default-features = false, features = ["ddsfile", "image", "decode", "strum"] }
 
 [profile.release]
 lto = true
