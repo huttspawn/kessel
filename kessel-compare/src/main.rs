@@ -13,9 +13,9 @@
 //!   - in old, not new        -> REMOVED
 //!   - same stable_id, payload differs -> CHANGED
 //!
-//! This used to call smugglr-core's `classify_diff`. kessel only ever used its
-//! content-hash path (no timestamps, hash covers the whole payload), so that
-//! path lives here as `classify` and kessel-compare no longer tracks smugglr's API.
+//! `classify` is local rather than smugglr-core's `classify_diff`: spice has no
+//! timestamps and the hash covers the whole payload, so only the set partition
+//! applies, and owning it keeps smugglr's API changes out of this build.
 //!
 //! Usage: kessel-compare <old.sqlite> <new.sqlite>
 
