@@ -18,7 +18,7 @@
 //!
 //! Type tags (`GomTypeId`): `01` UInt64, `02` Int64, `03` Bool, `04` Float,
 //! `05` Enum, `06` String, `07` List, `08` Map, `09` EmbeddedClass,
-//! `0F` ClassRef.
+//! `0F` ClassRef, `18` embedded struct (same layout as `09`).
 //!
 //! Container layout (each container re-reads its element type tag inline):
 //! - List: `<elem_tag> <len> <len2> { <idx> <value> }*`  (`len == len2`)
@@ -42,6 +42,10 @@ mod tag {
     pub const LIST: u8 = 0x07;
     pub const MAP: u8 = 0x08;
     pub const EMBEDDED: u8 = 0x09;
+    /// Seen in 8.0 singletons (lgcVentures_Prototype, itmUpgradesPrototype).
+    /// Same wire layout as `EMBEDDED`: script type, field count, then
+    /// `<delta_id><tag><value>` per field.
+    pub const EMBEDDED_STRUCT: u8 = 0x18;
     pub const CLASS_REF: u8 = 0x0F;
 }
 
@@ -248,9 +252,12 @@ impl<'a> Reader<'a> {
             tag::STRING => Ok(GomValue::Str(self.read_string()?)),
             tag::LIST => self.read_list(),
             tag::MAP => self.read_map(),
-            tag::EMBEDDED => self.read_object(),
+            tag::EMBEDDED | tag::EMBEDDED_STRUCT => self.read_object(),
             tag::CLASS_REF => Ok(GomValue::ClassRef(self.read_number()?)),
-            other => bail!("gom_reader: unsupported type tag 0x{other:02X}"),
+            other => bail!(
+                "gom_reader: unsupported type tag 0x{other:02X} at offset {}",
+                self.pos - 1
+            ),
         }
     }
 
@@ -406,6 +413,25 @@ mod tests {
             Reader::new(&[0x03], 0).read_value(tag::ENUM).unwrap(),
             GomValue::Enum(2)
         );
+    }
+
+    #[test]
+    fn embedded_struct_tag_reads_like_embedded() {
+        // From lgcVentures_Prototype (8.0 PTS): a map value of tag 0x18.
+        // script type 3, 3 fields: +1 u64 (8-byte), +1 i64 1, +1 i64 negative.
+        let buf = [
+            0x03, 0x03, 0x01, 0x01, 0xCF, 0x69, 0x91, 0x4C, 0x16, 0x20, 0x38, 0xE5, 0x12, 0x02,
+            0x02, 0x01, 0x03, 0x02, 0xC0, 0x05,
+        ];
+        let v = Reader::new(&buf, 0)
+            .read_value(tag::EMBEDDED_STRUCT)
+            .unwrap();
+        assert_eq!(
+            v.embedded_field(1),
+            Some(&GomValue::U64(0x6991_4C16_2038_E512))
+        );
+        assert_eq!(v.embedded_field(3), Some(&GomValue::I64(1)));
+        assert_eq!(v.embedded_field(6), Some(&GomValue::I64(-5)));
     }
 
     #[test]

@@ -233,8 +233,14 @@ pub fn should_extract_stb(path: &str) -> bool {
 
         // Selected nested STBs that contain category labels not in the
         // root-level kind tables. planetaryconquest carries conquest theme
-        // names; galacticcommand carries Eternal Empire reward-track labels.
-        const NESTED_TARGETS: &[&str] = &["gui/planetaryconquest.stb", "gui/galacticcommand.stb"];
+        // names; galacticcommand carries Eternal Empire reward-track labels;
+        // achievementcategories carries achievement category, venture, stage
+        // and venture-category names.
+        const NESTED_TARGETS: &[&str] = &[
+            "gui/planetaryconquest.stb",
+            "gui/galacticcommand.stb",
+            "gui/achievementcategories.stb",
+        ];
         for target in NESTED_TARGETS {
             if after_str == *target {
                 return true;

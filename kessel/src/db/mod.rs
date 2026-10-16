@@ -12,6 +12,7 @@ pub(crate) use crate::grammar::Grammar;
 pub(crate) use crate::schema::{decode_payload_schema_aware, GameObject};
 pub(crate) use crate::stb::StbEntry;
 mod ability;
+mod achievement;
 mod cnv;
 mod conquest;
 mod description_values;
@@ -184,6 +185,7 @@ impl Database {
             let tx = conn.transaction()?;
             schema::create_core_tables(&tx)?;
             stats_systems::create_tables(&tx)?;
+            achievement::create_tables(&tx)?;
             schematic::create_tables(&tx)?;
             conquest::create_tables(&tx)?;
             world::create_tables(&tx)?;
