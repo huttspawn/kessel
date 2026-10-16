@@ -6,7 +6,7 @@
 //!
 //! Usage:
 //!   cargo run -p kessel-discovery --example dump_singleton -- \
-//!     <spice.sqlite> <singleton fqn> [--first-field]
+//!     <spice.sqlite> <singleton fqn> [--first-field] [--object]
 
 use anyhow::{Context, Result};
 use base64::Engine;
@@ -53,15 +53,19 @@ fn main() -> Result<()> {
         .get(2)
         .context("usage: <spice.sqlite> <singleton fqn>")?;
     let first_field = args.iter().any(|a| a == "--first-field");
+    // --object: decode a canonical object's payload instead of a singleton.
+    let object = args.iter().any(|a| a == "--object");
 
     let conn = Connection::open(db_path)?;
+    let sql = if object {
+        "SELECT json_extract(json, '$.payload_b64') FROM objects \
+         WHERE fqn = ?1 AND is_canonical = 1 LIMIT 1"
+    } else {
+        "SELECT payload_b64 FROM singletons WHERE fqn = ?1"
+    };
     let b64: String = conn
-        .query_row(
-            "SELECT payload_b64 FROM singletons WHERE fqn = ?1",
-            [fqn],
-            |r| r.get(0),
-        )
-        .with_context(|| format!("singleton {fqn} not found"))?;
+        .query_row(sql, [fqn], |r| r.get(0))
+        .with_context(|| format!("{fqn} not found"))?;
     let payload = base64::engine::general_purpose::STANDARD.decode(b64)?;
 
     let mut guids = HashMap::new();
