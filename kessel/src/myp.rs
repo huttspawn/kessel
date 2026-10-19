@@ -33,7 +33,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom};
 const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
 use std::path::Path;
 
-const MYP_MAGIC: [u8; 3] = [b'M', b'Y', b'P'];
+const MYP_MAGIC: [u8; 3] = *b"MYP";
 const HEADER_SIZE: usize = 40;
 const FILE_TABLE_HEADER_SIZE: usize = 12;
 const FILE_ENTRY_SIZE: usize = 34;

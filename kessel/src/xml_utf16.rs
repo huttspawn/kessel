@@ -53,7 +53,7 @@ fn decode_utf16(bytes: &[u8], little_endian: bool) -> Result<String> {
         bail!("UTF-16 input has odd byte length: {}", bytes.len());
     }
 
-    let u16_iter = bytes.chunks_exact(2).map(|chunk| {
+    let u16_iter = bytes.as_chunks::<2>().0.iter().map(|chunk| {
         let pair = [chunk[0], chunk[1]];
         if little_endian {
             u16::from_le_bytes(pair)

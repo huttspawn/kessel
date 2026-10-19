@@ -73,7 +73,9 @@ fn decode_utf16_le_or_bom(bytes: &[u8]) -> Result<String> {
                 return Err(anyhow!("UTF-16 payload has odd byte count"));
             }
             let units: Vec<u16> = payload
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| {
                     if kind == "utf16le" {
                         u16::from_le_bytes([c[0], c[1]])

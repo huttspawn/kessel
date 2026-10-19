@@ -25,7 +25,7 @@ use std::io::{Cursor, Write};
 use std::path::Path;
 
 /// DDS file magic number
-const DDS_MAGIC: [u8; 4] = [b'D', b'D', b'S', b' '];
+const DDS_MAGIC: [u8; 4] = *b"DDS ";
 
 /// Check if data starts with DDS magic
 pub fn is_dds(data: &[u8]) -> bool {
