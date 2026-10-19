@@ -215,6 +215,33 @@ fn walkback_amount(data: &[u8], object_start: usize) -> usize {
     steps
 }
 
+/// Longest decimal guid string seen between an FQN and its payload (a u64 has
+/// at most 20 decimal digits).
+const GUID_STRING_MAX_DIGITS: usize = 20;
+
+/// Offset of the zstd payload that follows an FQN ending at `fqn_end` (the
+/// FQN's NUL terminator), or `None`.
+///
+/// Most objects put the payload right after the FQN. A second layout, used by
+/// most quests (`qst.*`) and some emotes, first writes the object's guid as a
+/// decimal ASCII string with its own NUL (`<fqn>\0<digits>\0<zstd>`); that
+/// string is skipped before the usual short search for the zstd magic.
+fn payload_start(data: &[u8], fqn_end: usize) -> Option<usize> {
+    let mut from = fqn_end;
+    let digits_start = fqn_end + 1;
+    let digits = data
+        .get(digits_start..)?
+        .iter()
+        .take(GUID_STRING_MAX_DIGITS + 1)
+        .take_while(|b| b.is_ascii_digit())
+        .count();
+    if (1..=GUID_STRING_MAX_DIGITS).contains(&digits) && data.get(digits_start + digits) == Some(&0)
+    {
+        from = digits_start + digits;
+    }
+    (from..data.len().min(from + 10)).find(|&i| data.len() > i + 4 && data[i..i + 4] == ZSTD_MAGIC)
+}
+
 /// Try to extract next object size from the 8-byte footer.
 /// SWTOR stores the size at varying positions in the footer.
 fn extract_next_size_from_footer(footer: &[u8]) -> Option<usize> {
@@ -346,16 +373,7 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
             fqn_end += 1;
         }
 
-        // Find ZSTD magic
-        let mut zstd_pos = None;
-        for i in fqn_end..data.len().min(fqn_end + 10) {
-            if data.len() > i + 4 && data[i..i + 4] == ZSTD_MAGIC {
-                zstd_pos = Some(i);
-                break;
-            }
-        }
-
-        if let Some(zstd_start) = zstd_pos {
+        if let Some(zstd_start) = payload_start(data, fqn_end) {
             // Use ZSTD's frame size detection - O(1) instead of probing
             let zstd_data = &data[zstd_start..];
             if let Ok(frame_size) = zstd_safe::find_frame_compressed_size(zstd_data) {
@@ -394,16 +412,16 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
     // Recovery pass: the footer chain occasionally jumps over a real object
     // (the chained next-size lands the cursor past an object boundary
     // entirely, rather than the off-by-N alignment that walkback handles).
-    // Scan for `01 02 <FQN>` markers in the buffer and attempt to parse any
-    // FQN we haven't already produced. Bounded by the nominal preamble lookup
-    // so we don't pick up spurious `01 02` byte coincidences elsewhere in
-    // payloads.
+    // Scan for `01 02 <FQN>` markers (`01 03 <FQN>` in the guid-string layout)
+    // in the buffer and attempt to parse any FQN we haven't already produced.
+    // Bounded by the nominal preamble lookup so we don't pick up spurious
+    // byte coincidences elsewhere in payloads.
     let parsed_fqns: std::collections::HashSet<String> =
         objects.iter().map(|o| o.fqn.clone()).collect();
     let mut i = 42;
     while i + 6 < data.len() {
-        if data[i - 1] == 0x01 && data[i] == 0x02 && is_fqn_byte(data[i + 1]) {
-            // Found an `01 02 <fqn-byte>` triple. Walk forward for the FQN.
+        if data[i - 1] == 0x01 && matches!(data[i], 0x02 | 0x03) && is_fqn_byte(data[i + 1]) {
+            // Found an `01 02|03 <fqn-byte>` triple. Walk forward for the FQN.
             let fqn_start = i + 1;
             let mut fqn_end = fqn_start;
             while fqn_end < data.len() && fqn_end < fqn_start + 200 && data[fqn_end] != 0 {
@@ -418,14 +436,7 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                     // Attempt parse: object starts 42 bytes before FQN.
                     let obj_start = fqn_start - 42;
                     // Need a payload bound. Find next ZSTD magic and frame size.
-                    let mut zstd_pos = None;
-                    for j in fqn_end..data.len().min(fqn_end + 10) {
-                        if data.len() > j + 4 && data[j..j + 4] == ZSTD_MAGIC {
-                            zstd_pos = Some(j);
-                            break;
-                        }
-                    }
-                    if let Some(zs) = zstd_pos {
+                    if let Some(zs) = payload_start(data, fqn_end) {
                         if let Ok(frame_size) = zstd_safe::find_frame_compressed_size(&data[zs..]) {
                             if frame_size > 0 && zs + frame_size <= data.len() {
                                 if let Ok(decoded) = zstd::decode_all(&data[zs..zs + frame_size]) {
@@ -469,16 +480,7 @@ fn parse_object(data: &[u8]) -> Result<GomObject> {
 
     let fqn = String::from_utf8_lossy(&data[fqn_start..fqn_end]).to_string();
 
-    // Find ZSTD magic after FQN null
-    let mut zstd_pos = None;
-    for i in fqn_end..data.len().min(fqn_end + 10) {
-        if data.len() > i + 4 && data[i..i + 4] == ZSTD_MAGIC {
-            zstd_pos = Some(i);
-            break;
-        }
-    }
-
-    let zstd_start = zstd_pos.context("No ZSTD magic found")?;
+    let zstd_start = payload_start(data, fqn_end).context("No ZSTD magic found")?;
 
     // ZSTD payload ends 8 bytes before object end
     if data.len() < 8 {
@@ -699,5 +701,58 @@ mod tests {
         let data = vec![b'a'; 200];
         let walkback = walkback_amount(&data, 100);
         assert_eq!(walkback, WALKBACK_MAX_STEPS);
+    }
+
+    /// One object as `parse_object` sees it: 42-byte header, FQN, NUL, an
+    /// optional decimal guid string with its NUL, the zstd payload, and an
+    /// 8-byte footer.
+    fn object(fqn: &str, guid_string: Option<&str>, payload: &[u8]) -> Vec<u8> {
+        let mut data = vec![0xAB; 42];
+        data.extend_from_slice(fqn.as_bytes());
+        data.push(0);
+        if let Some(g) = guid_string {
+            data.extend_from_slice(g.as_bytes());
+            data.push(0);
+        }
+        data.extend_from_slice(&zstd::encode_all(payload, 3).unwrap());
+        data.extend_from_slice(&[0u8; 8]);
+        data
+    }
+
+    #[test]
+    fn parse_object_reads_the_guid_string_layout() {
+        let data = object(
+            "qst.location.pvp.starfighter.imperial.starfighter_introduction",
+            Some("16140962172503595855"),
+            b"quest payload",
+        );
+        let obj = parse_object(&data).unwrap();
+        assert_eq!(
+            obj.fqn,
+            "qst.location.pvp.starfighter.imperial.starfighter_introduction"
+        );
+        assert_eq!(obj.payload, b"quest payload");
+    }
+
+    #[test]
+    fn parse_object_still_reads_the_plain_layout() {
+        let data = object("abl.sith_warrior.ravage", None, b"ability payload");
+        let obj = parse_object(&data).unwrap();
+        assert_eq!(obj.fqn, "abl.sith_warrior.ravage");
+        assert_eq!(obj.payload, b"ability payload");
+    }
+
+    #[test]
+    fn payload_start_ignores_digits_without_a_terminating_nul() {
+        // Digits that run straight into the payload are not a guid string, so
+        // the search stays in the plain window and misses magic past it.
+        let mut data = b"name\x00123456789012".to_vec();
+        data.extend_from_slice(&ZSTD_MAGIC);
+        data.extend_from_slice(&[0; 8]);
+        assert_eq!(payload_start(&data, 4), None);
+        let mut plain = b"name\x00".to_vec();
+        plain.extend_from_slice(&ZSTD_MAGIC);
+        plain.extend_from_slice(&[0; 8]);
+        assert_eq!(payload_start(&plain, 4), Some(5));
     }
 }
