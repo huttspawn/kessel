@@ -229,6 +229,24 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     let schem_count = timed!("schematic_recipes", db.populate_schematic_recipes())?;
     println!("  Schematic recipes: {}", schem_count);
 
+    // Achievements: name/description/task lines from str.ach plus the
+    // payload ref graph (conditions, quests, counted NPCs, child achievements).
+    let (ach_count, ach_tasks, ach_refs) = timed!("achievements", db.populate_achievements())?;
+    println!(
+        "  Achievements: {} ({} task lines, {} refs)",
+        ach_count, ach_tasks, ach_refs
+    );
+    let ach_reward_rows = timed!("achievement_rewards", db.populate_achievement_rewards())?;
+    println!("  Achievement reward items: {}", ach_reward_rows);
+
+    // Ventures (lgcVentures_Prototype). After achievements: stage names
+    // resolve through the stage meta achievement.
+    let (venture_count, venture_objectives) = timed!("ventures", db.populate_ventures())?;
+    println!(
+        "  Ventures: {} ({} objectives)",
+        venture_count, venture_objectives
+    );
+
     // Ability stat extraction (#69). Scans abl.* payloads for [u16 propId]
     // [f32 value] pairs in the 0x0400-0x04FF range. Verified prop IDs land
     // in dedicated columns (cooldown, cast_time, force_cost, melee_range,
