@@ -98,6 +98,11 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     let text_rows = timed!("quest_text", db.populate_quest_text())?;
     println!("  Quest text: {} rows", text_rows);
 
+    // Quest tasks (#354): branch > step > task rows with task text, map
+    // notes and completion hook -- the objectives of script-driven quests
+    // that have no kill-target map. Prints its own summary line.
+    timed!("quest_tasks", db.populate_quest_tasks())?;
+
     // Hydra script FQN refs (#214): every counter/track/jrn/qm flag +
     // target NPC/cnv/abl ref pulled from hyd.* payload ASCII strings.
     let hydra_ref_rows = timed!("hydra_refs", db.populate_hydra_refs())?;

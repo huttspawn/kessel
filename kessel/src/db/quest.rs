@@ -570,6 +570,130 @@ impl Database {
         Ok(written)
     }
 
+    /// Populate `quest_tasks` (#354): one row per task of every canonical
+    /// Quest object whose payload decodes with the GOM reader. Script-driven
+    /// quests (ventures, date nights, most new-layout quests) have no
+    /// kill-target map, so their objectives exist only as these tasks. Task
+    /// text is the en-us `str.qst` string at (id2 = quest string_id, id1 =
+    /// slot), the same rows `quest_text` reads. Payloads that fail to decode
+    /// are counted and skipped. Rows commit in batches of `batch_size`.
+    /// Returns rows written.
+    pub fn populate_quest_tasks(&self) -> Result<u64> {
+        self.flush()?;
+        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+        // (fqn, string_id, payload_b64) per canonical quest.
+        type QuestRow = (String, Option<i64>, Option<String>);
+        let (quests, texts): (Vec<QuestRow>, std::collections::HashMap<(i64, i64), String>) = {
+            let conn = self
+                .conn
+                .lock()
+                .map_err(|_| anyhow::anyhow!("database mutex poisoned"))?;
+            let mut stmt = conn.prepare(
+                "SELECT fqn, string_id, json_extract(json, '$.payload_b64') \
+                 FROM objects WHERE kind = 'Quest' AND is_canonical = 1 ORDER BY fqn",
+            )?;
+            let quests: Vec<QuestRow> = stmt
+                .query_map([], |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, Option<i64>>(1)?,
+                        r.get::<_, Option<String>>(2)?,
+                    ))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            let mut stmt = conn.prepare(
+                "SELECT id2, id1, text FROM strings \
+                 WHERE fqn >= 'str.qst.' AND fqn < 'str.qst/' AND id1 <> 88 AND locale = 'en-us' \
+                   AND text IS NOT NULL AND text <> ''",
+            )?;
+            let texts: std::collections::HashMap<(i64, i64), String> = stmt
+                .query_map([], |r| {
+                    Ok((
+                        (r.get::<_, i64>(0)?, r.get::<_, i64>(1)?),
+                        r.get::<_, String>(2)?,
+                    ))
+                })?
+                .collect::<Result<_, _>>()?;
+            (quests, texts)
+        };
+
+        let mut rows: Vec<QuestTask> = Vec::new();
+        let mut quest_count: u64 = 0;
+        let mut mismatches: u64 = 0;
+        let mut decode_failures: u64 = 0;
+        for (fqn, string_id, b64) in &quests {
+            let Some(b64) = b64 else { continue };
+            let Ok(payload) = BASE64.decode(b64) else {
+                decode_failures += 1;
+                continue;
+            };
+            let obj = match crate::gom_reader::read_object_fields(&payload) {
+                Ok(obj) => obj,
+                Err(e) => {
+                    if decode_failures < 5 {
+                        tracing::warn!("quest payload decode failed for {fqn}: {e}");
+                    }
+                    decode_failures += 1;
+                    continue;
+                }
+            };
+            // 52 canonical quests have no objects.string_id; their payload
+            // still carries it in the high 32 bits of QST_STRING_ID.
+            let string_id: Option<i64> = string_id.or_else(|| {
+                obj.embedded_field(QST_STRING_ID)
+                    .and_then(crate::gom_reader::GomValue::as_i64)
+                    .map(|v| ((v as u64) >> 32) as i64)
+            });
+            let (tasks, bad): (Vec<QuestTask>, u64) =
+                quest_tasks_from_fields(fqn, string_id, &obj, &texts);
+            if !tasks.is_empty() {
+                quest_count += 1;
+            }
+            mismatches += bad;
+            rows.extend(tasks);
+        }
+
+        let with_text: usize = rows.iter().filter(|t| t.text.is_some()).count();
+        let with_hook: usize = rows.iter().filter(|t| t.hook_state.is_some()).count();
+        let mut conn = self
+            .conn
+            .lock()
+            .map_err(|_| anyhow::anyhow!("database mutex poisoned"))?;
+        for chunk in rows.chunks(self.batch_size) {
+            let tx = conn.transaction()?;
+            {
+                let mut stmt = tx.prepare_cached(
+                    "INSERT OR REPLACE INTO quest_tasks \
+                        (quest_fqn, branch, step, task, text_slot, text, map_notes, hook_state, hook_name) \
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                )?;
+                for t in chunk {
+                    let map_notes: String = serde_json::to_string(&t.map_notes)?;
+                    stmt.execute(params![
+                        t.quest_fqn,
+                        t.branch,
+                        t.step,
+                        t.task,
+                        t.text_slot,
+                        t.text,
+                        map_notes,
+                        t.hook_state,
+                        t.hook_name,
+                    ])?;
+                }
+            }
+            tx.commit()?;
+        }
+        println!(
+            "  Quest tasks: {} rows, {quest_count} quests, {with_text} with text, \
+             {with_hook} with a hook, {mismatches} text-id mismatches, \
+             {decode_failures} decode failures",
+            rows.len()
+        );
+        Ok(rows.len() as u64)
+    }
+
     /// Populate `hydra_refs` (#214) by scanning hyd.* payloads for inline
     /// ASCII FQN references. Hydra scripts encode their references (counter
     /// flags, target NPCs, conversations, etc.) as length-prefixed ASCII
@@ -2041,6 +2165,119 @@ pub(crate) fn classify_quest_flag(name: &str) -> &'static str {
     }
 }
 
+/// One task of a decoded quest (#354): its branch/step/task list positions,
+/// objective text, map notes and completion hook.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct QuestTask {
+    pub quest_fqn: String,
+    pub branch: u32,
+    pub step: u32,
+    pub task: u32,
+    pub text_slot: Option<u32>,
+    pub text: Option<String>,
+    pub map_notes: Vec<String>,
+    pub hook_state: Option<i64>,
+    pub hook_name: Option<String>,
+}
+
+// Quest field ids (low 32 bits; GOM fields in one object share the high 32).
+const QST_STRING_ID: u32 = 0x2c1f_e412;
+const QST_BRANCHES: u32 = 0x05a2_a6d3;
+const QST_BRANCH_STEPS: u32 = 0x05a2_a6d1;
+const QST_STEP_TASKS: u32 = 0x05a2_a6d0;
+const QST_TASK_TEXT_ID: u32 = 0x2b8c_1db4;
+const QST_TASK_MAP_NOTES: u32 = 0xbce1_f1c6;
+const QST_TASK_HOOK_REF: u32 = 0xd449_4960;
+const QST_HOOK_LIST: u32 = 0xad64_0052;
+const QST_HOOK_KEY: u32 = 0xb21e_56a4;
+const QST_HOOK_STATE: u32 = 0x6428_709b;
+const QST_HOOK_NAME: u32 = 0x2ade_c3c7;
+
+/// Walk a decoded quest's branches > steps > tasks into `QuestTask` rows.
+/// A task text id is `(string_id << 32) | slot`; when its high 32 bits differ
+/// from `string_id` (or the quest has none) the slot is dropped and counted in
+/// the returned mismatch total. `texts` maps `(string_id, slot)` to en-us text.
+/// A task's hook is the quest hook-list entry whose key (`0x...34b21e56a4`)
+/// equals the task's hook ref (`0x...34d4494960`); `hook_state` is that
+/// entry's state (`0x...416428709b`, the value hydra Set Quest State sets) and
+/// `hook_name` its name. Both stay NULL when no entry matches.
+pub(crate) fn quest_tasks_from_fields(
+    quest_fqn: &str,
+    string_id: Option<i64>,
+    obj: &crate::gom_reader::GomValue,
+    texts: &std::collections::HashMap<(i64, i64), String>,
+) -> (Vec<QuestTask>, u64) {
+    use crate::gom_reader::GomValue;
+    fn list(v: &GomValue, id: u32) -> &[GomValue] {
+        v.embedded_field(id)
+            .and_then(GomValue::as_list)
+            .unwrap_or(&[])
+    }
+    // (key, state, name) per hook-list entry.
+    let hooks: Vec<(i64, Option<i64>, Option<String>)> = list(obj, QST_HOOK_LIST)
+        .iter()
+        .filter_map(|h| {
+            let key: i64 = h.embedded_field(QST_HOOK_KEY)?.as_i64()?;
+            let state: Option<i64> = h.embedded_field(QST_HOOK_STATE).and_then(GomValue::as_i64);
+            let name: Option<String> = match h.embedded_field(QST_HOOK_NAME) {
+                Some(GomValue::Str(s)) => Some(s.clone()),
+                _ => None,
+            };
+            Some((key, state, name))
+        })
+        .collect();
+
+    let mut tasks: Vec<QuestTask> = Vec::new();
+    let mut mismatches: u64 = 0;
+    for (bi, branch) in list(obj, QST_BRANCHES).iter().enumerate() {
+        for (si, step) in list(branch, QST_BRANCH_STEPS).iter().enumerate() {
+            for (ti, task) in list(step, QST_STEP_TASKS).iter().enumerate() {
+                let text_id: Option<u64> = task
+                    .embedded_field(QST_TASK_TEXT_ID)
+                    .and_then(GomValue::as_i64)
+                    .map(|v| v as u64);
+                let text_slot: Option<u32> = match text_id {
+                    Some(id) if string_id == Some((id >> 32) as i64) => Some(id as u32),
+                    Some(_) => {
+                        mismatches += 1;
+                        None
+                    }
+                    None => None,
+                };
+                let text: Option<String> = match (string_id, text_slot) {
+                    (Some(sid), Some(slot)) => texts.get(&(sid, i64::from(slot))).cloned(),
+                    _ => None,
+                };
+                let map_notes: Vec<String> = list(task, QST_TASK_MAP_NOTES)
+                    .iter()
+                    .filter_map(|n| match n {
+                        GomValue::Str(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let hook: Option<&(i64, Option<i64>, Option<String>)> = task
+                    .embedded_field(QST_TASK_HOOK_REF)
+                    .and_then(GomValue::as_i64)
+                    .and_then(|r| hooks.iter().find(|(key, _, _)| *key == r));
+                let hook_state: Option<i64> = hook.and_then(|(_, state, _)| *state);
+                let hook_name: Option<String> = hook.and_then(|(_, _, name)| name.clone());
+                tasks.push(QuestTask {
+                    quest_fqn: quest_fqn.to_string(),
+                    branch: bi as u32,
+                    step: si as u32,
+                    task: ti as u32,
+                    text_slot,
+                    text,
+                    map_notes,
+                    hook_state,
+                    hook_name,
+                });
+            }
+        }
+    }
+    (tasks, mismatches)
+}
+
 /// Count quest steps by looking for branch/step/task patterns in payload strings.
 /// Pattern: `_bX_sY_tZ` where X=branch, Y=step, Z=task.
 pub(crate) fn count_quest_steps(json_str: &str) -> i32 {
@@ -2174,6 +2411,21 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             );
             CREATE INDEX IF NOT EXISTS idx_quest_text_string ON quest_text(string_id);
             CREATE INDEX IF NOT EXISTS idx_quest_text_kind ON quest_text(kind);
+            -- Quest tasks (#354): one row per task of every decoded quest
+            -- (branch > step > task list positions), with the task's str.qst
+            -- text, map notes (JSON array) and completion hook.
+            CREATE TABLE IF NOT EXISTS quest_tasks (
+                quest_fqn  TEXT NOT NULL,
+                branch     INTEGER NOT NULL,
+                step       INTEGER NOT NULL,
+                task       INTEGER NOT NULL,
+                text_slot  INTEGER,
+                text       TEXT,
+                map_notes  TEXT,      -- JSON array, '[]' when none
+                hook_state INTEGER,
+                hook_name  TEXT,
+                PRIMARY KEY (quest_fqn, branch, step, task)
+            );
             -- Unified mission catalog (#268): every named mission as one
             -- first-class, queryable row -- keyed by string_id (the stable
             -- identity that exists for all ~6761 missions, vs the ~1514
@@ -2344,6 +2596,116 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
 mod tests {
     use super::*;
     use crate::db::testutil::temp_db_path;
+    use crate::gom_reader::GomValue;
+
+    fn emb(fields: Vec<(u64, GomValue)>) -> GomValue {
+        GomValue::Embedded(fields)
+    }
+
+    fn quest_tree(steps: Vec<Vec<GomValue>>, hooks: Vec<GomValue>) -> GomValue {
+        let steps: Vec<GomValue> = steps
+            .into_iter()
+            .map(|tasks| emb(vec![(0x4000_0005_05a2_a6d0, GomValue::List(tasks))]))
+            .collect();
+        let branch: GomValue = emb(vec![(0x4000_0005_05a2_a6d1, GomValue::List(steps))]);
+        emb(vec![
+            (0x4000_0005_05a2_a6d3, GomValue::List(vec![branch])),
+            (0x4000_0007_ad64_0052, GomValue::List(hooks)),
+        ])
+    }
+
+    #[test]
+    fn quest_tasks_walk_branches_steps_tasks() {
+        let sid: i64 = 1_130_835;
+        let text_id = |slot: u64| GomValue::U64(((sid as u64) << 32) | slot);
+        let task_with_text = emb(vec![(0x4000_0000_2b8c_1db4, text_id(264))]);
+        // Hook ref with no matching hook-list entry; the task's own
+        // 0x...4164287098 value must be ignored.
+        let task_no_text = emb(vec![
+            (0x4000_0034_d449_4960, GomValue::U64(7)),
+            (0x4000_0041_6428_7098, GomValue::U64(99)),
+        ]);
+        let task_notes_hook = emb(vec![
+            (0x4000_0000_2b8c_1db4, text_id(265)),
+            (
+                0x4000_0004_bce1_f1c6,
+                GomValue::List(vec![GomValue::Str("mpn.ventures.hoth".to_string())]),
+            ),
+            (
+                0x4000_0034_d449_4960,
+                GomValue::U64(17_952_295_674_837_795_079),
+            ),
+        ]);
+        let hook = emb(vec![
+            (
+                0x4000_0000_2ade_c3c7,
+                GomValue::Str("hook_travel to hoth".to_string()),
+            ),
+            (0x4000_0000_2c1f_e390, GomValue::U64(4_856_899_342_172_423)),
+            (
+                0x4000_0034_b21e_56a4,
+                GomValue::U64(17_952_295_674_837_795_079),
+            ),
+            (
+                0x4000_0041_6428_709b,
+                GomValue::I64(-853_414_660_465_191_255),
+            ),
+        ]);
+        let tree = quest_tree(
+            vec![vec![task_with_text], vec![task_no_text, task_notes_hook]],
+            vec![hook],
+        );
+        let texts: std::collections::HashMap<(i64, i64), String> = [
+            ((sid, 264), "Travel to Hoth".to_string()),
+            ((sid, 265), "Defeat the droids".to_string()),
+        ]
+        .into_iter()
+        .collect();
+
+        let (rows, mismatches) = quest_tasks_from_fields("qst.t", Some(sid), &tree, &texts);
+        assert_eq!(mismatches, 0);
+        assert_eq!(rows.len(), 3);
+        let idx: Vec<(u32, u32, u32)> = rows.iter().map(|t| (t.branch, t.step, t.task)).collect();
+        assert_eq!(idx, vec![(0, 0, 0), (0, 1, 0), (0, 1, 1)]);
+        assert_eq!(rows[0].text_slot, Some(264));
+        assert_eq!(rows[0].text.as_deref(), Some("Travel to Hoth"));
+        assert!(rows[0].map_notes.is_empty());
+        assert_eq!(rows[1].text_slot, None);
+        assert_eq!(rows[1].text, None);
+        assert_eq!(rows[1].hook_state, None, "ref 7 is not in the hook list");
+        assert_eq!(rows[1].hook_name, None);
+        assert_eq!(rows[2].text_slot, Some(265));
+        assert_eq!(rows[2].map_notes, vec!["mpn.ventures.hoth".to_string()]);
+        assert_eq!(rows[2].hook_state, Some(-853_414_660_465_191_255));
+        assert_eq!(rows[2].hook_name.as_deref(), Some("hook_travel to hoth"));
+    }
+
+    #[test]
+    fn quest_task_text_id_for_another_quest_is_null() {
+        let other: u64 = 999;
+        let task = emb(vec![(
+            0x4000_0000_2b8c_1db4,
+            GomValue::U64((other << 32) | 264),
+        )]);
+        let tree = quest_tree(vec![vec![task]], vec![]);
+        let texts: std::collections::HashMap<(i64, i64), String> =
+            [((999, 264), "Wrong quest".to_string())]
+                .into_iter()
+                .collect();
+        let (rows, mismatches) = quest_tasks_from_fields("qst.t", Some(1_130_835), &tree, &texts);
+        assert_eq!(mismatches, 1);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].text_slot, None);
+        assert_eq!(rows[0].text, None);
+    }
+
+    #[test]
+    fn populate_quest_tasks_handles_empty_archive() {
+        let path = temp_db_path("quest_tasks_empty");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        assert_eq!(db.populate_quest_tasks().unwrap(), 0);
+    }
     #[test]
     fn migrate_quest_typed_columns_adds_columns_idempotently() {
         let path = temp_db_path("quest_typed_migrate");
