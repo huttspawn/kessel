@@ -112,13 +112,9 @@ fn main() -> Result<()> {
         }
     }
 
-    // Build set of STB file hashes to extract
-    let mut stb_hashes: HashSet<u64> = HashSet::new();
-    for (hash, path) in hash_dict.paths_matching("/str/") {
-        if stb::should_extract_stb(path) {
-            stb_hashes.insert(hash);
-        }
-    }
+    // STB tables to extract, found by the hash of their known paths
+    // (no dictionary). Conversation tables come from populate_conversation_strings.
+    let stb_paths = stb::known_stb_hashes();
 
     // Build set of icon file hashes to extract
     let mut icon_hashes: std::collections::HashMap<u64, String> = std::collections::HashMap::new();
@@ -227,7 +223,7 @@ fn main() -> Result<()> {
                 }
 
                 let is_bucket = bucket_hashes.contains(&entry.filename_hash);
-                let is_stb = stb_hashes.contains(&entry.filename_hash);
+                let stb_path = stb_paths.get(&entry.filename_hash);
 
                 let data = match archive.read_entry(entry) {
                     Ok(d) => d,
@@ -243,16 +239,14 @@ fn main() -> Result<()> {
                 }
 
                 // Process STB files
-                if is_stb {
-                    if let Some(path) = hash_dict.get(entry.filename_hash) {
-                        if let Ok(stb_file) = stb::parse(&data, path) {
-                            for stb_entry in &stb_file.entries {
-                                let string_fqn = format!(
-                                    "{}.{}.{}",
-                                    stb_file.fqn_prefix, stb_entry.id1, stb_entry.id2
-                                );
-                                let _ = db.insert_string(&string_fqn, &stb_file.locale, stb_entry);
-                            }
+                if let Some(path) = stb_path {
+                    if let Ok(stb_file) = stb::parse(&data, path) {
+                        for stb_entry in &stb_file.entries {
+                            let string_fqn = format!(
+                                "{}.{}.{}",
+                                stb_file.fqn_prefix, stb_entry.id1, stb_entry.id2
+                            );
+                            let _ = db.insert_string(&string_fqn, &stb_file.locale, stb_entry);
                         }
                     }
                 }

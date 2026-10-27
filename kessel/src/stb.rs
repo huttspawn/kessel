@@ -20,7 +20,9 @@
 //!
 //! Text data follows entries at specified offsets.
 
+use crate::hash::{combine_hash, hashlittle2};
 use anyhow::{bail, Result};
+use std::collections::HashMap;
 
 const HEADER_SIZE: usize = 7;
 const ENTRY_SIZE: usize = 26;
@@ -191,65 +193,35 @@ fn extract_fqn_from_path(path: &str) -> String {
     "str.unknown".to_string()
 }
 
-/// Check if an STB file path should be extracted based on our filter
-///
-/// We only want the 6 main root-level STB files:
-/// - abl.stb, itm.stb, npc.stb, qst.stb, cdx.stb, ach.stb, schem.stb
-pub fn should_extract_stb(path: &str) -> bool {
-    let normalized = path.to_lowercase();
+/// The STB tables extracted from the archive, by path. Each is found by the
+/// hash of its path, so no dictionary is needed. Root tables hold the primary
+/// object kinds; the gui tables hold category labels the root tables lack
+/// (conquest themes, Galactic Command reward tracks, achievement categories
+/// and ventures). Conversation tables (`/str/cnv/`) are not listed: they are
+/// derived from the `cnv.*` objects in `populate_conversation_strings`.
+const KNOWN_STB_PATHS: &[&str] = &[
+    "/resources/en-us/str/abl.stb",
+    "/resources/en-us/str/tal.stb",
+    "/resources/en-us/str/itm.stb",
+    "/resources/en-us/str/npc.stb",
+    "/resources/en-us/str/qst.stb",
+    "/resources/en-us/str/cdx.stb",
+    "/resources/en-us/str/ach.stb",
+    "/resources/en-us/str/gui/planetaryconquest.stb",
+    "/resources/en-us/str/gui/galacticcommand.stb",
+    "/resources/en-us/str/gui/achievementcategories.stb",
+];
 
-    // Must be in /str/ directory
-    if !normalized.contains("/str/") {
-        return false;
-    }
-
-    if let Some(str_pos) = normalized.find("/str/") {
-        let after_str = &normalized[str_pos + 5..]; // skip "/str/"
-
-        // Root-level STBs (no subdirectory): primary object kinds.
-        const ROOT_TARGETS: &[&str] = &[
-            "abl.stb",
-            "tal.stb",
-            "itm.stb",
-            "npc.stb",
-            "qst.stb",
-            "cdx.stb",
-            "ach.stb",
-            "schem.stb",
-        ];
-        if !after_str.contains('/') {
-            return ROOT_TARGETS.contains(&after_str);
-        }
-
-        // Conversation dialogue tables. The spoken/subtitle lines for every
-        // conversation live in per-conversation nested STBs under /str/cnv/
-        // (e.g. /str/cnv/location/taris/class/jedi_knight/rora_seake.stb).
-        // 5,768 en-us tables -- the largest /str/ category. The path maps
-        // straight onto the cnv.* object FQN (extract_fqn_from_path), so the
-        // strings link back to conversations (and through them, quests).
-        if after_str.starts_with("cnv/") {
-            return true;
-        }
-
-        // Selected nested STBs that contain category labels not in the
-        // root-level kind tables. planetaryconquest carries conquest theme
-        // names; galacticcommand carries Eternal Empire reward-track labels;
-        // achievementcategories carries achievement category, venture, stage
-        // and venture-category names.
-        const NESTED_TARGETS: &[&str] = &[
-            "gui/planetaryconquest.stb",
-            "gui/galacticcommand.stb",
-            "gui/achievementcategories.stb",
-        ];
-        for target in NESTED_TARGETS {
-            if after_str == *target {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    false
+/// Archive filename hash -> path for every known STB table. The hash is
+/// `combine_hash(ph, sh)`, the key archive entries carry.
+pub fn known_stb_hashes() -> HashMap<u64, &'static str> {
+    KNOWN_STB_PATHS
+        .iter()
+        .map(|path| {
+            let (ph, sh) = hashlittle2(path.as_bytes(), 0, 0);
+            (combine_hash(ph, sh), *path)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -289,35 +261,36 @@ mod tests {
     }
 
     #[test]
-    fn test_should_extract_stb() {
-        // Should extract root-level files
-        assert!(should_extract_stb("/resources/en-us/str/abl.stb"));
-        assert!(should_extract_stb("/resources/en-us/str/itm.stb"));
-        assert!(should_extract_stb("/resources/en-us/str/npc.stb"));
-        assert!(should_extract_stb("/resources/en-us/str/qst.stb"));
-        assert!(should_extract_stb("/resources/en-us/str/cdx.stb"));
-        assert!(should_extract_stb("/resources/en-us/str/ach.stb"));
-        assert!(should_extract_stb("/resources/en-us/str/schem.stb"));
-
-        // Should NOT extract subdirectory files
-        assert!(!should_extract_stb(
-            "/resources/en-us/str/abl/agent/skill.stb"
-        ));
-        assert!(!should_extract_stb(
-            "/resources/en-us/str/gui/disciplinewindow.stb"
-        ));
-
-        // Conversation dialogue tables (nested under /str/cnv/) ARE extracted --
-        // they hold the spoken/subtitle lines for every conversation.
-        assert!(should_extract_stb(
-            "/resources/en-us/str/cnv/some_convo.stb"
-        ));
-        assert!(should_extract_stb(
-            "/resources/en-us/str/cnv/location/taris/class/jedi_knight/rora_seake.stb"
-        ));
-
-        // Should NOT extract other root files
-        assert!(!should_extract_stb("/resources/en-us/str/mpn.stb"));
-        assert!(!should_extract_stb("/resources/en-us/str/dec.stb"));
+    fn known_stb_hashes_match_dictionary() {
+        // Real PH/SH pairs from hashes_filename.txt.
+        let cases: &[(&str, u32, u32)] = &[
+            ("/resources/en-us/str/abl.stb", 0x8154_956D, 0x5430_5B3B),
+            ("/resources/en-us/str/tal.stb", 0x93A7_AD6F, 0x5DE1_7C3F),
+            ("/resources/en-us/str/itm.stb", 0x32EF_86D8, 0xFB5D_CB98),
+            ("/resources/en-us/str/npc.stb", 0xB2A2_6731, 0x0DDC_0C21),
+            ("/resources/en-us/str/qst.stb", 0xD097_4307, 0x8ED1_2356),
+            ("/resources/en-us/str/cdx.stb", 0xE488_9EE0, 0x10A7_098C),
+            ("/resources/en-us/str/ach.stb", 0x8BBE_1958, 0x45F4_B329),
+            (
+                "/resources/en-us/str/gui/planetaryconquest.stb",
+                0xA3B4_7B7C,
+                0x1203_52AA,
+            ),
+            (
+                "/resources/en-us/str/gui/galacticcommand.stb",
+                0x7552_57CA,
+                0xE929_6959,
+            ),
+            (
+                "/resources/en-us/str/gui/achievementcategories.stb",
+                0x2B44_73F6,
+                0x98B3_EA51,
+            ),
+        ];
+        let derived = known_stb_hashes();
+        assert_eq!(derived.len(), cases.len());
+        for (path, ph, sh) in cases {
+            assert_eq!(derived.get(&combine_hash(*ph, *sh)), Some(path));
+        }
     }
 }

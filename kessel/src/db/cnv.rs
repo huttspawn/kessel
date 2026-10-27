@@ -9,8 +9,8 @@
 //!   NODE body resolved to the quest / npc / achievement / codex / item /
 //!   followup / encounter it touches, plus alignment-event token counts.
 //! - The dialogue lines (`conversation_lines` view): the spoken/subtitle text,
-//!   which lives in per-conversation STBs under `/str/cnv/` (enabled in
-//!   `stb::should_extract_stb`). The STB path maps onto the `cnv.*` FQN, so
+//!   which lives in per-conversation STBs under `/str/cnv/` (read by
+//!   `populate_conversation_strings`). The STB path maps onto the `cnv.*` FQN, so
 //!   `str.cnv.<path>.<id1>.<id2>` strings rejoin their conversation -- and
 //!   through `conversation_quest_refs`, their quest.
 
@@ -675,7 +675,7 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
     )?;
 
     // Conversation dialogue lines. The spoken/subtitle text lives in the
-    // per-conversation STBs under /str/cnv/ (enabled in should_extract_stb),
+    // per-conversation STBs under /str/cnv/ (populate_conversation_strings),
     // stored as `str.cnv.<path>.<id1>.<id2>` rows in `strings`. This view
     // strips the `str.` prefix and the trailing `.<id1>.<id2>` to recover the
     // `cnv.*` FQN, so dialogue rejoins its conversation (and via
