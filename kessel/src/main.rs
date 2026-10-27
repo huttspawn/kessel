@@ -562,7 +562,6 @@ fn main() -> Result<()> {
     let pc = {
         let ctx = db::passes::PassCtx {
             input: &args.input,
-            hash_dict: &hash_dict,
             prot_hashes: &prot_hashes,
             scpt_hashes: &scpt_hashes,
             epp_hashes: &epp_hashes,
