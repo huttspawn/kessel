@@ -355,10 +355,16 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                 } else {
                     parse_object(obj_data)
                 };
-                if let Ok(obj) = parse_result {
-                    objects.push(obj);
-                }
-                // Note: We continue the chain even if parse_object fails
+                let Ok(obj) = parse_result else {
+                    // The footer's size can be wrong for an object (a large
+                    // payload, or text between the FQN and the payload), and a
+                    // slice of the wrong size does not parse. Let the scanning
+                    // path below read this same offset with the payload's own
+                    // frame size rather than skipping the object.
+                    using_footer_chain = false;
+                    continue;
+                };
+                objects.push(obj);
 
                 // Move to next object
                 let next_unaligned = offset + obj_size;
