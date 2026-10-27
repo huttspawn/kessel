@@ -799,6 +799,27 @@ impl Database {
         Ok(mapping)
     }
 
+    /// Archive filename hash -> icon path for every distinct `objects.icon_name`,
+    /// derived from the path convention instead of the hash dictionary.
+    pub fn derived_icon_hashes(&self) -> Result<std::collections::HashMap<u64, String>> {
+        self.flush()?;
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| anyhow::anyhow!("database mutex poisoned"))?;
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT icon_name FROM objects WHERE icon_name IS NOT NULL AND icon_name <> ''",
+        )?;
+        let names = stmt.query_map([], |row| row.get::<_, String>(0))?;
+
+        let mut hashes = std::collections::HashMap::new();
+        for name in names {
+            hashes.extend(derive_icon_paths(&name?));
+        }
+        Ok(hashes)
+    }
+
     /// Build fallback icon mappings for objects with NULL icon_name.
     /// Derives icon names from known FQN patterns where the game data
     /// doesn't embed the icon reference in the binary payload.
@@ -834,6 +855,17 @@ impl Database {
 
         Ok(mapping)
     }
+}
+
+/// Candidate archive paths for an icon name, keyed by archive filename hash:
+/// the name as stored and lowercased (the hash is case-sensitive and
+/// `icon_name` is often mixed-case).
+fn derive_icon_paths(icon_name: &str) -> [(u64, String); 2] {
+    [icon_name.to_string(), icon_name.to_lowercase()].map(|name| {
+        let path = format!("/resources/gfx/icons/{name}.dds");
+        let (ph, sh) = crate::hash::hashlittle2(path.as_bytes(), 0, 0);
+        (crate::hash::combine_hash(ph, sh), path)
+    })
 }
 
 /// Derive an icon filename from a FQN for objects that lack embedded icon references.
@@ -986,6 +1018,50 @@ mod tests {
         );
         assert_eq!(singleton_guid("b03e56"), None);
         assert_eq!(singleton_guid("zz3e566b260800e0"), None);
+    }
+
+    #[test]
+    fn derived_icon_path_matches_archive_hash() {
+        // Real PH/SH from hashes_filename.txt for this lowercase path.
+        let expected = crate::hash::combine_hash(0x0093_67E0, 0xBBF1_5EBC);
+        let derived = derive_icon_paths("Abl_Si_Sa_CracklingBlasts");
+        assert_eq!(derived[1].0, expected);
+        assert_eq!(
+            derived[1].1,
+            "/resources/gfx/icons/abl_si_sa_cracklingblasts.dds"
+        );
+        assert_ne!(
+            derived[0].0, expected,
+            "as-stored casing hashes differently"
+        );
+    }
+
+    #[test]
+    fn derived_icon_hashes_reads_distinct_icon_names() {
+        let path = temp_db_path("derived_icons");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        insert_obj(&db, "g1", "abl.a", "Ability");
+        insert_obj(&db, "g2", "abl.b", "Ability");
+        insert_obj(&db, "g3", "abl.c", "Ability");
+        {
+            let conn = db.conn.lock().unwrap();
+            conn.execute(
+                "UPDATE objects SET icon_name = 'abl_si_sa_cracklingblasts' WHERE game_id IN ('g1','g2')",
+                [],
+            )
+            .unwrap();
+            conn.execute("UPDATE objects SET icon_name = '' WHERE game_id = 'g3'", [])
+                .unwrap();
+        }
+        let hashes = db.derived_icon_hashes().unwrap();
+        // One name; as-stored and lowercased coincide.
+        assert_eq!(hashes.len(), 1);
+        assert_eq!(
+            hashes.get(&crate::hash::combine_hash(0x0093_67E0, 0xBBF1_5EBC)),
+            Some(&"/resources/gfx/icons/abl_si_sa_cracklingblasts.dds".to_string())
+        );
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
