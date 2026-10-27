@@ -26,10 +26,11 @@
 //!   - 42-byte header (contains GUIDs, offsets)
 //!   - FQN string (null-terminated)
 //!   - padding to align
-//!   - ZSTD-compressed payload (trim last 8 bytes)
+//!   - ZSTD-compressed payload (trim last 8 bytes), or the raw payload when
+//!     header byte 8 is `0x0E` (see `uncompressed_payload`)
 //!   - 8-byte footer (next object link)
 //!
-//! The ZSTD payload contains binary GOM data with length-prefixed strings.
+//! The payload contains binary GOM data with length-prefixed strings.
 
 use anyhow::{bail, Context, Result};
 
@@ -242,6 +243,44 @@ fn payload_start(data: &[u8], fqn_end: usize) -> Option<usize> {
     (from..data.len().min(from + 10)).find(|&i| data.len() > i + 4 && data[i..i + 4] == ZSTD_MAGIC)
 }
 
+/// Header byte 8 of an object whose payload is stored without compression
+/// (`0x0F` marks a zstd payload). Item appearances (`ipp.*`), `cos`, `dec`,
+/// `pth`, `phs` and others use this layout: after the FQN's NUL come zero
+/// padding bytes and the raw payload, no zstd frame.
+const UNCOMPRESSED_FLAG: u8 = 0x0E;
+
+/// The raw payload of an object stored uncompressed, given the offset of its
+/// 42-byte header in `data`, or `None` when the object is not stored that way.
+///
+/// The header's offsets count from 8 bytes before the header: the u16 at
+/// byte 10 is where the payload region starts (just past the FQN's NUL), and
+/// the u16 at byte 30 plus the u32 at byte 32 is where it ends. A zstd
+/// payload decompresses to the same region, padding included, so both
+/// layouts hand the same bytes to the GOM reader.
+fn uncompressed_payload(data: &[u8], header_start: usize) -> Option<(usize, usize)> {
+    let header = data.get(header_start..header_start + 42)?;
+    if header[8] != UNCOMPRESSED_FLAG {
+        return None;
+    }
+    let u16_at = |i: usize| usize::from(u16::from_le_bytes([header[i], header[i + 1]]));
+    let size = u32::from_le_bytes([header[32], header[33], header[34], header[35]]);
+    let start = (header_start + u16_at(10)).checked_sub(8)?;
+    let end = (header_start + u16_at(30) + usize::try_from(size).ok()?).checked_sub(8)?;
+    (header_start + 42 < start && start <= end && end <= data.len()).then_some((start, end))
+}
+
+/// Offset of a zstd payload found where the header says it starts (the u16
+/// at header byte 10, counted from 8 bytes before the header). Used when the
+/// payload is not right after the FQN, as in objects that store a text string
+/// between the two.
+fn compressed_start(data: &[u8], header_start: usize) -> Option<usize> {
+    let header = data.get(header_start..header_start + 42)?;
+    let offset = usize::from(u16::from_le_bytes([header[10], header[11]]));
+    let start = (header_start + offset).checked_sub(8)?;
+    (header_start + 42 < start && data.get(start..start + 4) == Some(&ZSTD_MAGIC[..]))
+        .then_some(start)
+}
+
 /// Try to extract next object size from the 8-byte footer.
 /// SWTOR stores the size at varying positions in the footer.
 fn extract_next_size_from_footer(footer: &[u8]) -> Option<usize> {
@@ -320,7 +359,6 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                     objects.push(obj);
                 }
                 // Note: We continue the chain even if parse_object fails
-                // Some objects (ipp.*, stg.*, etc) don't have ZSTD payloads
 
                 // Move to next object
                 let next_unaligned = offset + obj_size;
@@ -373,7 +411,14 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
             fqn_end += 1;
         }
 
-        if let Some(zstd_start) = payload_start(data, fqn_end) {
+        if let Some((start, end)) = uncompressed_payload(data, real_offset) {
+            objects.push(GomObject {
+                fqn: String::from_utf8_lossy(&data[fqn_pos..fqn_end]).to_string(),
+                header: data[real_offset..real_offset + 42].to_vec(),
+                payload: data[start..end].to_vec(),
+            });
+            offset = (end + 8).next_multiple_of(8);
+        } else if let Some(zstd_start) = payload_start(data, fqn_end) {
             // Use ZSTD's frame size detection - O(1) instead of probing
             let zstd_data = &data[zstd_start..];
             if let Ok(frame_size) = zstd_safe::find_frame_compressed_size(zstd_data) {
@@ -435,6 +480,15 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                 {
                     // Attempt parse: object starts 42 bytes before FQN.
                     let obj_start = fqn_start - 42;
+                    if let Some((start, end)) = uncompressed_payload(data, obj_start) {
+                        objects.push(GomObject {
+                            fqn: candidate_fqn,
+                            header: data[obj_start..fqn_start].to_vec(),
+                            payload: data[start..end].to_vec(),
+                        });
+                        i = end;
+                        continue;
+                    }
                     // Need a payload bound. Find next ZSTD magic and frame size.
                     if let Some(zs) = payload_start(data, fqn_end) {
                         if let Ok(frame_size) = zstd_safe::find_frame_compressed_size(&data[zs..]) {
@@ -479,6 +533,14 @@ fn parse_object(data: &[u8]) -> Result<GomObject> {
     }
 
     let fqn = String::from_utf8_lossy(&data[fqn_start..fqn_end]).to_string();
+
+    if let Some((start, end)) = uncompressed_payload(data, 0) {
+        return Ok(GomObject {
+            fqn,
+            header,
+            payload: data[start..end].to_vec(),
+        });
+    }
 
     let zstd_start = payload_start(data, fqn_end).context("No ZSTD magic found")?;
 
@@ -740,6 +802,58 @@ mod tests {
         let obj = parse_object(&data).unwrap();
         assert_eq!(obj.fqn, "abl.sith_warrior.ravage");
         assert_eq!(obj.payload, b"ability payload");
+    }
+
+    /// `ipp.mtx.season5.kreia.waist` as live 7.x bucket 0.bkt stores it:
+    /// header byte 8 is `0x0E`, and the raw payload follows the FQN's NUL with
+    /// no zstd frame. The last 8 bytes are the next object's link.
+    const UNCOMPRESSED_IPP: [u8; 170] = [
+        0xf8, 0xe0, 0x9a, 0xe7, 0xee, 0x13, 0x00, 0xe0, 0x0e, 0x00, 0x4f, 0x00, 0x32, 0x00, 0x4e,
+        0x00, 0x50, 0x14, 0x1e, 0xe2, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x50, 0x00, 0x5a, 0x00, 0x00, 0x00, 0x50, 0x00, 0x05, 0x00, 0x01, 0x03, 0x69, 0x70, 0x70,
+        0x2e, 0x6d, 0x74, 0x78, 0x2e, 0x73, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x35, 0x2e, 0x6b, 0x72,
+        0x65, 0x69, 0x61, 0x2e, 0x77, 0x61, 0x69, 0x73, 0x74, 0x00, 0x00, 0x00, 0x11, 0x08, 0xcf,
+        0x40, 0x00, 0x00, 0x00, 0x28, 0xcf, 0x66, 0x6a, 0x06, 0x1b, 0x69, 0x70, 0x70, 0x2e, 0x6d,
+        0x74, 0x78, 0x2e, 0x73, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x35, 0x2e, 0x6b, 0x72, 0x65, 0x69,
+        0x61, 0x2e, 0x77, 0x61, 0x69, 0x73, 0x74, 0xcc, 0x02, 0xed, 0xf2, 0x1a, 0xbc, 0x05, 0x11,
+        0x01, 0x02, 0xca, 0x29, 0xa2, 0x61, 0x01, 0x02, 0xca, 0x29, 0xa2, 0x69, 0x02, 0x02, 0xca,
+        0x0f, 0x44, 0xe1, 0x01, 0x02, 0xca, 0x1a, 0x00, 0xaa, 0xcb, 0xb8, 0x7e, 0x87, 0x7d, 0x02,
+        0xca, 0x29, 0xa2, 0x6b, 0xcc, 0x0d, 0x3e, 0xd6, 0x32, 0xdf, 0x02, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x74, 0x02,
+    ];
+
+    #[test]
+    fn parse_object_reads_the_uncompressed_layout() {
+        let obj = parse_object(&UNCOMPRESSED_IPP).unwrap();
+        assert_eq!(obj.fqn, "ipp.mtx.season5.kreia.waist");
+        assert_eq!(obj.payload, &UNCOMPRESSED_IPP[71..162]);
+        assert!(obj
+            .extract_strings()
+            .contains(&"ipp.mtx.season5.kreia.waist".to_string()));
+    }
+
+    #[test]
+    fn dblb_returns_an_uncompressed_object() {
+        let mut dblb = DBLB_MAGIC.to_vec();
+        dblb.extend_from_slice(&2u32.to_le_bytes());
+        dblb.extend_from_slice(&170u32.to_le_bytes());
+        dblb.extend_from_slice(&[0; 4]);
+        dblb.extend_from_slice(&UNCOMPRESSED_IPP);
+        let objects = parse_dblb_direct(&dblb).unwrap();
+        assert_eq!(objects.len(), 1);
+        assert_eq!(objects[0].fqn, "ipp.mtx.season5.kreia.waist");
+        assert_eq!(objects[0].header, &UNCOMPRESSED_IPP[..42]);
+        assert_eq!(objects[0].payload, &UNCOMPRESSED_IPP[71..162]);
+    }
+
+    #[test]
+    fn uncompressed_payload_ignores_a_compressed_object() {
+        let data = object("abl.sith_warrior.ravage", None, b"ability payload");
+        assert_eq!(data[8], 0xAB);
+        assert_eq!(uncompressed_payload(&data, 0), None);
+        let mut flagged = UNCOMPRESSED_IPP;
+        flagged[8] = 0x0F;
+        assert_eq!(uncompressed_payload(&flagged, 0), None);
     }
 
     #[test]

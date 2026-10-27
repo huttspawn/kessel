@@ -5,6 +5,7 @@
 // without each file re-listing imports.
 pub(crate) use anyhow::{Context, Result};
 pub(crate) use rusqlite::{params, Connection, Transaction};
+use std::collections::HashSet;
 pub(crate) use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -649,6 +650,30 @@ impl Database {
             .ok();
         drop(conn);
         b64.and_then(|b| BASE64.decode(b).ok())
+    }
+
+    /// Every GUID in `objects`.
+    pub fn object_guids(&self) -> Result<HashSet<String>> {
+        self.flush()?;
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT DISTINCT guid FROM objects")?;
+        let guids = stmt
+            .query_map([], |r| r.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(guids)
+    }
+
+    /// Record the registered objects the extraction does not hold (#373).
+    pub fn insert_unread_objects(&self, unread: &[crate::prototypes_info::Unread]) -> Result<()> {
+        self.with_tx(|tx| {
+            let mut stmt = tx.prepare(
+                "INSERT OR REPLACE INTO unread_objects (guid, flag, reason) VALUES (?1, ?2, ?3)",
+            )?;
+            for u in unread {
+                stmt.execute(params![u.guid, u.flag, u.reason])?;
+            }
+            Ok(())
+        })
     }
 
     pub fn stats(&self) -> Result<Stats> {

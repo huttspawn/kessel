@@ -62,8 +62,8 @@ struct Args {
     #[arg(long)]
     unknowns: Option<PathBuf>,
 
-    /// Extract all objects without content filtering (filter in ETL instead)
-    /// Only excludes versioned duplicates and test/debug content
+    /// Extract every kind without content filtering (filter in ETL instead)
+    /// Only excludes versioned duplicates
     #[arg(long)]
     unfiltered: bool,
 }
@@ -111,6 +111,15 @@ fn main() -> Result<()> {
             }
         }
     }
+
+    // The prototype registry, found by its known path's hash.
+    let registry_hash = {
+        let (ph, sh) = hash::hashlittle2(prototypes_info::REGISTRY_PATH.as_bytes(), 0, 0);
+        hash::combine_hash(ph, sh)
+    };
+    let mut registry: Option<Vec<prototypes_info::PrototypeInfo>> = None;
+    // GUID -> why, for objects read and then left out of `objects`.
+    let mut dropped: HashMap<String, &'static str> = HashMap::new();
 
     // STB tables to extract, found by the hash of their known paths
     // (no dictionary). Conversation tables come from populate_conversation_strings.
@@ -237,6 +246,9 @@ fn main() -> Result<()> {
                 if data.len() >= 4 && &data[..4] == b"PROT" {
                     prot_hashes.insert(entry.filename_hash);
                 }
+                if entry.filename_hash == registry_hash {
+                    registry = prototypes_info::parse(&data).ok();
+                }
 
                 // Process STB files
                 if let Some(path) = stb_path {
@@ -259,6 +271,7 @@ fn main() -> Result<()> {
                             args.unfiltered,
                             icon_overrides.as_ref(),
                             &mut versioned_seen,
+                            &mut dropped,
                         ) {
                             total_objects += count;
                         }
@@ -279,7 +292,11 @@ fn main() -> Result<()> {
                                     &obj,
                                     icon_overrides.as_ref(),
                                 );
-                                if !accept_variant(&mut versioned_seen, &fqn, &game_obj) {
+                                if !accept_variant(&mut versioned_seen, &fqn, &game_obj) && !args.unfiltered {
+                                    dropped.insert(
+                                        game_obj.guid.clone(),
+                                        prototypes_info::REASON_SUPERSEDED,
+                                    );
                                     continue;
                                 }
                                 if should_extract_object(&game_obj.fqn, args.unfiltered)
@@ -289,6 +306,10 @@ fn main() -> Result<()> {
                                         total_objects += 1;
                                     }
                                 } else {
+                                    dropped.insert(
+                                        game_obj.guid.clone(),
+                                        prototypes_info::REASON_FILTERED,
+                                    );
                                     capture_string_ref(&db, &game_obj);
                                 }
                             }
@@ -303,6 +324,7 @@ fn main() -> Result<()> {
                         args.unfiltered,
                         icon_overrides.as_ref(),
                         &mut versioned_seen,
+                        &mut dropped,
                     ) {
                         total_objects += count;
                     }
@@ -323,7 +345,11 @@ fn main() -> Result<()> {
                                 &obj,
                                 icon_overrides.as_ref(),
                             );
-                            if !accept_variant(&mut versioned_seen, &fqn, &game_obj) {
+                            if !accept_variant(&mut versioned_seen, &fqn, &game_obj) && !args.unfiltered {
+                                dropped.insert(
+                                    game_obj.guid.clone(),
+                                    prototypes_info::REASON_SUPERSEDED,
+                                );
                                 continue;
                             }
                             if should_extract_object(&game_obj.fqn, args.unfiltered)
@@ -333,6 +359,10 @@ fn main() -> Result<()> {
                                     total_objects += 1;
                                 }
                             } else {
+                                dropped.insert(
+                                    game_obj.guid.clone(),
+                                    prototypes_info::REASON_FILTERED,
+                                );
                                 capture_string_ref(&db, &game_obj);
                             }
                         }
@@ -513,6 +543,23 @@ fn main() -> Result<()> {
         passes_start.elapsed().as_secs_f64()
     );
 
+    // Check the extraction against the prototype registry (#373).
+    let registry_line = match &registry {
+        Some(registry) => {
+            let unread = prototypes_info::unread(registry, &db.object_guids()?, &dropped);
+            db.insert_unread_objects(&unread)?;
+            format!(
+                "{} registered, {} not extracted (see unread_objects)",
+                registry.len(),
+                unread.len()
+            )
+        }
+        None => format!(
+            "{} not found; nothing checked",
+            prototypes_info::REGISTRY_PATH
+        ),
+    };
+
     // Print summary
     let stats = db.stats()?;
     println!("\nExtraction complete!");
@@ -571,6 +618,7 @@ fn main() -> Result<()> {
     println!("    Conquest objectives: {}", stats.conquest_objectives);
     println!();
     println!("  Strings: {}", stats.strings);
+    println!("  Registry: {registry_line}");
     if args.icons {
         println!();
         println!("  Icons: {} (deduplicated)", total_icons);
@@ -660,12 +708,17 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
         return false;
     }
 
+    // When --unfiltered, keep every kind and let ETL filter.
+    if unfiltered {
+        return true;
+    }
+
     let prefix = match fqn.find('.') {
         Some(pos) => &fqn[..pos],
         None => fqn,
     };
 
-    // Must be a known prefix type (always applied).
+    // Must be a known prefix type.
     // enc/spn/plc are required for quest_npcs population: quest payloads
     // reference NPCs through encounter (enc.*) and spawn (spn.*) intermediaries
     // and through placeable (plc.*) targets. Without these, populate_quest_npcs
@@ -748,7 +801,7 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
         }
     }
 
-    // Skip test, debug, deprecated content (always applied - this is garbage)
+    // Skip test, debug, deprecated content
     for part in &parts {
         if matches!(
             *part,
@@ -762,12 +815,7 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
         return false;
     }
 
-    // When --unfiltered, skip content-based filtering and let ETL handle it
-    if unfiltered {
-        return true;
-    }
-
-    // Content-based filters below (only applied when NOT unfiltered)
+    // Content-based filters below
     // These can be replicated in ETL scripts for finer control
 
     // Skip internal abilities
@@ -886,6 +934,7 @@ fn process_pbuk(
     unfiltered: bool,
     overrides: Option<&icon_overrides::IconOverrides>,
     versioned_seen: &mut HashMap<String, u64>,
+    dropped: &mut HashMap<String, &'static str>,
 ) -> Result<usize> {
     let objects = pbuk::parse(data)?;
     let mut count = 0;
@@ -906,13 +955,15 @@ fn process_pbuk(
         }
 
         let game_obj = schema::GameObject::from_gom_with_overrides(&obj, overrides);
-        if !accept_variant(versioned_seen, &fqn, &game_obj) {
+        if !accept_variant(versioned_seen, &fqn, &game_obj) && !unfiltered {
+            dropped.insert(game_obj.guid.clone(), prototypes_info::REASON_SUPERSEDED);
             continue;
         }
         if should_extract_object(&game_obj.fqn, unfiltered) && !game_obj.fqn.is_empty() {
             db.insert_object(&game_obj)?;
             count += 1;
         } else {
+            dropped.insert(game_obj.guid.clone(), prototypes_info::REASON_FILTERED);
             capture_string_ref(db, &game_obj);
         }
     }
@@ -992,6 +1043,25 @@ mod tests {
                 "{fqn} must be accepted by the post-#169 whitelist"
             );
         }
+    }
+
+    #[test]
+    fn unfiltered_keeps_every_kind() {
+        for fqn in [
+            "dec.stronghold.trophy.operation.tfb.tfb_dread_guad_nm",
+            "pth.location.open_worlds.class.trooper.chapter_2.battle_at_t",
+            "phs.tat_knight_shock_drum_facility",
+            "epp.npc.creature.klorslug.bite",
+            "npp.test.trader.newnpc",
+            "abl.npc.generic.melee",
+        ] {
+            assert!(should_extract_object(fqn, true), "{fqn} dropped");
+        }
+        assert!(!should_extract_object(
+            "dec.stronghold.trophy.operation.tfb.tfb_dread_guad_nm",
+            false
+        ));
+        assert!(!should_extract_object("abl.foo.bar/7/0", true));
     }
 
     #[test]
