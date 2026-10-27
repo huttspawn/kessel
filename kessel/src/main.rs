@@ -117,7 +117,7 @@ fn main() -> Result<()> {
         let (ph, sh) = hash::hashlittle2(prototypes_info::REGISTRY_PATH.as_bytes(), 0, 0);
         hash::combine_hash(ph, sh)
     };
-    let mut registry: Option<Vec<prototypes_info::PrototypeInfo>> = None;
+    let mut registry: Option<Result<Vec<prototypes_info::PrototypeInfo>>> = None;
     // GUID -> why, for objects read and then left out of `objects`.
     let mut dropped: HashMap<String, &'static str> = HashMap::new();
 
@@ -247,7 +247,7 @@ fn main() -> Result<()> {
                     prot_hashes.insert(entry.filename_hash);
                 }
                 if entry.filename_hash == registry_hash {
-                    registry = prototypes_info::parse(&data).ok();
+                    registry = Some(prototypes_info::parse(&data));
                 }
 
                 // Process STB files
@@ -549,7 +549,11 @@ fn main() -> Result<()> {
 
     // Check the extraction against the prototype registry (#373).
     let registry_line = match &registry {
-        Some(registry) => {
+        Some(Err(e)) => format!(
+            "{} found but not readable ({e:#}); nothing checked",
+            prototypes_info::REGISTRY_PATH
+        ),
+        Some(Ok(registry)) => {
             let unread = prototypes_info::unread(registry, &db.object_guids()?, &dropped);
             db.insert_unread_objects(&unread)?;
             format!(
