@@ -5,6 +5,7 @@
 // without each file re-listing imports.
 pub(crate) use anyhow::{Context, Result};
 pub(crate) use rusqlite::{params, Connection, Transaction};
+use std::collections::HashSet;
 pub(crate) use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -651,6 +652,36 @@ impl Database {
         b64.and_then(|b| BASE64.decode(b).ok())
     }
 
+    /// Every extracted GUID: the `objects` rows, plus the singletons, whose
+    /// GUID is the first 8 header bytes (little-endian) of `header_hex`.
+    pub fn object_guids(&self) -> Result<HashSet<String>> {
+        self.flush()?;
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT DISTINCT guid FROM objects")?;
+        let mut guids: HashSet<String> = stmt
+            .query_map([], |r| r.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut stmt = conn.prepare("SELECT header_hex FROM singletons")?;
+        let headers = stmt
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        guids.extend(headers.iter().filter_map(|h| singleton_guid(h)));
+        Ok(guids)
+    }
+
+    /// Record the registered objects the extraction does not hold (#373).
+    pub fn insert_unread_objects(&self, unread: &[crate::prototypes_info::Unread]) -> Result<()> {
+        self.with_tx(|tx| {
+            let mut stmt = tx.prepare(
+                "INSERT OR REPLACE INTO unread_objects (guid, flag, reason) VALUES (?1, ?2, ?3)",
+            )?;
+            for u in unread {
+                stmt.execute(params![u.guid, u.flag, u.reason])?;
+            }
+            Ok(())
+        })
+    }
+
     pub fn stats(&self) -> Result<Stats> {
         // Ensure all pending data is flushed before counting
         self.flush()?;
@@ -930,10 +961,32 @@ pub(crate) const DISCIPLINE_COMBAT_STYLE_MAP: &[(&str, &str, &str)] = &[
 
 const ABILITY_PROP_SENTINEL: [u8; 6] = [0x01, 0x04, 0x00, 0x00, 0x80, 0xBF];
 
+/// A singleton's GUID from its stored `header_hex`: the header's first 8
+/// bytes, little-endian, as 16 upper-case hex digits (the `objects.guid` form).
+fn singleton_guid(header_hex: &str) -> Option<String> {
+    let bytes: [u8; 8] = (0..8)
+        .map(|i| u8::from_str_radix(header_hex.get(i * 2..i * 2 + 2)?, 16).ok())
+        .collect::<Option<Vec<u8>>>()?
+        .try_into()
+        .ok()?;
+    Some(format!("{:016X}", u64::from_le_bytes(bytes)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::testutil::*;
+
+    #[test]
+    fn singleton_guid_reads_the_header_little_endian() {
+        // sysInputBindingsRegistryPrototype's header, live 7.x bucket 561.bkt.
+        assert_eq!(
+            singleton_guid("b03e566b260800e00f005500").as_deref(),
+            Some("E00008266B563EB0")
+        );
+        assert_eq!(singleton_guid("b03e56"), None);
+        assert_eq!(singleton_guid("zz3e566b260800e0"), None);
+    }
 
     #[test]
     fn prepare_string_preserves_template_when_clean_changes_text() {

@@ -297,6 +297,14 @@ pub(crate) fn create_core_tables(tx: &Transaction) -> Result<()> {
             );
             CREATE INDEX IF NOT EXISTS idx_singletons_size ON singletons(payload_size DESC);
 
+            -- Registered objects not in the extraction (#373): one row per
+            -- prototypes.info GUID absent from `objects`, with why.
+            CREATE TABLE IF NOT EXISTS unread_objects (
+                guid    TEXT PRIMARY KEY,
+                flag    INTEGER NOT NULL,
+                reason  TEXT NOT NULL
+            );
+
 
 
 

@@ -87,6 +87,50 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<PrototypeInfo>> {
     Ok(records)
 }
 
+/// Archive path of the registry; kessel finds the entry by this path's hash,
+/// so a stale hash dictionary does not hide it.
+pub const REGISTRY_PATH: &str = "/resources/systemgenerated/prototypes.info";
+
+/// Why: the object was read and the content filter excluded it.
+pub const REASON_FILTERED: &str = "read; excluded by the content filter";
+/// Why: another object with the same FQN was kept in its place.
+pub const REASON_SUPERSEDED: &str = "read; another object with the same FQN was kept";
+/// Why: no file kessel reads yielded an object with this GUID.
+pub const REASON_NOT_FOUND: &str = "not found in any file kessel reads";
+
+/// A registered object the extraction does not hold, and why.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Unread {
+    /// The registered content GUID.
+    pub guid: String,
+    /// The record's routing flag.
+    pub flag: u8,
+    /// Why it is not in the extraction.
+    pub reason: &'static str,
+}
+
+/// Every registered object absent from `extracted`. `dropped` holds the
+/// reason for objects kessel read and then left out; any other absent GUID
+/// was not found.
+pub fn unread(
+    registry: &[PrototypeInfo],
+    extracted: &std::collections::HashSet<String>,
+    dropped: &HashMap<String, &'static str>,
+) -> Vec<Unread> {
+    registry
+        .iter()
+        .filter(|r| !extracted.contains(&r.content_guid))
+        .map(|r| Unread {
+            guid: r.content_guid.clone(),
+            flag: r.flag,
+            reason: dropped
+                .get(&r.content_guid)
+                .copied()
+                .unwrap_or(REASON_NOT_FOUND),
+        })
+        .collect()
+}
+
 /// Build a content_guid -> flag lookup map from a parsed record list.
 #[allow(dead_code)]
 pub fn build_guid_to_flag_map(records: &[PrototypeInfo]) -> HashMap<String, u8> {
@@ -188,6 +232,35 @@ mod tests {
         assert_eq!(map.len(), 2);
         assert_eq!(map.get("E00000000208C02E"), Some(&1));
         assert_eq!(map.get("E000000023ADD96F"), Some(&2));
+    }
+
+    #[test]
+    fn unread_reports_each_absent_registered_object_and_why() {
+        let registry = parse(&build_pinf(&[
+            ("E00000000208C02E", 3),
+            ("E000000023ADD96F", 2),
+            ("E000000056C4ED0B", 1),
+        ]))
+        .unwrap();
+        let extracted = ["E00000000208C02E".to_string()].into_iter().collect();
+        let dropped = [("E000000023ADD96F".to_string(), REASON_FILTERED)]
+            .into_iter()
+            .collect();
+        assert_eq!(
+            unread(&registry, &extracted, &dropped),
+            vec![
+                Unread {
+                    guid: "E000000023ADD96F".into(),
+                    flag: 2,
+                    reason: REASON_FILTERED,
+                },
+                Unread {
+                    guid: "E000000056C4ED0B".into(),
+                    flag: 1,
+                    reason: REASON_NOT_FOUND,
+                },
+            ]
+        );
     }
 
     #[test]
