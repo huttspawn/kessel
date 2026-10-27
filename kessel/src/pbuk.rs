@@ -523,8 +523,24 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
         i += 1;
     }
 
+    // The scanning passes can land inside another object's payload, where
+    // readable text (`chr.…`, `pkg.movement…`) after binary bytes passes the
+    // printable check on its first bytes. No real object name holds a byte
+    // outside printable ASCII or starts with anything but a letter or digit.
+    objects.retain(|obj| is_object_name(&obj.fqn));
+
     tracing::debug!("Parsed {} GOM objects", objects.len());
     Ok(objects)
+}
+
+/// True for a name a real GOM object can carry: printable ASCII throughout,
+/// starting with a letter or digit (`dynamic.garmenthue.…tier-x-0_h33_p`,
+/// `sysInputBindingsRegistryPrototype`).
+fn is_object_name(fqn: &str) -> bool {
+    fqn.as_bytes()
+        .first()
+        .is_some_and(u8::is_ascii_alphanumeric)
+        && fqn.bytes().all(|b| (0x20..0x7f).contains(&b))
 }
 
 /// Parse a single object given its exact bytes
@@ -867,6 +883,33 @@ mod tests {
         let mut flagged = UNCOMPRESSED_IPP;
         flagged[8] = 0x0F;
         assert_eq!(uncompressed_payload(&flagged, 0), None);
+    }
+
+    #[test]
+    fn is_object_name_accepts_real_names_and_rejects_payload_bytes() {
+        assert!(is_object_name("ipp.mtx.season5.kreia.waist"));
+        assert!(is_object_name(
+            "dynamic.garmenthue.garmenthue_tier-x-0_h33_p"
+        ));
+        assert!(is_object_name("sysInputBindingsRegistryPrototype"));
+        assert!(is_object_name("2chr"));
+        assert!(!is_object_name("2\u{5}\u{6}\u{10}chr.darth_kallig"));
+        assert!(!is_object_name(".\u{fffd}\u{3}"));
+        assert!(!is_object_name(""));
+    }
+
+    #[test]
+    fn dblb_drops_an_object_whose_name_holds_payload_bytes() {
+        // The real uncompressed object with a control byte in its name, as a
+        // scan that lands inside a payload sees it.
+        let mut junk = UNCOMPRESSED_IPP;
+        junk[46] = 0x05;
+        let mut dblb = DBLB_MAGIC.to_vec();
+        dblb.extend_from_slice(&2u32.to_le_bytes());
+        dblb.extend_from_slice(&170u32.to_le_bytes());
+        dblb.extend_from_slice(&[0; 4]);
+        dblb.extend_from_slice(&junk);
+        assert!(parse_dblb_direct(&dblb).unwrap().is_empty());
     }
 
     #[test]
