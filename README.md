@@ -26,7 +26,7 @@ cargo build --release
   --icons-output ./icons
 ```
 
-The hash dictionary auto-downloads from Jedipedia on first run. See [docs/cli.md](docs/cli.md) for all flags.
+No hash dictionary is needed: kessel finds every file it reads by its content or a path derived from extracted data. See [docs/cli.md](docs/cli.md) for all flags.
 
 ## Data pipeline
 
@@ -40,7 +40,7 @@ flowchart LR
     DB[("SQLite\nspice.sqlite")]
     ICONS["WebP icons\n{game_id}.webp"]
 
-    TOR -->|"hash dict resolves\n64-bit file hashes"| PBUK
+    TOR -->|"content magic\nidentifies entries"| PBUK
     PBUK -->|"zstd decompress\nDRLB blocks"| GOM
     TOR --> STB
     TOR --> DDS
@@ -96,7 +96,7 @@ kessel/
     stb.rs              # STB string table parser
     db.rs               # SQLite (batch inserts, grammar application, derived tables)
     dds.rs              # DDS to WebP conversion
-    hash.rs             # Hash dictionary and game_id computation
+    hash.rs             # Path hashing, optional hash dictionary, game_id
     grammar.rs          # Template/literal/cleanup rule processor
     icon_overrides.rs   # Compile-time FQN → icon_name override map
     gifts.rs            # Gift item FQN classification

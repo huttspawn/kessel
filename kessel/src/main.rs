@@ -2,8 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::collections::{HashMap, HashSet};
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 mod buckets_info;
@@ -38,7 +37,9 @@ struct Args {
     #[arg(short, long, default_value = "raw.sqlite")]
     output: PathBuf,
 
-    /// Hash dictionary file (hashes_filename.txt from Jedipedia)
+    /// Optional hash dictionary file (hashes_filename.txt from Jedipedia).
+    /// Extraction does not need it; when given, it adds the `.fxspec` paths
+    /// no appearance ref names
     #[arg(short = 'H', long)]
     hashes: Option<PathBuf>,
 
@@ -97,20 +98,15 @@ fn main() -> Result<()> {
         }
     };
 
-    // Load hash dictionary (auto-download from Jedipedia if not provided)
+    // The hash dictionary is optional (#295): extraction finds every entry it
+    // reads by content magic or a derived path. A supplied one only adds the
+    // `.fxspec` paths no ref names.
     let mut hash_dict = hash::HashDictionary::new();
-    let mut bucket_hashes: HashSet<u64> = HashSet::new();
-
-    let hash_path = resolve_hashes_path(&args)?;
-    if let Some(hash_path) = &hash_path {
-        hash_dict.load(hash_path)?;
-
-        // Find all bucket file hashes
-        for (hash, path) in hash_dict.paths_matching("/buckets/") {
-            if path.ends_with(".bkt") {
-                bucket_hashes.insert(hash);
-            }
+    if let Some(ref hash_path) = args.hashes {
+        if !hash_path.exists() {
+            anyhow::bail!("Hash file not found: {}", hash_path.display());
         }
+        hash_dict.load(hash_path)?;
     }
 
     // The prototype registry, found by its known path's hash.
@@ -225,7 +221,6 @@ fn main() -> Result<()> {
                     }
                 }
 
-                let is_bucket = bucket_hashes.contains(&entry.filename_hash);
                 let stb_path = stb_paths.get(&entry.filename_hash);
 
                 let data = match archive.read_entry(entry) {
@@ -265,63 +260,7 @@ fn main() -> Result<()> {
                         }
                     }
                 }
-                // Process bucket files (PBUK format)
-                else if is_bucket {
-                    if pbuk::is_pbuk(&data) {
-                        if let Ok(count) = process_pbuk(
-                            &data,
-                            &db,
-                            args.unfiltered,
-                            icon_overrides.as_ref(),
-                            &mut versioned_seen,
-                            &mut dropped,
-                        ) {
-                            total_objects += count;
-                        }
-                    } else if pbuk::is_dblb(&data) {
-                        if let Ok(objects) = pbuk::parse_dblb_direct(&data) {
-                            for mut obj in objects {
-                                let Some(fqn) = normalize_fqn(&obj.fqn) else {
-                                    continue;
-                                };
-                                obj.fqn = fqn.clone();
-                                if is_singleton_fqn(&fqn) {
-                                    if db.insert_singleton(&obj).is_ok() {
-                                        total_objects += 1;
-                                    }
-                                    continue;
-                                }
-                                let game_obj = schema::GameObject::from_gom_with_overrides(
-                                    &obj,
-                                    icon_overrides.as_ref(),
-                                );
-                                if !accept_variant(&mut versioned_seen, &fqn, &game_obj)
-                                    && !args.unfiltered
-                                {
-                                    dropped.insert(
-                                        game_obj.guid.clone(),
-                                        prototypes_info::REASON_SUPERSEDED,
-                                    );
-                                    continue;
-                                }
-                                if should_extract_object(&game_obj.fqn, args.unfiltered)
-                                    && !game_obj.fqn.is_empty()
-                                {
-                                    if db.insert_object(&game_obj).is_ok() {
-                                        total_objects += 1;
-                                    }
-                                } else {
-                                    dropped.insert(
-                                        game_obj.guid.clone(),
-                                        prototypes_info::REASON_FILTERED,
-                                    );
-                                    capture_string_ref(&db, &game_obj);
-                                }
-                            }
-                        }
-                    }
-                }
-                // Process loose PBUK/DBLB files
+                // Process PBUK/DBLB files, found by their magic
                 else if pbuk::is_pbuk(&data) {
                     if let Ok(count) = process_pbuk(
                         &data,
@@ -668,58 +607,6 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Resolve the hashes file path: use --hashes if provided, otherwise look for
-/// hashes_filename.txt next to the output file, and download from Jedipedia if missing.
-fn resolve_hashes_path(args: &Args) -> Result<Option<PathBuf>> {
-    // Explicit path provided
-    if let Some(ref path) = args.hashes {
-        if path.exists() {
-            return Ok(Some(path.clone()));
-        }
-        anyhow::bail!("Hash file not found: {}", path.display());
-    }
-
-    // Check default location: same directory as output
-    let default_path = args
-        .output
-        .parent()
-        .unwrap_or(Path::new("."))
-        .join("hashes_filename.txt");
-
-    if default_path.exists() {
-        println!("Using hash dictionary: {}", default_path.display());
-        return Ok(Some(default_path));
-    }
-
-    // Download from Jedipedia
-    println!("Downloading hash dictionary from Jedipedia...");
-    let url = "https://swtor.jedipedia.net/ajax/getFileNames.php?env=live&format=easymyp";
-
-    let response = ureq::get(url)
-        .call()
-        .map_err(|e| anyhow::anyhow!("Failed to download hashes: {}", e))?;
-
-    let mut body = Vec::new();
-    response
-        .into_reader()
-        .read_to_end(&mut body)
-        .map_err(|e| anyhow::anyhow!("Failed to read response: {}", e))?;
-
-    // Ensure parent directory exists
-    if let Some(parent) = default_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-
-    std::fs::write(&default_path, &body)?;
-    println!(
-        "Saved hash dictionary ({:.1} MB) to {}",
-        body.len() as f64 / 1_048_576.0,
-        default_path.display()
-    );
-
-    Ok(Some(default_path))
 }
 
 /// Strip `/major/minor` version suffix from a GOM FQN, or return as-is if unversioned.
