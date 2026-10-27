@@ -17,7 +17,7 @@ kessel --input <DIR> --output <PATH> [OPTIONS]
 
 | Flag | Description |
 |------|-------------|
-| `-H, --hashes <FILE>` | Hash dictionary path. Auto-downloads from Jedipedia if not provided. The downloaded file is saved alongside the input directory as `hashes_filename.txt`. |
+| `-H, --hashes <FILE>` | Optional hash dictionary (`hashes_filename.txt` from Jedipedia). Extraction does not need it and nothing is downloaded; when given, it adds the `.fxspec` paths no appearance ref names. |
 | `--icons` | Enable DDS-to-WebP icon extraction. |
 | `--icons-output <DIR>` | Icon output directory (default: `./icons`). Has no effect without `--icons`. |
 | `--unfiltered` | Skip content filters. See [Filtering](#filtering) below. |
@@ -27,7 +27,7 @@ kessel --input <DIR> --output <PATH> [OPTIONS]
 ## Examples
 
 ```bash
-# Minimal — hash dictionary auto-downloads
+# Minimal — no hash dictionary needed
 ./target/release/kessel -i ~/swtor/Assets -o spice.sqlite
 
 # With icon extraction
@@ -37,7 +37,7 @@ kessel --input <DIR> --output <PATH> [OPTIONS]
   --icons \
   --icons-output ./icons
 
-# Explicit hash dictionary
+# Optional hash dictionary (adds unreferenced .fxspec paths)
 ./target/release/kessel \
   -i ~/swtor/Assets \
   -o spice.sqlite \

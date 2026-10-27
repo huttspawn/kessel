@@ -38,7 +38,6 @@ base64 = "0.22"
 sha2 = "0.10"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-ureq = "2.9"
 indicatif = "0.17"
 rayon = "1.8"
 image = { version = "0.25", features = ["webp"] }
