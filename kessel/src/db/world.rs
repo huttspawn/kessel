@@ -438,7 +438,10 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             -- archive filename hash (#295); fqn is NULL when no path names
             -- the file. node_classes is a JSON array of the class names
             -- listed in the <classes> block; raw_xml preserves the full XML
-            -- for per-node-instance consumers.
+            -- for per-node-instance consumers. Dropped first: the pass
+            -- rewrites it whole, and a pre-#295 output file holds the
+            -- old fqn-keyed table.
+            DROP TABLE IF EXISTS fx_specs;
             CREATE TABLE IF NOT EXISTS fx_specs (
                 file_hash           TEXT PRIMARY KEY,
                 fqn                 TEXT UNIQUE,

@@ -7,6 +7,12 @@ Versions follow [Cargo semver](https://doc.rust-lang.org/cargo/reference/semver.
 
 ## [Unreleased]
 
+### Changed
+
+- **No hash dictionary needed (#295)** -- extraction no longer downloads the Jedipedia dictionary or picks up a `hashes_filename.txt` next to the output; `-H` is optional and only adds names. A run with no dictionary matches a dictionary-backed run in every table.
+
+- **`fx_specs` keyed by `file_hash` (#295)** -- fx specs are found by content, so the 14,551 no appearance spec names are kept with a NULL `fqn`. The key is now `file_hash` (the archive filename hash as `{:016X}`); `fqn` is `UNIQUE` and nullable. Joins on `fqn` still work.
+
 ### Added
 
 - **Ventures (8.0) and achievements** -- seven new tables. `achievements` (name, description, task count from `str.ach`), `achievement_tasks` (the per-objective lines, `str.ach` id1 256+), and `achievement_refs` (the payload's GUID ref graph in first-seen order: gating conditions, target quests, the exact NPC templates a kill task counts including dynamic-event variants, and child achievements). `ventures`, `venture_stages`, `venture_categories`, `venture_objectives` from the `lgcVentures_Prototype` singleton: type 6 = Classic (Veteran, 5 stages x Story/Exploration/Combat/General), 9 = Expert (Master, 8 stages x Exploration/Heroic Missions/High Value Targets plus expansion-era groups), 11 = the Basilisk Prototype companion venture; class index 1-8 = jedi_knight, jedi_consular, smuggler, trooper, sith_warrior, sith_inquisitor, agent, bounty_hunter. `achievement_reward_items` from `achRewardsTable_Prototype` (reward id -> points + item grants; the achievement -> reward-id link is not decoded yet). Venture/stage/category names are string refs packed as `(id2 << 32) | id1` into `gui/achievementcategories.stb`, now added to the STB allowlist. 8.0 PTS: 17 ventures (8 Classic, 8 Expert, Basilisk), 115 stages, 1,544 objectives, every objective resolving to a named achievement; 9,438 achievements, 26,359 refs. 7.9.1d live: Basilisk only (11 stages, 140 objectives). Field ids are identical across both builds. Classic/Expert gear (`itm.gen.ventures.*`, role/level-scaled tiers) is not referenced by any client object or singleton, even unfiltered: it is selected server-side.
