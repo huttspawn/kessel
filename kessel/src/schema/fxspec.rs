@@ -33,6 +33,26 @@ fn class_re() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r"<class>([^<]+)</class>").unwrap())
 }
 
+/// `<nodeWClasses>` and `<class>_FxSpec</class>`, in the two encodings
+/// `.fxspec` files ship in: UTF-16-LE (nearly all) and UTF-8 (a few).
+const MARKERS: [(&[u8], &[u8]); 2] = [
+    (
+        b"<\0n\0o\0d\0e\0W\0C\0l\0a\0s\0s\0e\0s\0>\0",
+        b"<\0c\0l\0a\0s\0s\0>\0_\0F\0x\0S\0p\0e\0c\0<\0/\0c\0l\0a\0s\0s\0>\0",
+    ),
+    (b"<nodeWClasses>", b"<class>_FxSpec</class>"),
+];
+
+/// Dict-free FX-spec sniff (#295): opens with `<nodeWClasses>` (UTF-16-LE
+/// BOM optional) and lists the `_FxSpec` class. Full decode stays in
+/// `decode_fxspec`.
+pub fn is_fxspec(data: &[u8]) -> bool {
+    let body = data.strip_prefix(&[0xFF, 0xFE]).unwrap_or(data);
+    MARKERS.iter().any(|(root, class)| {
+        body.starts_with(root) && body.windows(class.len()).any(|w| w == *class)
+    })
+}
+
 /// Decode a UTF-16-LE FX-spec XML file. `fqn` is supplied by the caller
 /// because the XML body itself doesn't embed one.
 pub fn decode_fxspec(bytes: &[u8], fqn: String) -> Result<FxSpec> {
@@ -129,6 +149,19 @@ mod tests {
         let bytes = synth_fxspec_le(xml);
         let spec = decode_fxspec(&bytes, "x".into()).unwrap();
         assert_eq!(spec.node_classes, vec!["_FxSpec"]);
+    }
+
+    #[test]
+    fn is_fxspec_matches_fxspec_content_only() {
+        let xml = r"<nodeWClasses><classes><class>_FxSpec</class></classes></nodeWClasses>";
+        assert!(is_fxspec(&synth_fxspec_le(xml)));
+        let mut bom = vec![0xFFu8, 0xFE];
+        bom.extend(synth_fxspec_le(xml));
+        assert!(is_fxspec(&bom));
+        let other = r"<nodeWClasses><classes><class>_FxSound</class></classes></nodeWClasses>";
+        assert!(!is_fxspec(&synth_fxspec_le(other)));
+        assert!(is_fxspec(xml.as_bytes()));
+        assert!(!is_fxspec(other.as_bytes()));
     }
 
     #[test]

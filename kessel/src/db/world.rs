@@ -64,12 +64,12 @@ impl Database {
         Ok(written)
     }
 
-    /// Populate `fx_specs` from every `.fxspec` file an
-    /// `appearance_specs.fx_spec_refs` entry points at (#183), with the paths
-    /// derived from those refs, not from the hash dictionary (#294). Runs
-    /// after `populate_appearance_specs`. A supplied hash dictionary only adds
-    /// the `.fxspec` paths no ref names (FR-KESSEL-024); with an empty one the
-    /// derived paths alone are read.
+    /// Populate `fx_specs` from every FX-spec-content entry the main sweep
+    /// found (#183, #295). Names come from the paths derived from
+    /// `appearance_specs.fx_spec_refs` (#294), so this runs after
+    /// `populate_appearance_specs`. A supplied hash dictionary only adds
+    /// names for entries no ref names (FR-KESSEL-024); an entry with no name
+    /// is kept with a NULL `fqn` and its `file_hash`.
     ///
     /// FQN is derived from the resource path between `/fxspec/` and the
     /// trailing `.fxspec`, matching the path-relative keys used by
@@ -77,6 +77,7 @@ impl Database {
     pub fn populate_fx_specs(
         &self,
         tor_dir: &std::path::Path,
+        fxspec_hashes: &std::collections::HashSet<u64>,
         hashes: &crate::hash::HashDictionary,
     ) -> Result<u64> {
         use crate::myp::Archive;
@@ -99,8 +100,8 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let tx = conn.unchecked_transaction()?;
         let mut insert = tx.prepare_cached(
-            "INSERT OR REPLACE INTO fx_specs (fqn, node_classes_json, raw_xml) \
-             VALUES (?1, ?2, ?3)",
+            "INSERT OR REPLACE INTO fx_specs (file_hash, fqn, node_classes_json, raw_xml) \
+             VALUES (?1, ?2, ?3, ?4)",
         )?;
         for tor_path in &tor_files {
             let mut archive = match Archive::open(tor_path) {
@@ -112,22 +113,23 @@ impl Database {
                 Err(_) => continue,
             };
             for entry in &entries {
-                let Some(path) = by_hash.get(&entry.filename_hash) else {
+                if !fxspec_hashes.contains(&entry.filename_hash) {
                     continue;
-                };
-                let Some(fqn) = fxspec_fqn_from_path(path) else {
-                    continue;
-                };
+                }
+                let fqn = by_hash
+                    .get(&entry.filename_hash)
+                    .and_then(|path| fxspec_fqn_from_path(path));
                 let data = match archive.read_entry(entry) {
                     Ok(d) => d,
                     Err(_) => continue,
                 };
-                let spec = match fxspec::decode_fxspec(&data, fqn) {
+                let spec = match fxspec::decode_fxspec(&data, fqn.clone().unwrap_or_default()) {
                     Ok(s) => s,
                     Err(_) => continue,
                 };
                 let classes = serde_json::to_string(&spec.node_classes)?;
-                insert.execute(params![spec.fqn, classes, spec.raw_xml])?;
+                let file_hash = format!("{:016X}", entry.filename_hash);
+                insert.execute(params![file_hash, fqn, classes, spec.raw_xml])?;
                 written += 1;
             }
         }
@@ -432,12 +434,14 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 fx_spec_refs        TEXT,
                 raw_xml             TEXT NOT NULL
             );
-            -- FX specs (#183). One row per .fxspec file. node_classes is a
-            -- JSON array of the class names listed in the <classes> block;
-            -- raw_xml preserves the full XML for per-node-instance
-            -- consumers.
+            -- FX specs (#183). One row per .fxspec file, keyed by its
+            -- archive filename hash (#295); fqn is NULL when no path names
+            -- the file. node_classes is a JSON array of the class names
+            -- listed in the <classes> block; raw_xml preserves the full XML
+            -- for per-node-instance consumers.
             CREATE TABLE IF NOT EXISTS fx_specs (
-                fqn                 TEXT PRIMARY KEY,
+                file_hash           TEXT PRIMARY KEY,
+                fqn                 TEXT UNIQUE,
                 node_classes_json   TEXT NOT NULL,
                 raw_xml             TEXT NOT NULL
             );

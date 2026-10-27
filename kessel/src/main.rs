@@ -163,10 +163,11 @@ fn main() -> Result<()> {
     // dictionary's `/prototypes/` paths, so new-patch prototypes (conversations
     // etc.) are extracted even when the community hash dictionary is stale.
     let mut prot_hashes: HashSet<u64> = HashSet::new();
-    // SCPT- and EPP-content entry hashes, sniffed the same way (#292) so the
-    // scripts and appearance-spec passes need no dictionary paths.
+    // SCPT-, EPP- and FX-spec-content entry hashes, sniffed the same way
+    // (#292, #295) so those passes need no dictionary paths.
     let mut scpt_hashes: HashSet<u64> = HashSet::new();
     let mut epp_hashes: HashSet<u64> = HashSet::new();
+    let mut fxspec_hashes: HashSet<u64> = HashSet::new();
     // Per-FQN best-variant score so far. Many FQNs appear multiple times
     // across archives -- some as canonical objects with full payload, some as
     // stub references. Picking first-seen (the prior HashSet behaviour)
@@ -243,6 +244,8 @@ fn main() -> Result<()> {
                     scpt_hashes.insert(entry.filename_hash);
                 } else if schema::epp::is_epp(&data) {
                     epp_hashes.insert(entry.filename_hash);
+                } else if schema::fxspec::is_fxspec(&data) {
+                    fxspec_hashes.insert(entry.filename_hash);
                 }
                 if entry.filename_hash == registry_hash {
                     registry = Some(prototypes_info::parse(&data));
@@ -505,6 +508,7 @@ fn main() -> Result<()> {
             prot_hashes: &prot_hashes,
             scpt_hashes: &scpt_hashes,
             epp_hashes: &epp_hashes,
+            fxspec_hashes: &fxspec_hashes,
         };
         db::passes::run_passes(&db, &ctx)?
     };

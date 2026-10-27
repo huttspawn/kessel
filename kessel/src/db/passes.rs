@@ -22,6 +22,9 @@ pub struct PassCtx<'a> {
     /// UTF-16-BOM `<Appearance` entry hashes from the same sweep; the
     /// appearance-spec pass gates on it.
     pub epp_hashes: &'a std::collections::HashSet<u64>,
+    /// FX-spec-content entry hashes from the same sweep; the fx-spec pass
+    /// gates on it.
+    pub fxspec_hashes: &'a std::collections::HashSet<u64>,
 }
 
 /// Per-pass counts that the final run summary in main.rs reports.
@@ -312,7 +315,10 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
         db.populate_appearance_specs(ctx.input, ctx.epp_hashes)
     )?;
     println!("  Appearance specs: {}", appearance_count);
-    let fxspec_count = timed!("fx_specs", db.populate_fx_specs(ctx.input, ctx.hash_dict))?;
+    let fxspec_count = timed!(
+        "fx_specs",
+        db.populate_fx_specs(ctx.input, ctx.fxspec_hashes, ctx.hash_dict)
+    )?;
     println!("  FX specs: {}", fxspec_count);
 
     // SCPT scripts (#182). Decrypt every .scpt file in
