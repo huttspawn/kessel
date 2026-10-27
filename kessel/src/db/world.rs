@@ -135,7 +135,8 @@ impl Database {
 
     /// Populate `scripts` with decrypted SCPT bodies (#182).
     ///
-    /// Walks every SCPT-magic entry the main sweep discovered (#292), runs `kessel::scpt::parse_and_decrypt`, and persists the body
+    /// Walks every SCPT-magic entry the main sweep discovered (#292), runs
+    /// `kessel::scpt::parse_and_decrypt`, and persists the body
     /// (base64-encoded) plus the numeric_id from the SCPT header.
     /// Per-script semantic interpretation (combat formulas, GSF physics,
     /// UI script logic) lives downstream of this row; this populator
