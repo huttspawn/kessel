@@ -292,7 +292,9 @@ fn main() -> Result<()> {
                                     &obj,
                                     icon_overrides.as_ref(),
                                 );
-                                if !accept_variant(&mut versioned_seen, &fqn, &game_obj) && !args.unfiltered {
+                                if !accept_variant(&mut versioned_seen, &fqn, &game_obj)
+                                    && !args.unfiltered
+                                {
                                     dropped.insert(
                                         game_obj.guid.clone(),
                                         prototypes_info::REASON_SUPERSEDED,
@@ -345,7 +347,9 @@ fn main() -> Result<()> {
                                 &obj,
                                 icon_overrides.as_ref(),
                             );
-                            if !accept_variant(&mut versioned_seen, &fqn, &game_obj) && !args.unfiltered {
+                            if !accept_variant(&mut versioned_seen, &fqn, &game_obj)
+                                && !args.unfiltered
+                            {
                                 dropped.insert(
                                     game_obj.guid.clone(),
                                     prototypes_info::REASON_SUPERSEDED,

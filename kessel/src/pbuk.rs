@@ -418,7 +418,9 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                 payload: data[start..end].to_vec(),
             });
             offset = (end + 8).next_multiple_of(8);
-        } else if let Some(zstd_start) = payload_start(data, fqn_end) {
+        } else if let Some(zstd_start) =
+            payload_start(data, fqn_end).or_else(|| compressed_start(data, real_offset))
+        {
             // Use ZSTD's frame size detection - O(1) instead of probing
             let zstd_data = &data[zstd_start..];
             if let Ok(frame_size) = zstd_safe::find_frame_compressed_size(zstd_data) {
@@ -490,7 +492,9 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                         continue;
                     }
                     // Need a payload bound. Find next ZSTD magic and frame size.
-                    if let Some(zs) = payload_start(data, fqn_end) {
+                    if let Some(zs) =
+                        payload_start(data, fqn_end).or_else(|| compressed_start(data, obj_start))
+                    {
                         if let Ok(frame_size) = zstd_safe::find_frame_compressed_size(&data[zs..]) {
                             if frame_size > 0 && zs + frame_size <= data.len() {
                                 if let Ok(decoded) = zstd::decode_all(&data[zs..zs + frame_size]) {
@@ -542,7 +546,9 @@ fn parse_object(data: &[u8]) -> Result<GomObject> {
         });
     }
 
-    let zstd_start = payload_start(data, fqn_end).context("No ZSTD magic found")?;
+    let zstd_start = payload_start(data, fqn_end)
+        .or_else(|| compressed_start(data, 0))
+        .context("No ZSTD magic found")?;
 
     // ZSTD payload ends 8 bytes before object end
     if data.len() < 8 {
