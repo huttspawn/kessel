@@ -10,6 +10,7 @@ use std::path::Path;
 /// Filesystem inputs the world passes need (appearance/fx/scripts/nodes/cnv).
 pub struct PassCtx<'a> {
     pub input: &'a Path,
+    /// Optional names for entries kessel cannot derive itself (FR-KESSEL-024).
     pub hash_dict: &'a HashDictionary,
     /// PROT-magic entry hashes self-discovered during the main archive sweep.
     /// The NODE-object pass gates on this set instead of the dictionary's

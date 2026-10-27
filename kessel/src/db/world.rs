@@ -64,7 +64,12 @@ impl Database {
         Ok(written)
     }
 
-    /// Populate `fx_specs` from every `.fxspec` file in the archives (#183).
+    /// Populate `fx_specs` from every `.fxspec` file an
+    /// `appearance_specs.fx_spec_refs` entry points at (#183), with the paths
+    /// derived from those refs, not from the hash dictionary (#294). Runs
+    /// after `populate_appearance_specs`. A supplied hash dictionary only adds
+    /// the `.fxspec` paths no ref names (FR-KESSEL-024); with an empty one the
+    /// derived paths alone are read.
     ///
     /// FQN is derived from the resource path between `/fxspec/` and the
     /// trailing `.fxspec`, matching the path-relative keys used by
@@ -76,15 +81,13 @@ impl Database {
     ) -> Result<u64> {
         use crate::myp::Archive;
         use crate::schema::fxspec;
-        use std::collections::HashSet;
 
-        let fx_hashes: HashSet<(u64, String)> = hashes
-            .paths_matching(".fxspec")
-            .into_iter()
-            .filter(|(_, p)| p.ends_with(".fxspec"))
-            .map(|(h, p)| (h, p.clone()))
-            .collect();
-        let by_hash: std::collections::HashMap<u64, String> = fx_hashes.iter().cloned().collect();
+        let mut by_hash = self.derived_fxspec_paths()?;
+        for (hash, path) in hashes.paths_matching(".fxspec") {
+            if path.ends_with(".fxspec") {
+                by_hash.entry(hash).or_insert_with(|| path.clone());
+            }
+        }
 
         let tor_files: Vec<std::path::PathBuf> = std::fs::read_dir(tor_dir)?
             .filter_map(|e| e.ok())
@@ -131,6 +134,26 @@ impl Database {
         drop(insert);
         tx.commit()?;
         Ok(written)
+    }
+
+    /// Archive filename hash -> `.fxspec` path for every distinct ref in
+    /// `appearance_specs.fx_spec_refs` (#294).
+    fn derived_fxspec_paths(&self) -> Result<std::collections::HashMap<u64, String>> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| anyhow::anyhow!("database mutex poisoned"))?;
+        let mut stmt = conn.prepare("SELECT fx_spec_refs FROM appearance_specs")?;
+        let rows = stmt.query_map([], |row| row.get::<_, Option<String>>(0))?;
+        let mut paths = std::collections::HashMap::new();
+        for json in rows {
+            let Some(json) = json? else { continue };
+            for fx_ref in serde_json::from_str::<Vec<String>>(&json)? {
+                let (hash, path) = fxspec_path_from_ref(&fx_ref);
+                paths.insert(hash, path);
+            }
+        }
+        Ok(paths)
     }
 
     /// Populate `scripts` with decrypted SCPT bodies (#182).
@@ -337,6 +360,20 @@ pub(crate) fn fxspec_fqn_from_path(path: &str) -> Option<String> {
     }
 }
 
+/// The archive filename hash and path of the `.fxspec` an `<fxSpecString>`
+/// ref names: the inverse of `fxspec_fqn_from_path` (#294). Archive paths are
+/// lowercase with forward slashes, while refs are written freely
+/// (`\worlddesign\...`, `/mtx/...`, `Sp_Stealth_cast_01`, `x.fxspec`), so the
+/// ref is normalized to that form before hashing.
+fn fxspec_path_from_ref(fx_ref: &str) -> (u64, String) {
+    let key = fx_ref.trim().to_lowercase().replace('\\', "/");
+    let key = key.trim_start_matches('/');
+    let key = key.strip_suffix(".fxspec").unwrap_or(key);
+    let path = format!("/resources/art/fx/fxspec/{key}.fxspec");
+    let (ph, sh) = crate::hash::hashlittle2(path.as_bytes(), 0, 0);
+    (crate::hash::combine_hash(ph, sh), path)
+}
+
 /// Search a record's bytes for the CC <cc_id> marker, then extract the
 /// trailing length-prefixed `_pla_<planet>` ASCII string. Used by the
 /// conquest events populator.
@@ -425,6 +462,52 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::testutil::temp_db_path;
+
+    #[test]
+    fn fxspec_path_from_ref_matches_archive_hash() {
+        // Real PH/SH from hashes_filename.txt for this path.
+        let fx_ref = "abilities/sith_warrior/sw_massacre_sword_glow";
+        let (hash, path) = fxspec_path_from_ref(fx_ref);
+        assert_eq!(hash, crate::hash::combine_hash(0x7898_6A70, 0x7442_C922));
+        assert_eq!(fxspec_fqn_from_path(&path).as_deref(), Some(fx_ref));
+        for written in [
+            "Abilities/Sith_Warrior/SW_Massacre_Sword_Glow",
+            "\\abilities\\sith_warrior\\sw_massacre_sword_glow",
+            "/abilities/sith_warrior/sw_massacre_sword_glow.fxspec",
+        ] {
+            assert_eq!(fxspec_path_from_ref(written), (hash, path.clone()));
+        }
+    }
+
+    #[test]
+    fn derived_fxspec_paths_reads_distinct_refs() {
+        let path = temp_db_path("derived_fxspecs");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        {
+            let conn = db.conn.lock().unwrap();
+            conn.execute_batch(
+                r#"INSERT INTO appearance_specs (fqn, fx_spec_refs, raw_xml) VALUES
+                     ('epp.a', '["abilities/sith_warrior/sw_massacre_sword_glow","x/y"]', ''),
+                     ('epp.b', '["x/y"]', ''),
+                     ('epp.c', NULL, '');"#,
+            )
+            .unwrap();
+        }
+        let paths = db.derived_fxspec_paths().unwrap();
+        assert_eq!(paths.len(), 2);
+        assert_eq!(
+            paths
+                .get(&crate::hash::combine_hash(0x7898_6A70, 0x7442_C922))
+                .map(String::as_str),
+            Some("/resources/art/fx/fxspec/abilities/sith_warrior/sw_massacre_sword_glow.fxspec")
+        );
+        assert!(paths
+            .values()
+            .any(|p| p == "/resources/art/fx/fxspec/x/y.fxspec"));
+    }
+
     #[test]
     fn find_planet_code_after_cc_reads_pla_suffix() {
         // CC marker + cc_id, then a `_pla_<planet>` run terminated by a
