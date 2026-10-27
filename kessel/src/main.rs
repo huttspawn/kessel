@@ -126,15 +126,7 @@ fn main() -> Result<()> {
     // (no dictionary). Conversation tables come from populate_conversation_strings.
     let stb_paths = stb::known_stb_hashes();
 
-    // Build set of icon file hashes to extract
-    let mut icon_hashes: std::collections::HashMap<u64, String> = std::collections::HashMap::new();
     if args.icons {
-        for (hash, path) in hash_dict.paths_matching("/gfx/icons/") {
-            if path.ends_with(".dds") {
-                icon_hashes.insert(hash, path.to_string());
-            }
-        }
-        // Create icons output directory
         std::fs::create_dir_all(&args.icons_output)?;
     }
 
@@ -185,9 +177,6 @@ fn main() -> Result<()> {
     // skipped, except under --unfiltered, which inserts every variant. A SQL
     // dedup pass after extraction marks the best row per FQN canonical.
     let mut versioned_seen: HashMap<String, u64> = HashMap::new();
-
-    // Buffer icons until objects are processed (need icon_name → game_id mapping)
-    let mut pending_icons: Vec<(Vec<u8>, String)> = Vec::new(); // (dds_data, icon_path)
 
     let sweep_start = Instant::now();
     for tor_path in &tor_files {
@@ -378,13 +367,6 @@ fn main() -> Result<()> {
                         }
                     }
                 }
-
-                // Buffer icon files for processing after objects (need icon_name → game_id mapping)
-                if let Some(icon_path) = icon_hashes.get(&entry.filename_hash) {
-                    if dds::is_dds(&data) {
-                        pending_icons.push((data.clone(), icon_path.clone()));
-                    }
-                }
             }
 
             // Clear entry progress bar
@@ -404,6 +386,35 @@ fn main() -> Result<()> {
 
     // Process buffered icons now that we have the icon_name → (game_id, kind) mapping
     let icons_start = Instant::now();
+    // Icons are found by the hash of the path derived from each object's
+    // icon_name (no dictionary), so they are read after the sweep has stored
+    // the objects.
+    let mut pending_icons: Vec<(Vec<u8>, String)> = Vec::new(); // (dds_data, icon_path)
+    if args.icons {
+        let icon_hashes = db.derived_icon_hashes()?;
+        for tor_path in &tor_files {
+            let Ok(mut archive) = myp::Archive::open(tor_path) else {
+                continue;
+            };
+            let entries: Vec<_> = match archive.entries() {
+                Ok(iter) => iter
+                    .filter(|e| icon_hashes.contains_key(&e.filename_hash))
+                    .cloned()
+                    .collect(),
+                Err(_) => continue,
+            };
+            for entry in entries {
+                let Some(icon_path) = icon_hashes.get(&entry.filename_hash) else {
+                    continue;
+                };
+                if let Ok(data) = archive.read_entry(&entry) {
+                    if dds::is_dds(&data) {
+                        pending_icons.push((data, icon_path.clone()));
+                    }
+                }
+            }
+        }
+    }
     if args.icons && !pending_icons.is_empty() {
         println!("\nProcessing {} icons...", pending_icons.len());
 
