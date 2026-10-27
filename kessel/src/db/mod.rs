@@ -800,9 +800,13 @@ impl Database {
     }
 
     /// Archive filename hash -> icon path for every distinct `objects.icon_name`,
-    /// derived from the path convention instead of the hash dictionary.
+    /// derived from the path convention instead of the hash dictionary. The
+    /// FQN-fallback names (objects with no icon_name) are included.
     pub fn derived_icon_hashes(&self) -> Result<std::collections::HashMap<u64, String>> {
-        self.flush()?;
+        let mut hashes = std::collections::HashMap::new();
+        for name in self.get_fqn_fallback_icons()?.keys() {
+            hashes.extend(derive_icon_paths(name));
+        }
 
         let conn = self
             .conn
@@ -812,8 +816,6 @@ impl Database {
             "SELECT DISTINCT icon_name FROM objects WHERE icon_name IS NOT NULL AND icon_name <> ''",
         )?;
         let names = stmt.query_map([], |row| row.get::<_, String>(0))?;
-
-        let mut hashes = std::collections::HashMap::new();
         for name in names {
             hashes.extend(derive_icon_paths(&name?));
         }
@@ -1044,6 +1046,8 @@ mod tests {
         insert_obj(&db, "g1", "abl.a", "Ability");
         insert_obj(&db, "g2", "abl.b", "Ability");
         insert_obj(&db, "g3", "abl.c", "Ability");
+        // No icon_name: found through the FQN fallback.
+        insert_obj(&db, "g4", "tal.legacy.perk.companion_gift_2", "Talent");
         {
             let conn = db.conn.lock().unwrap();
             conn.execute(
@@ -1055,8 +1059,11 @@ mod tests {
                 .unwrap();
         }
         let hashes = db.derived_icon_hashes().unwrap();
-        // One name; as-stored and lowercased coincide.
-        assert_eq!(hashes.len(), 1);
+        // Two names; as-stored and lowercased coincide for each.
+        assert_eq!(hashes.len(), 2);
+        assert!(hashes
+            .values()
+            .any(|p| p == "/resources/gfx/icons/legacyofaltruism2.dds"));
         assert_eq!(
             hashes.get(&crate::hash::combine_hash(0x0093_67E0, 0xBBF1_5EBC)),
             Some(&"/resources/gfx/icons/abl_si_sa_cracklingblasts.dds".to_string())
