@@ -36,6 +36,12 @@ const SCPT_HEADER_SIZE: usize = 37;
 const CIPHER_START: u8 = 0x43;
 const CIPHER_STEP: u8 = 11;
 
+/// True when `data` starts with the SCPT magic. The main archive sweep uses
+/// this to self-discover scripts without the hash dictionary (#292).
+pub fn is_scpt(data: &[u8]) -> bool {
+    data.starts_with(&SCPT_MAGIC)
+}
+
 /// SCPT plaintext header (37 bytes, uniform across all known files).
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -108,6 +114,16 @@ pub fn parse_and_decrypt(file_bytes: &[u8]) -> Result<(ScptHeader, Vec<u8>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn is_scpt_matches_magic_only() {
+        assert!(is_scpt(&build_scpt(7, b"x")));
+        assert!(is_scpt(b"SCPT"));
+        assert!(!is_scpt(b"SCP"));
+        assert!(!is_scpt(b"PROT\0\0\0\0"));
+        assert!(!is_scpt(b"xSCPT"));
+        assert!(!is_scpt(b""));
+    }
 
     fn build_scpt(numeric_id: u64, body: &[u8]) -> Vec<u8> {
         let mut buf = Vec::with_capacity(SCPT_HEADER_SIZE + body.len());

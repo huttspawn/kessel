@@ -16,6 +16,11 @@ pub struct PassCtx<'a> {
     /// `/prototypes/` paths, so new-patch prototypes extract even when the
     /// community hash dictionary is stale.
     pub prot_hashes: &'a std::collections::HashSet<u64>,
+    /// SCPT-magic entry hashes from the same sweep; the scripts pass gates on it.
+    pub scpt_hashes: &'a std::collections::HashSet<u64>,
+    /// UTF-16-BOM `<Appearance` entry hashes from the same sweep; the
+    /// appearance-spec pass gates on it.
+    pub epp_hashes: &'a std::collections::HashSet<u64>,
 }
 
 /// Per-pass counts that the final run summary in main.rs reports.
@@ -303,7 +308,7 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     // → fx_specs.fqn (path-relative keys).
     let appearance_count = timed!(
         "appearance_specs",
-        db.populate_appearance_specs(ctx.input, ctx.hash_dict)
+        db.populate_appearance_specs(ctx.input, ctx.epp_hashes)
     )?;
     println!("  Appearance specs: {}", appearance_count);
     let fxspec_count = timed!("fx_specs", db.populate_fx_specs(ctx.input, ctx.hash_dict))?;
@@ -312,7 +317,7 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     // SCPT scripts (#182). Decrypt every .scpt file in
     // /resources/systemgenerated/compilednative/ and persist the body as a
     // base64-encoded blob. Per-script semantic interpretation downstream.
-    let scripts_count = timed!("scripts", db.populate_scripts(ctx.input, ctx.hash_dict))?;
+    let scripts_count = timed!("scripts", db.populate_scripts(ctx.input, ctx.scpt_hashes))?;
     println!("  Scripts: {}", scripts_count);
 
     // NODE-format prototype entities (#175 cnv + #181 non-cnv) AND the
