@@ -62,8 +62,9 @@ struct Args {
     #[arg(long)]
     unknowns: Option<PathBuf>,
 
-    /// Extract every kind without content filtering (filter in ETL instead)
-    /// Only excludes versioned duplicates
+    /// Extract every kind without content filtering (filter in ETL instead).
+    /// Keeps every variant of an FQN; is_canonical marks the best one.
+    /// Only versioned FQNs (`/major/minor`) are left out
     #[arg(long)]
     unfiltered: bool,
 }
@@ -181,8 +182,8 @@ fn main() -> Result<()> {
     // stubs frequently came first in iteration order. Scoring prefers
     // candidates that resolved a string_id, then icon_name, then larger
     // payloads. Better candidates are still inserted; inferior ones are
-    // skipped. A SQL dedup pass after extraction collapses any remaining
-    // multi-GUID FQNs to the best row.
+    // skipped, except under --unfiltered, which inserts every variant. A SQL
+    // dedup pass after extraction marks the best row per FQN canonical.
     let mut versioned_seen: HashMap<String, u64> = HashMap::new();
 
     // Buffer icons until objects are processed (need icon_name → game_id mapping)
@@ -236,7 +237,12 @@ fn main() -> Result<()> {
 
                 let data = match archive.read_entry(entry) {
                     Ok(d) => d,
-                    Err(_) => continue,
+                    Err(e) => {
+                        if entry.filename_hash == registry_hash {
+                            registry = Some(Err(e));
+                        }
+                        continue;
+                    }
                 };
 
                 // Self-discover PROT-magic entries (NODE prototypes) by sniffing

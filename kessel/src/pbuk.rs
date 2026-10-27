@@ -423,7 +423,8 @@ fn parse_object_dblb(data: &[u8]) -> Result<Vec<GomObject>> {
                 header: data[real_offset..real_offset + 42].to_vec(),
                 payload: data[start..end].to_vec(),
             });
-            offset = (end + 8).next_multiple_of(8);
+            // Always move forward, even if a corrupt header gives a small end.
+            offset = (end + 8).next_multiple_of(8).max(offset + 8);
         } else if let Some(zstd_start) =
             payload_start(data, fqn_end).or_else(|| compressed_start(data, real_offset))
         {
