@@ -66,17 +66,28 @@ impl Database {
 
     /// Populate `fx_specs` from every `.fxspec` file an
     /// `appearance_specs.fx_spec_refs` entry points at (#183), with the paths
-    /// derived from those refs instead of the hash dictionary (#294). Runs
-    /// after `populate_appearance_specs`.
+    /// derived from those refs, not from the hash dictionary (#294). Runs
+    /// after `populate_appearance_specs`. A supplied hash dictionary only adds
+    /// the `.fxspec` paths no ref names (FR-KESSEL-024); with an empty one the
+    /// derived paths alone are read.
     ///
     /// FQN is derived from the resource path between `/fxspec/` and the
     /// trailing `.fxspec`, matching the path-relative keys used by
     /// `appearance_specs.fx_spec_refs`. node_classes is JSON-encoded.
-    pub fn populate_fx_specs(&self, tor_dir: &std::path::Path) -> Result<u64> {
+    pub fn populate_fx_specs(
+        &self,
+        tor_dir: &std::path::Path,
+        hashes: &crate::hash::HashDictionary,
+    ) -> Result<u64> {
         use crate::myp::Archive;
         use crate::schema::fxspec;
 
-        let by_hash = self.derived_fxspec_paths()?;
+        let mut by_hash = self.derived_fxspec_paths()?;
+        for (hash, path) in hashes.paths_matching(".fxspec") {
+            if path.ends_with(".fxspec") {
+                by_hash.entry(hash).or_insert_with(|| path.clone());
+            }
+        }
 
         let tor_files: Vec<std::path::PathBuf> = std::fs::read_dir(tor_dir)?
             .filter_map(|e| e.ok())

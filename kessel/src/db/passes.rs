@@ -3,12 +3,15 @@
 //! (FK resolution, multi-hop joins) -- the inline comments document why.
 
 use super::Database;
+use crate::hash::HashDictionary;
 use anyhow::Result;
 use std::path::Path;
 
 /// Filesystem inputs the world passes need (appearance/fx/scripts/nodes/cnv).
 pub struct PassCtx<'a> {
     pub input: &'a Path,
+    /// Optional names for entries kessel cannot derive itself (FR-KESSEL-024).
+    pub hash_dict: &'a HashDictionary,
     /// PROT-magic entry hashes self-discovered during the main archive sweep.
     /// The NODE-object pass gates on this set instead of the dictionary's
     /// `/prototypes/` paths, so new-patch prototypes extract even when the
@@ -309,7 +312,7 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
         db.populate_appearance_specs(ctx.input, ctx.epp_hashes)
     )?;
     println!("  Appearance specs: {}", appearance_count);
-    let fxspec_count = timed!("fx_specs", db.populate_fx_specs(ctx.input))?;
+    let fxspec_count = timed!("fx_specs", db.populate_fx_specs(ctx.input, ctx.hash_dict))?;
     println!("  FX specs: {}", fxspec_count);
 
     // SCPT scripts (#182). Decrypt every .scpt file in
