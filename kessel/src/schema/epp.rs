@@ -49,6 +49,18 @@ fn fxspec_string_re() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r"<fxSpecString\b[^>]*>([^<]+)</fxSpecString>").unwrap())
 }
 
+/// `<Appearance` encoded UTF-16-LE, as the EPP root element sits in the file.
+const APPEARANCE_UTF16LE: &[u8] = b"<\0A\0p\0p\0e\0a\0r\0a\0n\0c\0e\0";
+
+/// Cheap EPP sniff for dict-free discovery (#292): a UTF-16-LE BOM followed
+/// somewhere by `<Appearance`. Full decode stays in `decode_epp`.
+pub fn is_epp(data: &[u8]) -> bool {
+    data.starts_with(&[0xFF, 0xFE])
+        && data[2..]
+            .windows(APPEARANCE_UTF16LE.len())
+            .any(|w| w == APPEARANCE_UTF16LE)
+}
+
 /// Decode a UTF-16-LE EPP XML file into a structured AppearanceSpec.
 pub fn decode_epp(bytes: &[u8]) -> Result<AppearanceSpec> {
     let raw_xml = crate::xml_utf16::decode_xml_bom(bytes)?;
@@ -140,6 +152,24 @@ mod tests {
     fn decode_epp_errors_on_missing_root() {
         let bytes = synth_epp("<NotAppearance/>");
         assert!(decode_epp(&bytes).is_err());
+    }
+
+    #[test]
+    fn is_epp_needs_bom_and_appearance_root() {
+        assert!(is_epp(&synth_epp(
+            r#"<?xml version="1.0"?><Appearance fqn="epp.a"/>"#
+        )));
+        // BOM-prefixed XML that is not an appearance (e.g. fxspec).
+        assert!(!is_epp(&synth_epp("<fxSpec/>")));
+        // `<Appearance` without the UTF-16-LE BOM.
+        let mut no_bom = synth_epp("<Appearance fqn=\"epp.a\"/>");
+        no_bom.drain(..2);
+        assert!(!is_epp(&no_bom));
+        // UTF-8 text is not UTF-16-LE.
+        assert!(!is_epp(b"\xFF\xFE<Appearance fqn=\"epp.a\"/>"));
+        assert!(!is_epp(&[0xFF, 0xFE]));
+        assert!(!is_epp(&[0xFF]));
+        assert!(!is_epp(b""));
     }
 
     #[test]

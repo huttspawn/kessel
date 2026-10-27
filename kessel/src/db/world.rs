@@ -3,8 +3,8 @@
 use super::*;
 
 impl Database {
-    /// Populate `appearance_specs` from every `.epp` file in the archives
-    /// (#183).
+    /// Populate `appearance_specs` from every EPP file in the archives
+    /// (#183), gated on the EPP-content hashes the main sweep discovered (#292).
     ///
     /// Each row carries the FQN extracted from the XML root attribute,
     /// JSON-encoded lists of distinct AppearanceAction types and fxSpec
@@ -13,18 +13,10 @@ impl Database {
     pub fn populate_appearance_specs(
         &self,
         tor_dir: &std::path::Path,
-        hashes: &crate::hash::HashDictionary,
+        epp_hashes: &std::collections::HashSet<u64>,
     ) -> Result<u64> {
         use crate::myp::Archive;
         use crate::schema::epp;
-        use std::collections::HashSet;
-
-        let epp_hashes: HashSet<u64> = hashes
-            .paths_matching(".epp")
-            .into_iter()
-            .filter(|(_, p)| p.ends_with(".epp"))
-            .map(|(h, _)| h)
-            .collect();
 
         let tor_files: Vec<std::path::PathBuf> = std::fs::read_dir(tor_dir)?
             .filter_map(|e| e.ok())
@@ -143,8 +135,8 @@ impl Database {
 
     /// Populate `scripts` with decrypted SCPT bodies (#182).
     ///
-    /// Walks every `/resources/systemgenerated/compilednative/<numeric_id>`
-    /// file, runs `kessel::scpt::parse_and_decrypt`, and persists the body
+    /// Walks every SCPT-magic entry the main sweep discovered (#292), runs
+    /// `kessel::scpt::parse_and_decrypt`, and persists the body
     /// (base64-encoded) plus the numeric_id from the SCPT header.
     /// Per-script semantic interpretation (combat formulas, GSF physics,
     /// UI script logic) lives downstream of this row; this populator
@@ -152,18 +144,11 @@ impl Database {
     pub fn populate_scripts(
         &self,
         tor_dir: &std::path::Path,
-        hashes: &crate::hash::HashDictionary,
+        scpt_hashes: &std::collections::HashSet<u64>,
     ) -> Result<u64> {
         use crate::myp::Archive;
         use crate::scpt;
         use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-        use std::collections::HashSet;
-
-        let scpt_hashes: HashSet<u64> = hashes
-            .paths_matching("/resources/systemgenerated/compilednative/")
-            .into_iter()
-            .map(|(h, _)| h)
-            .collect();
 
         let tor_files: Vec<std::path::PathBuf> = std::fs::read_dir(tor_dir)?
             .filter_map(|e| e.ok())
