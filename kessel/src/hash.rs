@@ -117,7 +117,9 @@ impl HashDictionary {
         Ok(count)
     }
 
-    /// Look up filepath by hash
+    /// Look up filepath by hash. Unused by the binary; kessel-discovery tools
+    /// call it through the library.
+    #[allow(dead_code)]
     pub fn get(&self, hash: u64) -> Option<&String> {
         self.hash_to_path.get(&hash)
     }
