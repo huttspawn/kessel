@@ -11,6 +11,7 @@
 //!   - `FF FE`     -> UTF-16-LE
 //!   - `FE FF`     -> UTF-16-BE
 //!   - `EF BB BF`  -> UTF-8 (BOM stripped)
+//!   - `3C 00`     -> UTF-16-LE without a BOM (`<` as one LE unit; #380)
 //!   - none        -> UTF-8 (assumed)
 
 use anyhow::{bail, Result};
@@ -27,6 +28,7 @@ pub fn decode_xml_bom(bytes: &[u8]) -> Result<String> {
         (0xFF, 0xFE) => (Encoding::Utf16Le, &bytes[2..]),
         (0xFE, 0xFF) => (Encoding::Utf16Be, &bytes[2..]),
         (0xEF, 0xBB) if bytes.len() >= 3 && bytes[2] == 0xBF => (Encoding::Utf8, &bytes[3..]),
+        (0x3C, 0x00) => (Encoding::Utf16Le, bytes),
         _ => (Encoding::Utf8, bytes),
     };
 
@@ -121,6 +123,12 @@ mod tests {
     fn decodes_utf8_without_bom() {
         let bytes = b"<Hello/>";
         assert_eq!(decode_xml_bom(bytes).expect("decode"), "<Hello/>");
+    }
+
+    #[test]
+    fn decodes_utf16_le_without_bom() {
+        let bytes = encode_utf16_le("<Hello/>");
+        assert_eq!(decode_xml_bom(&bytes[2..]).expect("decode"), "<Hello/>");
     }
 
     #[test]

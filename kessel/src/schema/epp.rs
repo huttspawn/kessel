@@ -52,13 +52,17 @@ fn fxspec_string_re() -> &'static Regex {
 /// `<Appearance` encoded UTF-16-LE, as the EPP root element sits in the file.
 const APPEARANCE_UTF16LE: &[u8] = b"<\0A\0p\0p\0e\0a\0r\0a\0n\0c\0e\0";
 
-/// Cheap EPP sniff for dict-free discovery (#292): a UTF-16-LE BOM followed
-/// somewhere by `<Appearance`. Full decode stays in `decode_epp`.
+/// Cheap EPP sniff for dict-free discovery (#292): UTF-16-LE, with the
+/// `FF FE` BOM or opening on `<` without one (#380), and `<Appearance`
+/// somewhere in it. Full decode stays in `decode_epp`.
 pub fn is_epp(data: &[u8]) -> bool {
-    data.starts_with(&[0xFF, 0xFE])
-        && data[2..]
-            .windows(APPEARANCE_UTF16LE.len())
-            .any(|w| w == APPEARANCE_UTF16LE)
+    let body = match data {
+        [0xFF, 0xFE, rest @ ..] => rest,
+        [0x3C, 0x00, ..] => data,
+        _ => return false,
+    };
+    body.windows(APPEARANCE_UTF16LE.len())
+        .any(|w| w == APPEARANCE_UTF16LE)
 }
 
 /// Decode a UTF-16-LE EPP XML file into a structured AppearanceSpec.
@@ -155,21 +159,29 @@ mod tests {
     }
 
     #[test]
-    fn is_epp_needs_bom_and_appearance_root() {
+    fn is_epp_needs_utf16le_and_appearance_root() {
         assert!(is_epp(&synth_epp(
             r#"<?xml version="1.0"?><Appearance fqn="epp.a"/>"#
         )));
         // BOM-prefixed XML that is not an appearance (e.g. fxspec).
         assert!(!is_epp(&synth_epp("<fxSpec/>")));
-        // `<Appearance` without the UTF-16-LE BOM.
-        let mut no_bom = synth_epp("<Appearance fqn=\"epp.a\"/>");
-        no_bom.drain(..2);
-        assert!(!is_epp(&no_bom));
+        // BOM-less UTF-16-LE that is not an appearance.
+        assert!(!is_epp(&synth_epp("<fxSpec/>")[2..]));
         // UTF-8 text is not UTF-16-LE.
         assert!(!is_epp(b"\xFF\xFE<Appearance fqn=\"epp.a\"/>"));
         assert!(!is_epp(&[0xFF, 0xFE]));
         assert!(!is_epp(&[0xFF]));
         assert!(!is_epp(b""));
+    }
+
+    /// #380: nine live `.epp` files are UTF-16-LE with no byte-order mark.
+    #[test]
+    fn epp_without_bom_is_sniffed_and_decoded() {
+        let bom = synth_epp(r#"<Appearance fqn="epp.agent.stealth.loop" GUID="1"/>"#);
+        let no_bom = &bom[2..];
+        assert!(is_epp(no_bom));
+        let spec = decode_epp(no_bom).unwrap();
+        assert_eq!(spec.fqn, "epp.agent.stealth.loop");
     }
 
     #[test]
