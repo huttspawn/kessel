@@ -1,0 +1,71 @@
+--- rannoch-orig/crates/rannoch-store/src/history.rs	2026-11-01 10:54:42
++++ rannoch-v050/crates/rannoch-store/src/history.rs	2026-11-01 10:54:42
+@@ -567,12 +567,6 @@
+             "amendment {id} names {target}, which made no hearing of its own"
+         ))
+     })?;
+-    if made.integer.is_some() {
+-        return Err(Error::Refused(format!(
+-            "amendment {id} names {target}, in a class ordered by an integer key: an amendment \
+-             has no integer key to be known at"
+-        )));
+-    }
+     let point = event.recorded()?;
+     // When the target was recorded, from its own id, as the amendment's point is from the
+     // amendment's; the target's point on its axis (its writer's time, else that record time) is
+@@ -1234,15 +1228,11 @@
+ 
+ /// What a read known at `at` bounds the versions of `class` by, or of a link when `class` is
+ /// `None`: the column on its axis and the bound. A link is read at a time only.
+-pub(crate) fn known_bound(class: Option<&Class>, at: At) -> Result<(&'static str, i64), Error> {
+-    match (class, at) {
+-        (Some(class), at) if class.history == HistoryKey::Integer => {
+-            Ok(("integer", axis(class, at)?))
+-        }
+-        (Some(class), at) => Ok(("point", axis(class, at)?)),
+-        (None, At::Time(time)) => Ok(("point", millis(time))),
+-        (None, At::Key(_)) => Err(Error::Refused(format!(
+-            "a link is read at a time, not at {at:?}"
++pub(crate) fn known_bound(_class: Option<&Class>, at: At) -> Result<(&'static str, i64), Error> {
++    match at {
++        At::Time(time) => Ok(("point", millis(time))),
++        At::Key(_) => Err(Error::Refused(format!(
++            "known-at is a clock time, not {at:?}"
+         ))),
+     }
+ }
+@@ -1437,6 +1427,34 @@
+         let ontology = self.current_ontology()?;
+         let class = ontology.class(&node.class)?;
+         Ok(node_at(&self.conn, class, &node.key, axis(class, at)?)?.map(|(v, ..)| v))
++    }
++
++    /// The version of `node` that held at `at` on its axis, among what was known at the clock
++    /// time `known`.
++    ///
++    /// # Errors
++    /// [`Error::Refused`] when `at` is off the class's axis or `known` is not a time.
++    pub fn state_known_at(&self, node: &NodeRef, at: At, known: At) -> Result<Option<Version>, Error> {
++        let ontology = self.current_ontology()?;
++        let class = ontology.class(&node.class)?;
++        let at = axis(class, at)?;
++        let (_, known) = known_bound(Some(class), known)?;
++        let on_axis = if class.history == HistoryKey::Integer {
++            "integer <= ?4"
++        } else {
++            "integer IS NULL AND point <= ?4"
++        };
++        let tail = format!(
++            "AND {on_axis} AND coalesce(known, point) <= ?5 ORDER BY {} LIMIT 1",
++            order("DESC")
++        );
++        Ok(read_version(
++            &self.conn,
++            (&node_entity(&class.name), &node.key, None),
++            (known_version_row, &tail),
++            &[&at, &known],
++        )?
++        .map(|(version, ..)| version))
+     }
+ 
+     /// The version of the link of `relation` from the node keyed `from` to the node keyed `to`
