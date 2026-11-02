@@ -1,0 +1,13 @@
+[package]
+name = "rannoch-reads"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+rannoch-store = { git = "https://github.com/runlegion/rannoch", rev = "2bac9b5" }
+
+[profile.release]
+debug = 1

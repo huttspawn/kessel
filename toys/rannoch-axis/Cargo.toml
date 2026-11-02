@@ -1,0 +1,11 @@
+[package]
+name = "rannoch-axis"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+exclude = ["rannoch-patched"]
+
+[dependencies]
+rannoch-store = { path = "rannoch-patched/crates/rannoch-store" }

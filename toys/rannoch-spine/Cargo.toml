@@ -1,0 +1,10 @@
+[package]
+name = "rannoch-spine"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+rannoch-store = { git = "https://github.com/runlegion/rannoch", tag = "v0.5.0" }
