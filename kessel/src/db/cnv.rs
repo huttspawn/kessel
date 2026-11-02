@@ -544,6 +544,77 @@ impl Database {
     }
 }
 
+impl Database {
+    /// Populate `conversation_options` (#287) from each conversation's node graph. Run after
+    /// `populate_conversation_dialogue`, whose `seq` the targets point at. Returns the rows
+    /// written.
+    pub fn populate_conversation_options(&self) -> Result<u64> {
+        use crate::schema::conversation_graph::ConversationGraph;
+        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| anyhow::anyhow!("database lock poisoned: {e}"))?;
+        let conversations: Vec<(String, String)> = {
+            let mut stmt = conn.prepare(
+                "SELECT fqn, json_extract(json, '$.payload_b64') FROM objects \
+                 WHERE kind = 'Conversation' AND is_canonical = 1 \
+                 AND json_extract(json, '$.payload_b64') IS NOT NULL",
+            )?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+            rows.collect::<rusqlite::Result<_>>()?
+        };
+        let tx = conn.unchecked_transaction()?;
+        let mut insert = tx.prepare_cached(
+            "INSERT OR REPLACE INTO conversation_options \
+             (cnv_fqn, decision_seq, option_index, line_id, target_seq, alignment) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        )?;
+        let mut seq_of =
+            tx.prepare_cached("SELECT line_id, seq FROM conversation_dialogue WHERE cnv_fqn = ?1")?;
+        let (mut written, mut undecoded, mut unresolved) = (0u64, 0u64, 0u64);
+        for (fqn, b64) in &conversations {
+            let graph = BASE64
+                .decode(b64)
+                .ok()
+                .and_then(|payload| ConversationGraph::read(&payload));
+            let Some(graph) = graph else {
+                undecoded += 1;
+                continue;
+            };
+            let seqs: std::collections::HashMap<u32, i64> = seq_of
+                .query_map([fqn], |r| Ok((r.get(0)?, r.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?;
+            for (decision_seq, choices) in graph.decisions().iter().enumerate() {
+                for (option_index, choice) in choices.iter().enumerate() {
+                    let target = choice.next_line_id.and_then(|line| seqs.get(&line));
+                    unresolved += u64::from(choice.next_line_id.is_some() && target.is_none());
+                    insert.execute(params![
+                        fqn,
+                        decision_seq as i64,
+                        option_index as i64,
+                        choice.line_id,
+                        target,
+                        choice.alignment.map(|a| a.as_str()),
+                    ])?;
+                    written += 1;
+                }
+            }
+        }
+        drop(insert);
+        drop(seq_of);
+        tx.commit()?;
+        if undecoded > 0 {
+            tracing::warn!("conversation_options: {undecoded} conversation(s) did not decode");
+        }
+        if unresolved > 0 {
+            tracing::warn!("conversation_options: {unresolved} target(s) are not dialogue lines");
+        }
+        Ok(written)
+    }
+}
+
 /// Derive the en-us dialogue STB archive path for a `cnv.*` conversation FQN.
 ///
 /// Inverse of `stb::extract_fqn_from_path`: a conversation FQN
@@ -642,6 +713,21 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 PRIMARY KEY (cnv_fqn, event_kind)
             );
             CREATE INDEX IF NOT EXISTS idx_cnv_align_kind ON conversation_alignment_events(event_kind);
+
+            -- One row per player choice, grouped by decision point (#287). target_seq is the
+            -- conversation_dialogue seq of the first line the choice leads to; alignment is
+            -- the side of the Force it rewards (cnvForceRewardType), not how many points.
+            CREATE TABLE IF NOT EXISTS conversation_options (
+                cnv_fqn      TEXT NOT NULL,
+                decision_seq INTEGER NOT NULL,
+                option_index INTEGER NOT NULL,
+                line_id      INTEGER,
+                target_seq   INTEGER,
+                alignment    TEXT,
+                PRIMARY KEY (cnv_fqn, decision_seq, option_index)
+            );
+            CREATE INDEX IF NOT EXISTS idx_conversation_options_cnv
+                ON conversation_options(cnv_fqn);
 
             -- Ordered dialogue script per conversation (#285). Each row is one
             -- dialogue line, decoded from the conversation NODE payload's
@@ -891,5 +977,92 @@ mod tests {
             )
             .unwrap();
         assert_eq!(resolved, 1, "npc speaker fqn appears in conversation_npcs");
+    }
+
+    /// A conversation with one decision: line 10 asks, line 20 (light) leads on to line 30, and
+    /// line 21 (dark) ends.
+    fn options_test_db() -> Database {
+        use crate::schema::conversation_graph::testing::{node, payload};
+        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+        let path = temp_db_path("cnv_options");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let bytes = payload(
+            &[1],
+            vec![
+                node(1, &[2, 3], Some(10), false, None),
+                node(2, &[4], Some(20), true, Some(1)),
+                node(3, &[], Some(21), true, Some(2)),
+                node(4, &[], Some(30), false, None),
+            ],
+        );
+        let json = format!("{{\"payload_b64\":\"{}\"}}", BASE64.encode(&bytes));
+        {
+            let conn = db.conn.lock().unwrap();
+            conn.execute(
+                "INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, is_canonical, json) \
+                 VALUES ('c1','s','p','gc','cnv.test','Conversation',1,?1)",
+                params![json],
+            )
+            .unwrap();
+            for (seq, line) in [(0, 10), (1, 20), (2, 21), (3, 30)] {
+                conn.execute(
+                    "INSERT INTO conversation_dialogue (cnv_fqn, seq, line_id, line_ref) \
+                     VALUES ('cnv.test', ?1, ?2, 'str.cnv.test')",
+                    params![seq, line],
+                )
+                .unwrap();
+            }
+        }
+        db
+    }
+
+    #[test]
+    fn conversation_options_groups_choices_at_a_decision() {
+        let db = options_test_db();
+        assert_eq!(db.populate_conversation_options().unwrap(), 2);
+        let conn = db.conn.lock().unwrap();
+        let rows: Vec<(i64, i64, i64)> = conn
+            .prepare("SELECT decision_seq, option_index, line_id FROM conversation_options ORDER BY 1, 2")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(rows, vec![(0, 0, 20), (0, 1, 21)]);
+    }
+
+    #[test]
+    fn conversation_options_attaches_alignment_where_present() {
+        let db = options_test_db();
+        db.populate_conversation_options().unwrap();
+        let conn = db.conn.lock().unwrap();
+        let alignments: Vec<String> = conn
+            .prepare("SELECT alignment FROM conversation_options ORDER BY option_index")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(alignments, vec!["lightside", "darkside"]);
+    }
+
+    #[test]
+    fn conversation_options_branch_target_in_range() {
+        let db = options_test_db();
+        db.populate_conversation_options().unwrap();
+        let conn = db.conn.lock().unwrap();
+        let targets: Vec<Option<i64>> = conn
+            .prepare("SELECT target_seq FROM conversation_options ORDER BY option_index")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            targets,
+            vec![Some(3), None],
+            "line 30 is seq 3; the dark choice ends"
+        );
     }
 }
