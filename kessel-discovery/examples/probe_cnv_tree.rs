@@ -79,6 +79,7 @@ fn summ(v: &GomValue) -> String {
         GomValue::Map(m) => format!("map[{}]", m.len()),
         GomValue::Embedded(f) => format!("obj{{{} fields}}", f.len()),
         GomValue::ClassRef(r) => format!("classref(0x{r:016X})"),
+        GomValue::Vector3(v) => format!("vector3({v:?})"),
     }
 }
 

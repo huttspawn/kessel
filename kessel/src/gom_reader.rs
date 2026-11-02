@@ -18,7 +18,8 @@
 //!
 //! Type tags (`GomTypeId`): `01` UInt64, `02` Int64, `03` Bool, `04` Float,
 //! `05` Enum, `06` String, `07` List, `08` Map, `09` EmbeddedClass,
-//! `0F` ClassRef, `18` embedded struct (same layout as `09`).
+//! `0E` and `14`/`15` numbers, `0F` ClassRef, `11` engine stub (12 numbers),
+//! `12` Vector3, `18` embedded struct (same layout as `09`).
 //!
 //! Container layout (each container re-reads its element type tag inline):
 //! - List: `<elem_tag> <len> <len2> { <idx> <value> }*`  (`len == len2`)
@@ -47,6 +48,16 @@ mod tag {
     /// `<delta_id><tag><value>` per field.
     pub const EMBEDDED_STRUCT: u8 = 0x18;
     pub const CLASS_REF: u8 = 0x0F;
+    /// One number; only `guiScaleFormGFxProto` uses it.
+    pub const NUMBER_0E: u8 = 0x0E;
+    /// Twelve numbers; only the eight engine stub singletons use it.
+    pub const ENGINE_STUB: u8 = 0x11;
+    /// Three little-endian f32 (`Dynamic` position, rotation, scale).
+    pub const VECTOR3: u8 = 0x12;
+    /// One number; the values read as durations in milliseconds.
+    pub const DURATION: u8 = 0x14;
+    /// One number; the values read as milliseconds since 1601.
+    pub const DATE: u8 = 0x15;
 }
 
 /// A decoded GOM value. Enums carry the zero-based member index (the engine
@@ -66,6 +77,7 @@ pub enum GomValue {
     Map(Vec<(GomValue, GomValue)>),
     Embedded(Vec<(u64, GomValue)>),
     ClassRef(u64),
+    Vector3([f32; 3]),
 }
 
 impl GomValue {
@@ -136,10 +148,7 @@ impl<'a> Reader<'a> {
         Reader { buf, pos }
     }
 
-    /// Current cursor position within the payload (recon probes use this to
-    /// report byte offsets). Only consumed by `kessel-discovery` recon tools,
-    /// so the production binary sees it as unused.
-    #[allow(dead_code)]
+    /// Current cursor position within the payload.
     pub fn pos(&self) -> usize {
         self.pos
     }
@@ -254,6 +263,19 @@ impl<'a> Reader<'a> {
             tag::MAP => self.read_map(),
             tag::EMBEDDED | tag::EMBEDDED_STRUCT => self.read_object(),
             tag::CLASS_REF => Ok(GomValue::ClassRef(self.read_number()?)),
+            tag::NUMBER_0E | tag::DURATION | tag::DATE => Ok(GomValue::U64(self.read_number()?)),
+            tag::ENGINE_STUB => {
+                let mut numbers = Vec::with_capacity(12);
+                for _ in 0..12 {
+                    numbers.push(GomValue::U64(self.read_number()?));
+                }
+                Ok(GomValue::List(numbers))
+            }
+            tag::VECTOR3 => Ok(GomValue::Vector3([
+                self.read_f32()?,
+                self.read_f32()?,
+                self.read_f32()?,
+            ])),
             other => bail!(
                 "gom_reader: unsupported type tag 0x{other:02X} at offset {}",
                 self.pos - 1
@@ -288,7 +310,12 @@ impl<'a> Reader<'a> {
         }
         let mut entries = Vec::with_capacity(len.min(1 << 20) as usize);
         for _ in 0..len {
-            let key = self.read_value(key_tag)?;
+            // A map key tagged 0 is a signed number, not the null a bare 0 tag means.
+            let key = if key_tag == 0 {
+                GomValue::I64(self.read_signed_number()?)
+            } else {
+                self.read_value(key_tag)?
+            };
             let val = self.read_value(val_tag)?;
             entries.push((key, val));
         }
@@ -347,9 +374,94 @@ pub fn read_object_fields(payload: &[u8]) -> Result<GomValue> {
     reader.read_object()
 }
 
+/// Where an object's field stream starts within its payload, from its 42-byte
+/// header: `u16 hdr[36..38] - u16 hdr[10..12]`. Glommed class ids sit before the
+/// stream, so skipping leading zeros is not enough for those objects. `None` when
+/// the header does not frame this payload.
+fn field_stream_start(header: &[u8], payload_len: usize) -> Option<usize> {
+    let u16_at = |i: usize| -> Option<usize> {
+        let bytes = header.get(i..i + 2)?;
+        Some(usize::from(u16::from_le_bytes([bytes[0], bytes[1]])))
+    };
+    let start = u16_at(36)?.checked_sub(u16_at(10)?)?;
+    (start <= payload_len).then_some(start)
+}
+
+/// Decode a GOM object with its header, returning the fields and the offset
+/// where the stream ended. A conversation's node graph lies after that offset,
+/// so callers must not treat the end as the end of the object.
+/// An object whose stream length (`u32 hdr[32..36]`) is 0 has no fields.
+pub fn read_framed_object(header: &[u8], payload: &[u8]) -> Result<(GomValue, usize)> {
+    let start = field_stream_start(header, payload.len())
+        .ok_or_else(|| anyhow::anyhow!("gom_reader: header does not frame the payload"))?;
+    if header.get(32..36) == Some(&[0, 0, 0, 0]) {
+        return Ok((GomValue::Embedded(Vec::new()), start));
+    }
+    let mut reader = Reader::new(payload, start);
+    let value = reader.read_object()?;
+    Ok((value, reader.pos()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn duration_is_a_number() -> Result<()> {
+        let mut r = Reader::new(&[0xCA, 0x15, 0x3D, 0x80], 0);
+        assert_eq!(r.read_value(tag::DURATION)?, GomValue::U64(1_392_000));
+        Ok(())
+    }
+
+    #[test]
+    fn vector3_is_three_little_endian_floats() -> Result<()> {
+        let bytes = [0, 0, 0x80, 0x3F, 0, 0, 0, 0x40, 0, 0, 0x40, 0x40];
+        let mut r = Reader::new(&bytes, 0);
+        assert_eq!(
+            r.read_value(tag::VECTOR3)?,
+            GomValue::Vector3([1.0, 2.0, 3.0])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn map_key_tag_zero_is_a_signed_number() -> Result<()> {
+        let bytes = [0x00, tag::UINT64, 1, 1, 7, 9];
+        let mut r = Reader::new(&bytes, 0);
+        assert_eq!(
+            r.read_value(tag::MAP)?,
+            GomValue::Map(vec![(GomValue::I64(7), GomValue::U64(9))])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn framed_object_starts_past_glommed_ids_and_reports_its_end() -> Result<()> {
+        let mut header = [0u8; 42];
+        header[10] = 8;
+        header[32] = 1;
+        header[36] = 12;
+        let payload = [0xEE, 0xEE, 0xEE, 0xEE, 0, 1, 5, tag::UINT64, 9, 0xAA];
+        let (value, end) = read_framed_object(&header, &payload)?;
+        assert_eq!(value, GomValue::Embedded(vec![(5, GomValue::U64(9))]));
+        assert_eq!(end, 9);
+        Ok(())
+    }
+
+    #[test]
+    fn empty_field_stream_is_no_fields() -> Result<()> {
+        let (value, _) = read_framed_object(&[0u8; 42], &[0, 0, 0])?;
+        assert_eq!(value, GomValue::Embedded(Vec::new()));
+        Ok(())
+    }
+
+    #[test]
+    fn a_header_past_the_payload_is_refused() {
+        let mut header = [0u8; 42];
+        header[32] = 1;
+        header[36] = 200;
+        assert!(read_framed_object(&header, &[0, 0]).is_err());
+    }
 
     #[test]
     fn number_literal_and_widths() {

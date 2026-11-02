@@ -15,6 +15,7 @@ pub mod gsf_talent;
 pub mod item;
 pub mod tag_table;
 
+use crate::gom_reader::{read_framed_object, GomValue};
 use crate::gom_schema;
 use crate::icon_overrides::IconOverrides;
 use crate::pbuk::GomObject;
@@ -158,8 +159,10 @@ impl GameObject {
                 .or_else(|| overrides.and_then(|o| o.get(&gom.fqn).map(str::to_string)))
         };
 
-        // Extract string_id: try FQN-based first (finds 91% of quests), then type-marker fallback
-        let string_id = Self::extract_string_id_via_fqn_with(&gom.payload, Some(&gom.fqn))
+        // An NPC's own name slot wins: the id the scans below find can be a placeholder.
+        // Otherwise FQN-based first (finds 91% of quests), then type-marker fallback.
+        let string_id = Self::npc_name_string_id(&gom.header, &gom.payload)
+            .or_else(|| Self::extract_string_id_via_fqn_with(&gom.payload, Some(&gom.fqn)))
             .or_else(|| Self::extract_string_id_via_type_marker(&gom.payload));
 
         // Encode raw payload as base64 for later analysis
@@ -190,6 +193,27 @@ impl GameObject {
             revision: 1,
             json,
         }
+    }
+
+    /// An NPC's display name id: the slot in its text map whose bucket is `str.npc`. The slot
+    /// holds a full string reference, whose high 32 bits are the id. `None` for an object with
+    /// no such slot; Npc and NpcCompanion objects have one today.
+    fn npc_name_string_id(header: &[u8], payload: &[u8]) -> Option<u32> {
+        const TEXT_MAP_FIELD: u32 = 0xa787_ee87;
+        const TEXT_REF_FIELD: u32 = 0x5ce8_7488;
+        const TEXT_BUCKET_FIELD: u32 = 0x5ce8_7489;
+
+        let (object, _) = read_framed_object(header, payload).ok()?;
+        object
+            .embedded_field(TEXT_MAP_FIELD)?
+            .as_map()?
+            .iter()
+            .map(|(_, slot)| slot)
+            .filter(|slot| {
+                matches!(slot.embedded_field(TEXT_BUCKET_FIELD), Some(GomValue::Str(b)) if b == "str.npc")
+            })
+            .find_map(|slot| slot.embedded_field(TEXT_REF_FIELD)?.as_i64())
+            .and_then(|reference| u32::try_from(reference >> 32).ok())
     }
 
     /// FQN-based string_id extraction.
@@ -731,6 +755,57 @@ mod schema_walker_tests {
             "expected >=2 resolved markers, got {}",
             d.property_count_resolved
         );
+    }
+
+    /// A payload whose field stream is one text map with one slot of `bucket`.
+    fn npc_payload(bucket: &str, id: u64) -> Vec<u8> {
+        let mut p = vec![0, 1];
+        p.extend([0xCB, 0xA7, 0x87, 0xEE, 0x87, 0x08, 0x01, 0x09, 1, 1, 5]);
+        p.extend([0, 2, 0xCB, 0x5C, 0xE8, 0x74, 0x88, 0x01, 0xCF]);
+        p.extend((id << 32).to_be_bytes());
+        p.extend([1, 0x06, bucket.len() as u8]);
+        p.extend(bucket.as_bytes());
+        p
+    }
+
+    fn framed_header() -> Vec<u8> {
+        let mut header = vec![0u8; 42];
+        header[32] = 1;
+        header
+    }
+
+    #[test]
+    fn npc_name_comes_from_the_str_npc_slot() {
+        let id = GameObject::npc_name_string_id(&framed_header(), &npc_payload("str.npc", 182_768));
+        assert_eq!(id, Some(182_768));
+    }
+
+    #[test]
+    fn a_title_slot_is_not_a_name() {
+        let payload = npc_payload("str.sys.titles", 182_768);
+        assert_eq!(
+            GameObject::npc_name_string_id(&framed_header(), &payload),
+            None
+        );
+    }
+
+    #[test]
+    fn an_npc_name_replaces_the_placeholder_the_scan_finds() {
+        // After the stream: the FQN and the placeholder 194683, which the byte scan finds.
+        let mut payload = npc_payload("str.npc", 182_768);
+        payload.extend(b"npc.test");
+        payload.extend([0xCE, 0x02, 0xF8, 0x7B]);
+        assert_eq!(
+            GameObject::extract_string_id_via_fqn_with(&payload, Some("npc.test")),
+            Some(194_683)
+        );
+        let gom = GomObject {
+            fqn: "npc.test".to_string(),
+            header: framed_header(),
+            payload,
+        };
+        let object = GameObject::from_gom_with_overrides(&gom, None);
+        assert_eq!(object.string_id, Some(182_768));
     }
 
     #[test]
