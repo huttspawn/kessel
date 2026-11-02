@@ -113,7 +113,7 @@ impl ConversationGraph {
                 let choices: Vec<Choice> = node
                     .children
                     .iter()
-                    .filter_map(|id| Some((*id, self.nodes.get(id)?)))
+                    .filter_map(|id| self.through_links(*id))
                     .filter(|(_, child)| child.is_player_choice && child.line_id.is_some())
                     .map(|(id, child)| Choice {
                         line_id: child.line_id,
@@ -124,6 +124,21 @@ impl ConversationGraph {
                 (choices.len() >= 2).then_some(choices)
             })
             .collect()
+    }
+
+    /// The node `id` names, following links, as a menu re-offers an earlier option through one.
+    /// `None` for a missing node or a loop of links.
+    fn through_links(&self, id: i64) -> Option<(i64, &Node)> {
+        let mut seen = HashSet::new();
+        let mut current = id;
+        loop {
+            let node = self.nodes.get(&current)?;
+            match node.link_target {
+                Some(target) if seen.insert(current) => current = target,
+                Some(_) => return None,
+                None => return Some((current, node)),
+            }
+        }
     }
 
     /// The first line after node `from`, depth first in the game's order, through silent nodes
@@ -279,6 +294,16 @@ pub(crate) mod testing {
         (GomValue::U64(id), GomValue::Embedded(fields))
     }
 
+    /// A link node jumping to `target`.
+    pub(crate) fn link(id: u64, target: u64) -> (GomValue, GomValue) {
+        let fields = vec![
+            (0x24c9_78b9, ids(&[])),
+            (0x24c9_78e5, GomValue::U64(id)),
+            (0x24cd_478e, GomValue::U64(target)),
+        ];
+        (GomValue::U64(id), GomValue::Embedded(fields))
+    }
+
     /// A conversation payload: a preamble, then one object holding `nodes` from `roots`.
     pub(crate) fn payload(roots: &[u64], nodes: Vec<(GomValue, GomValue)>) -> Vec<u8> {
         let root = GomValue::Embedded(vec![
@@ -296,7 +321,7 @@ pub(crate) mod testing {
 
 #[cfg(test)]
 mod tests {
-    use super::testing::{node, payload};
+    use super::testing::{link, node, payload};
     use super::*;
 
     /// 1 asks; 2 and 3 are its choices; 2 goes on through silent 4 to line 30; 3 ends.
@@ -380,6 +405,47 @@ mod tests {
             ],
         );
         let graph = ConversationGraph::read(&silent).ok_or_else(|| anyhow::anyhow!("no graph"))?;
+        assert_eq!(graph.decisions()[0].len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn a_menu_re_offers_an_earlier_option_through_a_link() -> anyhow::Result<()> {
+        // From the hub menu in cnv.alliance.alderaan.broonmark.broonmark: 5 asks, and the first
+        // of its two options is reached through link 6.
+        let menu = payload(
+            &[5],
+            vec![
+                node(2, &[3], Some(20), true, Some(1)),
+                node(3, &[], Some(30), false, None),
+                node(4, &[], Some(21), true, None),
+                node(5, &[6, 4], Some(10), false, None),
+                link(6, 2),
+            ],
+        );
+        let graph = ConversationGraph::read(&menu).ok_or_else(|| anyhow::anyhow!("no graph"))?;
+        let decisions = graph.decisions();
+        assert_eq!(decisions.len(), 1);
+        assert_eq!(decisions[0][0].line_id, Some(20));
+        assert_eq!(decisions[0][0].alignment, Some(Alignment::Light));
+        assert_eq!(decisions[0][0].next_line_id, Some(30));
+        assert_eq!(decisions[0][1].line_id, Some(21));
+        Ok(())
+    }
+
+    #[test]
+    fn a_loop_of_links_is_no_option() -> anyhow::Result<()> {
+        let looped = payload(
+            &[1],
+            vec![
+                node(1, &[2, 4, 5], Some(10), false, None),
+                link(2, 3),
+                link(3, 2),
+                node(4, &[], Some(20), true, None),
+                node(5, &[], Some(21), true, None),
+            ],
+        );
+        let graph = ConversationGraph::read(&looped).ok_or_else(|| anyhow::anyhow!("no graph"))?;
         assert_eq!(graph.decisions()[0].len(), 2);
         Ok(())
     }

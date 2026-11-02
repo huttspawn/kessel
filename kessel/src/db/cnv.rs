@@ -573,7 +573,7 @@ impl Database {
         )?;
         let mut seq_of =
             tx.prepare_cached("SELECT line_id, seq FROM conversation_dialogue WHERE cnv_fqn = ?1")?;
-        let (mut written, mut undecoded) = (0u64, 0u64);
+        let (mut written, mut undecoded, mut unresolved) = (0u64, 0u64, 0u64);
         for (fqn, b64) in &conversations {
             let graph = BASE64
                 .decode(b64)
@@ -589,6 +589,7 @@ impl Database {
             for (decision_seq, choices) in graph.decisions().iter().enumerate() {
                 for (option_index, choice) in choices.iter().enumerate() {
                     let target = choice.next_line_id.and_then(|line| seqs.get(&line));
+                    unresolved += u64::from(choice.next_line_id.is_some() && target.is_none());
                     insert.execute(params![
                         fqn,
                         decision_seq as i64,
@@ -606,6 +607,9 @@ impl Database {
         tx.commit()?;
         if undecoded > 0 {
             tracing::warn!("conversation_options: {undecoded} conversation(s) did not decode");
+        }
+        if unresolved > 0 {
+            tracing::warn!("conversation_options: {unresolved} target(s) are not dialogue lines");
         }
         Ok(written)
     }
