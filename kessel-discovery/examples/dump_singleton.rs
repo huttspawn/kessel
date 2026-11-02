@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result};
 use base64::Engine;
-use kessel::gom_reader::{read_first_field, read_framed_object, read_object_fields, GomValue};
+use kessel::gom_reader::{read_first_field, read_framed_object, GomValue};
 use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -82,13 +82,7 @@ fn main() -> Result<()> {
     let value = if first_field {
         read_first_field(&payload)?
     } else {
-        let header: Vec<u8> = (0..header_hex.len() / 2)
-            .filter_map(|i| u8::from_str_radix(header_hex.get(i * 2..i * 2 + 2)?, 16).ok())
-            .collect();
-        match read_framed_object(&header, &payload) {
-            Ok((value, _)) => value,
-            Err(_) => read_object_fields(&payload)?,
-        }
+        read_framed_object(&hex::decode(header_hex)?, &payload)?.0
     };
     println!("{}", serde_json::to_string_pretty(&render(&value, &guids))?);
     Ok(())

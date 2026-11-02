@@ -19,7 +19,7 @@ struct Tally {
 }
 
 fn record(t: &mut Tally, fqn: &str, header_hex: &str, payload: &[u8]) {
-    let header = hex(header_hex);
+    let header = hex::decode(header_hex).unwrap_or_default();
     match read_framed_object(&header, payload) {
         Ok((_, end)) => {
             t.read += 1;
@@ -33,12 +33,6 @@ fn record(t: &mut Tally, fqn: &str, header_hex: &str, payload: &[u8]) {
             *t.errors.entry(e.to_string()).or_default() += 1;
         }
     }
-}
-
-fn hex(text: &str) -> Vec<u8> {
-    (0..text.len() / 2)
-        .filter_map(|i| u8::from_str_radix(text.get(i * 2..i * 2 + 2)?, 16).ok())
-        .collect()
 }
 
 fn main() -> Result<()> {
