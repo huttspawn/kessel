@@ -377,6 +377,8 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
         "  Conversation dialogue: {} lines across {} conversations",
         cnv_dialogue_lines, cnv_dialogue_convs
     );
+    let cnv_options = timed!("conversation_options", db.populate_conversation_options())?;
+    println!("  Conversation options: {cnv_options} player choices");
 
     // Quest_chain via NPC giver overlap. Must run AFTER both
     // populate_quest_clusters (cluster filter) and populate_conversation_refs
