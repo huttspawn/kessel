@@ -197,7 +197,7 @@ impl GameObject {
 
     /// An NPC's display name id: the slot in its text map whose bucket is `str.npc`. The slot
     /// holds a full string reference, whose high 32 bits are the id. `None` for an object with
-    /// no such slot, which is every other kind.
+    /// no such slot; Npc and NpcCompanion objects have one today.
     fn npc_name_string_id(header: &[u8], payload: &[u8]) -> Option<u32> {
         const TEXT_MAP_FIELD: u32 = 0xa787_ee87;
         const TEXT_REF_FIELD: u32 = 0x5ce8_7488;
@@ -791,10 +791,18 @@ mod schema_walker_tests {
 
     #[test]
     fn an_npc_name_replaces_the_placeholder_the_scan_finds() {
+        // After the stream: the FQN and the placeholder 194683, which the byte scan finds.
+        let mut payload = npc_payload("str.npc", 182_768);
+        payload.extend(b"npc.test");
+        payload.extend([0xCE, 0x02, 0xF8, 0x7B]);
+        assert_eq!(
+            GameObject::extract_string_id_via_fqn_with(&payload, Some("npc.test")),
+            Some(194_683)
+        );
         let gom = GomObject {
             fqn: "npc.test".to_string(),
             header: framed_header(),
-            payload: npc_payload("str.npc", 182_768),
+            payload,
         };
         let object = GameObject::from_gom_with_overrides(&gom, None);
         assert_eq!(object.string_id, Some(182_768));
