@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result};
 use base64::Engine;
-use kessel::gom_reader::{read_first_field, read_object_fields, GomValue};
+use kessel::gom_reader::{read_first_field, read_framed_object, read_object_fields, GomValue};
 use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -41,6 +41,7 @@ fn render(v: &GomValue, guids: &HashMap<u64, String>) -> Value {
             Value::Object(obj)
         }
         GomValue::ClassRef(c) => json!({ "class": format!("{c:016x}") }),
+        GomValue::Vector3(v) => json!(v),
     }
 }
 
@@ -58,13 +59,13 @@ fn main() -> Result<()> {
 
     let conn = Connection::open(db_path)?;
     let sql = if object {
-        "SELECT json_extract(json, '$.payload_b64') FROM objects \
+        "SELECT json_extract(json, '$.payload_b64'), json_extract(json, '$.header_hex') FROM objects \
          WHERE fqn = ?1 AND is_canonical = 1 LIMIT 1"
     } else {
-        "SELECT payload_b64 FROM singletons WHERE fqn = ?1"
+        "SELECT payload_b64, header_hex FROM singletons WHERE fqn = ?1"
     };
-    let b64: String = conn
-        .query_row(sql, [fqn], |r| r.get(0))
+    let (b64, header_hex): (String, String) = conn
+        .query_row(sql, [fqn], |r| Ok((r.get(0)?, r.get(1)?)))
         .with_context(|| format!("{fqn} not found"))?;
     let payload = base64::engine::general_purpose::STANDARD.decode(b64)?;
 
@@ -81,7 +82,13 @@ fn main() -> Result<()> {
     let value = if first_field {
         read_first_field(&payload)?
     } else {
-        read_object_fields(&payload)?
+        let header: Vec<u8> = (0..header_hex.len() / 2)
+            .filter_map(|i| u8::from_str_radix(header_hex.get(i * 2..i * 2 + 2)?, 16).ok())
+            .collect();
+        match read_framed_object(&header, &payload) {
+            Ok((value, _)) => value,
+            Err(_) => read_object_fields(&payload)?,
+        }
     };
     println!("{}", serde_json::to_string_pretty(&render(&value, &guids))?);
     Ok(())

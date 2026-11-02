@@ -254,9 +254,10 @@ const UNCOMPRESSED_FLAG: u8 = 0x0E;
 ///
 /// The header's offsets count from 8 bytes before the header: the u16 at
 /// byte 10 is where the payload region starts (just past the FQN's NUL), and
-/// the u16 at byte 30 plus the u32 at byte 32 is where it ends. A zstd
-/// payload decompresses to the same region, padding included, so both
-/// layouts hand the same bytes to the GOM reader.
+/// the u16 at byte 36 (the field stream, after any glommed class ids) plus the
+/// u32 at byte 32 is where it ends. A zstd payload decompresses to the same
+/// region, padding included, so both layouts hand the same bytes to the GOM
+/// reader.
 fn uncompressed_payload(data: &[u8], header_start: usize) -> Option<(usize, usize)> {
     let header = data.get(header_start..header_start + 42)?;
     if header[8] != UNCOMPRESSED_FLAG {
@@ -265,7 +266,7 @@ fn uncompressed_payload(data: &[u8], header_start: usize) -> Option<(usize, usiz
     let u16_at = |i: usize| usize::from(u16::from_le_bytes([header[i], header[i + 1]]));
     let size = u32::from_le_bytes([header[32], header[33], header[34], header[35]]);
     let start = (header_start + u16_at(10)).checked_sub(8)?;
-    let end = (header_start + u16_at(30) + usize::try_from(size).ok()?).checked_sub(8)?;
+    let end = (header_start + u16_at(36) + usize::try_from(size).ok()?).checked_sub(8)?;
     (header_start + 42 < start && start <= end && end <= data.len()).then_some((start, end))
 }
 
@@ -873,6 +874,19 @@ mod tests {
         assert_eq!(objects[0].fqn, "ipp.mtx.season5.kreia.waist");
         assert_eq!(objects[0].header, &UNCOMPRESSED_IPP[..42]);
         assert_eq!(objects[0].payload, &UNCOMPRESSED_IPP[71..162]);
+    }
+
+    #[test]
+    fn uncompressed_payload_ends_past_glommed_class_ids() {
+        // From plc.qtr.1x2.raid.denova.kephess.jump_target's header.
+        let mut data = vec![0u8; 400];
+        data[8] = UNCOMPRESSED_FLAG;
+        data[10] = 0x5f;
+        data[28] = 1;
+        data[30] = 0x60;
+        data[32] = 0xdf;
+        data[36] = 0x68;
+        assert_eq!(uncompressed_payload(&data, 0), Some((0x57, 0x60 + 0xdf)));
     }
 
     #[test]
