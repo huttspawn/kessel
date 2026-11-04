@@ -1,0 +1,354 @@
+{
+ "400003d288e5e090": {
+  "meaning": "Map on a Hydra script action or condition, one level per key, holding FX parameter overrides for a VFX action: name such as @fxTimeout or FIRING mapped to a text value (duration, vector or state).",
+  "evidence": "Almost always empty. All 56 non-empty maps have the single key -5425730341799037700, and all are on actions: Play VFX 47 (6 Hydra, 41 Conversation), Stop Character VFX 9. Example hyd.alliance.galactic_threads.elom.inst_rappel Play VFX elom_rappel_rope_loop: @DelayDetachDuration=0:00:06.200, @fxTimeout=00:00:08.000. The meaning of the outer key is not resolved.",
+  "confidence": "proved"
+ },
+ "40000034bc126750": {
+  "meaning": "Compiled form of a Hydra or conversation condition block: a flat postfix list of variable ids, constants and small operator codes.",
+  "evidence": "Sits beside hydConditions, hydConditionOperator and hydConditionArguments in hydConditionBlock, and has the same shape as named qstComplexVariableExpressionCompiled (40000034bc126751). Operand ids resolve to variable fqn ids: hyd.location.taris.bronze.knight_fall.inst_datalog_1 condition '== true' on toolbox qst...knight_fall.is_on_quest (40000002080ce2f1=13646406301550051329) compiles to [13646406301550051329, 1, 12]; two-clause blocks read [v,0,11,v,0,11,8]. Across Hydra, 75,529 of 95,770 lists are multiples of 3; longer forms carry extra operators. Operator codes 8, 9, 10, 11, 12 are seen but their exact semantics are not settled here.",
+  "confidence": "proved"
+ },
+ "40000034d36ca502": {
+  "meaning": "Item quest variables given to the player by this step or task.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. Step 1,881 of 1,882 resolve to qstItemVariableDefinition, task 210 of 210, e.g. worker_justice_credits item_thoma_holocommunicator. The same variable is listed here before it appears in d36ca504 in 990 of 998 branches (6 equal, 2 later), which sets the give and take directions. Whether it fires at step start or completion is not separated by this test.",
+  "confidence": "proved"
+ },
+ "40000034c8b89fb0": {
+  "meaning": "Boolean quest variables set when this step or task finishes.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. Step: 10,068 SimpleBool and 56 PermanentBool of 10,127; task: 1,476 and 4 of 1,487. Names are past-tense milestones matching the step's own objective: sqm_defeated_boss on the step with task boss_trophy, sqm_machines_destroyed with counter_machines_destroyed. Timing: of 120 tasks whose qstTaskAutoCompleteVariable is set by a step list, 114 are set one step earlier. 'Set true' is inferred from the names and that auto-complete use, not read from a value.",
+  "confidence": "likely"
+ },
+ "40000034d36ca504": {
+  "meaning": "Item quest variables taken from the player by this step or task.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. Step 2,377 of 2,377 and task 94 of 94 resolve to item variables. Pairs with d36ca502 in order (give before take 990 of 998). For tasks that collect an item, the take is on the same step 49 times and the next step 444 times, so a turn-in step takes what the previous step collected.",
+  "confidence": "proved"
+ },
+ "40000034c8b89fb3": {
+  "meaning": "Map-note quest variables removed from the player by this step or task.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. Step 465 of 498, task 32 of 49 resolve to qstMapNoteVariableDefinition, the rest resolve to nothing. In all 388 branches using the same variable in c8b89fb2 and here, c8b89fb2 is on the earlier step. Direction comes from that ordering.",
+  "confidence": "likely"
+ },
+ "40000034c8b89fb2": {
+  "meaning": "Map-note quest variables added for the player by this step.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 452 of 490 resolve to qstMapNoteVariableDefinition (qstMapNoteAsset gives the mpn fqn), 38 resolve to nothing. In all 388 branches using the same variable in c8b89fb3, this field is on the earlier step. Direction comes from that ordering.",
+  "confidence": "likely"
+ },
+ "400000307bd62590": {
+  "meaning": "Instance quest variables activated for the player by this step.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 166 of 172 resolve to qstInstanceVariableDefinition, e.g. hk_51.breakingandentering instance_doc_lighton. Before 7bd62591 in 85 of 89 branches. What activating an instance variable does in the world is not shown by the data.",
+  "confidence": "likely"
+ },
+ "400000307bd62591": {
+  "meaning": "Instance quest variables deactivated for the player by this step.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 134 of 143 resolve to qstInstanceVariableDefinition. After 7bd62590 in 85 of 89 branches. What deactivating does in the world is not shown by the data.",
+  "confidence": "likely"
+ },
+ "40000001e3c45ddd": {
+  "meaning": "Name of the event that fires this Hydra script entry, e.g. On Enter, On Use, On Custom:<name>. Normally repeats the hydScriptMap key.",
+  "evidence": "Equals the map key in 65,569 of 65,865 entries. The other 296 have key 'On Arrive Instant' with value 'On Arrive', so read the key if the instant variant matters.",
+  "confidence": "proved"
+ },
+ "4000000564513cfb": {
+  "meaning": "Who a Hydra trigger deactivates for after firing: enum hydTriggerDeactivate, 1 Instigator, 2 Group, 3 Everyone.",
+  "evidence": "Client enum hydTriggerDeactivate has hash 6AAC375064513CFA, one below this field's low 32 bits, the same relation as qstTaskTrackingDisplay and ea13e641, and qstActivityType and b58ce5fc. Values 1 (4,928), 2 (684), 3 (60,253). Non-default values concentrate on On Enter and On Exit. Reading values as 0-based members matches the enum's Uninitialized at 0. Runtime effect not observed.",
+  "confidence": "proved"
+ },
+ "40000002bb83598f": {
+  "meaning": "Hydra trigger fires for player characters.",
+  "evidence": "Sibling of the companion and NPC flags, set on 63,990 of 65,865 entries including all script kinds. On Enter or On Exit entries with it unset carry another instigator flag in 636 of 668 cases, e.g. companion-only cc_poi_barks triggers. No in-game check.",
+  "confidence": "likely"
+ },
+ "400000426c54c423": {
+  "reason": "Always true on an entry of cnvNpcReactions (cnvReactionNpcId, cnvReactionType); present on 55,762 of 57,281 entries. Rates do not separate by reaction type, and flagged entries never name the node's speaker, but neither do almost all unflagged ones. Comparing a node with and without the flag in a conversation in game would settle it."
+ },
+ "400000307860fc01": {
+  "meaning": "The quest variable holding a task's progress; the task completes when it reaches qstTaskCountMax.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. Resolves for 43,913 of 43,917 tasks: SimpleBool 37,842, Counter 4,494, Item 1,557, ItemDeconstruct 20. Every Counter, Item and ItemDeconstruct variable has qstMaxCount equal to the task's qstTaskCountMax (6,071 of 6,071); 37,809 of 37,842 bool tasks have count 1 and the other 33 also match.",
+  "confidence": "proved"
+ },
+ "400000049af60277": {
+  "meaning": "Designer's drop-chance label for a task's quest item; free text such as Always, Often, Rare, or Rare -- RandInt(1,100) >= 70.",
+  "evidence": "Always-type labels on 43,658 tasks. Of 226 non-Always labels, 217 are on tasks whose progress variable is an Item variable. Some values state the roll themselves ('Often -- RandInt(1,100) >= 50'). Whether the server still reads the text or the loot tables govern is not shown.",
+  "confidence": "likely"
+ },
+ "400000437a802070": {
+  "meaning": "Map of area ids to true listing the areas associated with a quest step.",
+  "evidence": "Keys are area ids in the same form as mapLinkAreaId: 885 of 953 keys occur as a qstTaskMapLink area in the same quest; values are all true. What the game does with the list (tracker, map, phase handling) is not shown.",
+  "confidence": "likely"
+ },
+ "400000005b20eaaa": {
+  "meaning": "This quest step or task enables the spawner or encounter it is keyed by.",
+  "evidence": "Value of the map 4000000a731cd8be, keyed by Spawn (135,412) or Encounter (14,918) objects. Parallels named qstStepClientOnlySpawnerStateEnabled. For a spawner both enabled and disabled in a branch, enable comes first in 3,672 of 4,416 cases. Never combined with 3aef5105 in a single entry.",
+  "confidence": "likely"
+ },
+ "40000003e9153158": {
+  "reason": "An enum with the single value 1 on 38,621 of 38,777 steps. The absent 156 are not separated by qstCanBeFailed or fail objects (54 have both, 71 neither), and no client enum matches. The community name qstStepFailureScope has no support. A build or a client enum where the value differs would be needed."
+ },
+ "4000004e6f677098": {
+  "meaning": "Quest map from qstBranchId to the 1-based position of that branch in the qstBranches list.",
+  "evidence": "Checked on all 9,442 quests with branches: for every pair k to v, branches[v-1].qstBranchId == k. E.g. origins_of_the_makrin has branch order [1,3,2] and map {1:1, 2:3, 3:2}. The community name qstBranchesUnknownOrder is only a placeholder.",
+  "confidence": "proved"
+ },
+ "4000000d632d5101": {
+  "meaning": "Named state (On, Off, Open, Closed, Locked, Destroyed...) for placeables from the keyed spawner during this quest step; see 4000000d632d5102.",
+  "evidence": "Under 4000000dbd7c6f8d in the spawner map; 22,515 quest uses. Names match Hydra state events such as On Custom:Open-Closed. Equal to 5102 in 18,017 of 18,437 pairs. Where they differ it is the more stable one: in the next step it stays the same 288 of 315 times, against 190 of 292 for 5102. That fits the spin-up reading in the community name but does not prove it; a phase re-entry test mid-quest would.",
+  "confidence": "likely"
+ },
+ "4000000d632d5102": {
+  "meaning": "Second named state for placeables from the keyed spawner during this quest step; see 4000000d632d5101.",
+  "evidence": "Same place and vocabulary as 5101. Examples of differing pairs (5101, 5102): flashpoint_manaan (Closed, On), blood_hunt (Closed, Open), (On, Off). It carries the changing value more often than 5101, which fits a state applied on entering the step, but this does not prove it; a phase re-entry test mid-quest would.",
+  "confidence": "likely"
+ },
+ "400000003aef5105": {
+  "meaning": "This quest step or task disables the spawner or encounter it is keyed by.",
+  "evidence": "Value of the map 4000000a731cd8be; parallels named qstStepClientOnlySpawnerStateDisabled; 19,429 uses, never in one entry with 5b20eaaa. Follows enable for the same spawner in 3,672 of 4,416 cases.",
+  "confidence": "likely"
+ },
+ "40000044372ac59e": {
+  "meaning": "Category tag ids on a quest, the 64-bit form of the keys in qstCategoryTags. Achievement counters key on the same ids for 12 of the 24.",
+  "evidence": "6,646 quests have it, and exactly the same quests have qstCategoryTags, with equal list lengths. 24 distinct values on each side with matching frequencies (2,779, 1,880, 1,473, 1,360, 1,038...). Single-tag quests pair one to one, e.g. E00071420A9EABF9 with 3465947290801567056, which also has a single qstCategoriesBitField bit (8). 12 of 24 ids are keys in lgcAchievementEventsPrototype (6,149 of 18,300 uses).",
+  "confidence": "proved"
+ },
+ "400000448d60c771": {
+  "meaning": "Derived marker on a Condition: present exactly when every type in cndTypeBitList is in one fixed allowed set of types. What the engine uses it for is unknown.",
+  "evidence": "Zero exceptions across 20,151 conditions (18,099 flagged, 2,052 not, 2 with empty lists also flagged). Allowed types include HasItems, GlobalVariable, HasAchievement, IsLevel, ContactStatus, HasItemRating, IsLootDiscipline, OfFaction, OfClass, Influence. Never flagged: WithEffect, IsDiscipline, IsSubscriptionLevel, IsGalacticSeasonObjectiveActive, HasCollectionItemUnlocked, FlashpointDifficulty. The allowed set is inferred from the positives, so the test shows consistency across mixed-type conditions, not a stated rule.",
+  "confidence": "proved"
+ },
+ "400000448f1aac70": {
+  "meaning": "Derived marker on a Condition: same as 448d60c771 but its allowed set of types also excludes IsLootDiscipline. What the engine uses it for is unknown.",
+  "evidence": "Zero exceptions across 20,151 conditions (17,745 flagged). It is a strict subset of 448d60c771; all 354 conditions with the first and not the second contain type 87 IsLootDiscipline.",
+  "confidence": "proved"
+ },
+ "40000002cdeb4375": {
+  "meaning": "Custom event name sent to a Hydra script; with a sibling Hydra reference (4000000a4fa14a1f) it fires that script's 'On Custom:<name>' entry.",
+  "evidence": "10,343 of 10,632 quest pairs and 661 of 661 achievement pairs resolve to that exact script entry; misses are mostly dangling or renamed (e.g. 'Discover Act 1 (imp)' against 'Discover Act 1 First Half (imp)'). 1,978 uses have no Hydra reference. The holding field gives the moment: e848b9bb start ('start','Autocomplete'), cdf0591a complete ('Mission Turn-In'), cdf05962 failure ('FailQuest','OnFail'), e4c167cc and e4c167cd abandon ('AbandonQuest').",
+  "confidence": "proved"
+ },
+ "40000002ced5c808": {
+  "reason": "Enum 1 (9,503) or 2 (410) on tasks; absent on 34,004. The objective verb separates presence: present tasks are mostly Defeat, Destroy, Recover (e.g. Defeat Ortuno); absent ones are Speak, Return, Complete, Travel. So it is about world objectives, which fits group credit but does not prove it, and nothing separates 1 from 2 (Defeat Ortuno is 1, Defeat Commander Kallin is 2). No client enum matches. A grouped run with a member out of range on one task of each value would settle it."
+ },
+ "40000029e237e188": {
+  "reason": "An integer 1 to 195 on all 9,463 quests, mostly 3 to 7, which fits a designer edit count as the community name qstVersion says, but nothing in the data ties it to one. Comparing the value for the same quests across game builds would settle it."
+ },
+ "40000045908ae8d2": {
+  "reason": "Always true, on 9,388 of 9,463 quests. The 75 absent are 72 qst.dynamic_events.dantooine plus 3 others, and absence correlates with 400003d3834751e1 (phi -0.77), but no named field or text explains it. Comparing a Dantooine dynamic event with and without it in game would be needed."
+ },
+ "4000004bb8dc9944": {
+  "meaning": "Integer parameters of an achievement condition: map from a parameter enum to an integer value. The parameter enum has no name in the client's dictionary.",
+  "evidence": "Key meaning follows from the type and text. On type 29, key 18 is difficulty: storymode8=1, hardmode8/nightmare8=2, storymode16=3, hardmode16/nightmare16=4. On type 16, keys 15 and 16 are a warzone stat selector and threshold (damage_total_03 15=1 16=300000). On type 19, key 19=50 on influence_50. Other keys are not settled.",
+  "confidence": "proved"
+ },
+ "400000428eab81d0": {
+  "reason": "Always true, on 7,553 of 9,463 quests. Absent mostly on hidden and private quests (phi -0.56 with qstIsHiddenQuest, -0.55 with qstReqPrivacy), +0.55 with qstStringIdVariableDefinition, and absent on 761 companion quests. That suggests a player-visible quest log entry, but 1,088 flagged quests have no journal strings and 44 hidden quests are flagged. Comparing flagged and unflagged quests in the mission log would settle it."
+ },
+ "40000034d4494960": {
+  "meaning": "The constant quest variable a Hydra script sets to advance this task: the task's completion hook.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 7,489 of 7,515 are qstConstVariableDefinition, named hook_* (e.g. hook_maksup_ootm_collect proto-barks). The variable's qstVariableNameId occurs as the value of a Hydra 'Set Quest State' action in 7,152 of 7,514. quest_tasks.hook_name and hook_state already equal this variable on all 7,489 rows.",
+  "confidence": "proved"
+ },
+ "40000002bb835995": {
+  "meaning": "Hydra trigger reactivates after a delay, given by 40000002bb835996.",
+  "evidence": "On 7,484 entries, mostly On Enter and On Exit; paired with the time field on 5,458. 2,026 uses have no explicit time (presumably a default) and 358 uses hold a time without this flag (leftover and unused).",
+  "confidence": "likely"
+ },
+ "40000002bb835996": {
+  "meaning": "Delay before a Hydra trigger reactivates, in seconds.",
+  "evidence": "f32 0.01 to 6000; common values 5, 1, 10, 300, 30, 900; usually beside bb835995. The unit is inferred from the round values, which read as seconds: no join to a known duration was found.",
+  "confidence": "likely"
+ },
+ "4000004bb8dc9943": {
+  "meaning": "Integer-list parameters of an achievement condition: map from a parameter enum to a list of ids.",
+  "evidence": "Key 14 (149, on type 15) holds a companion id: each companion's achievements repeat one id (two for Jaesa, light and dark), and the six no_companion achievements hold [0] negated. Key 8 (23, on type 18) holds unresolved ids, e.g. conquests.location.sectionx.worldboss_nightmarish. Neither key's ids resolve as object GUIDs or match cndSummonedCompanionId.",
+  "confidence": "likely"
+ },
+ "4000004bb8dc9945": {
+  "meaning": "String parameters of an achievement condition: map from a parameter enum to text. In this build only key 23, a comparison operator name.",
+  "evidence": "16 of 16 uses: type 23, key 23 = 'cndComparison_GreaterThanOrEqualTo', which is a member of client enum cndComparison, beside int key 22 = 10, e.g. galactic_seasons.season_6.weekly.conquest.200k.",
+  "confidence": "proved"
+ },
+ "4000004bb8dc9948": {
+  "meaning": "Time-interval parameters of an achievement condition, in milliseconds: map from a parameter enum to a duration.",
+  "evidence": "Type 8, key 2 = 7200000 on ach.operations.the_eternity_vault.nightmaremode.timed_run, whose description says 'in less than 2 hours' (7,200,000 ms = 2 h). The other use is 1200000 on test.qa.fparker.condition_test.intime.",
+  "confidence": "proved"
+ },
+ "4000004bb8dc994b": {
+  "meaning": "Achievement condition type: an enum selecting what the condition tests. The enum has no name in the client's dictionary, so types are known by use only.",
+  "evidence": "20 values on 4,019 conditions. Use shows: 3 class (metrics.level.*_consular, kill_10_marauders), 8 time limit (with bb8dc9948), 11 faction (key 6 holds two values, one Imperial and one Republic in fqn), 16 PvP stat threshold, 19 companion influence, 29 difficulty, 15 companion in use. Most frequent, 20 (2,393), has no parameters and is unresolved, as are the rarest (4, 9, 31).",
+  "confidence": "proved"
+ },
+ "4000004eae529e18": {
+  "meaning": "The quest variable marking a repeat run of the quest. Only 27 quests point at a defined variable; for 3,822 others it is an empty placeholder.",
+  "evidence": "27 values resolve to a PermanentBool named glb_repeat_* or repeat, e.g. qst.exp.seasons.02.ep_09 glb_repeat_season_2_ch_9 (the 27 are exactly the quests with 431424d192). The other 3,822 are the quest's id prefix with slot 0, which no variable definition holds. Whether the engine reads the placeholder at all is not shown.",
+  "confidence": "likely"
+ },
+ "40000001d2172763": {
+  "meaning": "What a task's bonus-mission entry does to the bonus quest: enum, absent/1 appears at the bonus's start and 2 later in the same branch; 2 likely ends or closes it.",
+  "evidence": "Holder 40000004dc01e9d4 on tasks, with sibling 400000307860fc07 naming the bonus quest. When one bonus has both values in a branch, 1 comes earlier in 581 of 585; absent comes before 2 in 188 of 190. E.g. flashpoint_manaan logistic_confusion: 1 at step 1, 2 at step 10. 2 is on the last step in 738 of 1,355, against 230 of 2,428 for 1. This contradicts the community name qstTaskBonusMissionStartTrigger for value 2. Whether 2 ends, fails or completes the bonus is not separated.",
+  "confidence": "likely"
+ },
+ "4000004e134fd908": {
+  "reason": "Only two values, 3588848902734087 (0xCC00A00000107) and 3588848902734088, on 3,694 conversation nodes in exp.seasons and character.combat_style and 3 scrolling-text nodes. They resolve to no object, quest variable or string, and occur on player, NPC, text and silent nodes alike. Viewing a conversation with both values in game, or a client trace, would be needed."
+ },
+ "400000444c03d6a1": {
+  "meaning": "Bitset of the action types of an object's deep links: 1 grant quest, 2 travel, 4 open window (bits are lkyDeepLinkAction members).",
+  "evidence": "Compare with the links in lkyDeepLinkOwnerDeepLinks (400000442eabc8b1). The OR of each link's fqn class (lky.grant_quest.*=1, lky.travel.*=2, lky.open_window.*=4) equals the value on 2,598 of 2,618 quests and achievements, including all 1,529 quests (4, mission_window) and 5 on star_fortress and master_difficulty. The other 20 are 4 with lky.generic.open_to_achievement. Values on emt objects were not checked.",
+  "confidence": "proved"
+ },
+ "4000004344191ff1": {
+  "meaning": "Set of bark events handled by a conversation: map from bark event id to true.",
+  "evidence": "Keys equal the distinct cnvBarkEventCondition (4000000048e5173b) values of the conversation's nodes in 182 of 203 conversations; in the other 21 the only extra key is 0. Found on 203 conversations such as cnv.misc.combat.cc.* companion barks.",
+  "confidence": "proved"
+ },
+ "40000004267b45a3": {
+  "reason": "Always true on a quest script call (cdeb4375 + Hydra reference), on 1,996 of about 13,000; most in the completion and start holders. Called script entries show no difference in trigger settings with or without it, since all 10,343 joins are Everyone with no reactivation. The community name qstHydraRunOnce has no support. A repeat-run test on a flagged call would settle it."
+ },
+ "40000034d36ca501": {
+  "meaning": "Quest variable that gates this spawner's enable state in the step; the spawner's enable depends on it.",
+  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 1,775 of 1,794 resolve: SimpleBool 820, Complex 687, Link 217, PermanentBool 51; e.g. cnv_chose_to_hold_camp, gameplay_chose_turrets. Every use is beside 5b20eaaa (enable). Parallels named qstStepClientOnlySpawnerStateVariableId. Direction is not settled: names like cmplx_do_not_spawn_agent_ship suggest the spawner may enable when the variable is false in some cases.",
+  "confidence": "likely"
+ },
+ "400000497ba659a0": {
+  "reason": "Always true on 1,743 quests. Most are companion conversations (612), and 619 of 698 qstReqPrivacy quests have it (phi 0.51); the rest are breadcrumbs, conquests and dailies. This contradicts the community name qstIsEventQuest. No named field explains the set; comparing how flagged and unflagged quests are offered in game would be needed."
+ },
+ "4000004e2bd6139a": {
+  "meaning": "Custom event name sent to the Hydra script in a conversation node's script call (2bd61399); it fires that script's 'On Custom:<name>' entry.",
+  "evidence": "1,537 of 1,540 pairs resolve to that exact script entry; the 3 misses are on cnv.test.cdurel.pts_disc_change_boost, whose script has 'Set Focus A' and 'B' for label 'Set Focus'. Examples: grant_codex (102), codexGrantEntry (40), To_Isaac_Apt.",
+  "confidence": "proved"
+ },
+ "4000004e2bd6139c": {
+  "reason": "Always true on a conversation node's script call, on 1,513 of 1,540. The 27 unset are nearly all scene exits: 'On Cnv Complete' on spirit_of_vengeance scenes, teleports (to_gravestone, ExitFlashpoint, Teleport to Odessen), mostly on leaf nodes. This suggests unset calls wait for the conversation to end, but nothing proves it. Watching a set and unset call's timing in game would settle it."
+ },
+ "400000404d7ad371": {
+  "meaning": "Negates an achievement condition: the achievement counts when the test is false.",
+  "evidence": "Name pairs show it on type 29: flashpoint.*.solo.* and solo_and_veteran.* (excluding master) have the flag with key 18=2, while flashpoint.*.master.* and hardmode have key 18=2 without it. Six *.weekly.combat.no_companion have the flag on type 15 with companion [0]. Parallels named cndNegate.",
+  "confidence": "proved"
+ },
+ "4000004403a9ce02": {
+  "meaning": "Derived marker on a Condition: present exactly when every type in cndTypeBitList is world, schedule or guild state, not the character's own state.",
+  "evidence": "Zero exceptions across 20,151 conditions (987 flagged). Allowed types: IsEventActive, IsGalacticSeasonObjectiveActive, HasGuildPerkActive, IsConquestActive, IsPvPSeasonObjectiveActive, IsDateTime, HasCountOfActivePerkTag, IsDayOfTheWeek, IsPTS, IsGuildLevel, IsMTXConnected, IsAnyGalacticSeasonActive, IsAnyPvPSeasonActive, NestedConditional. E.g. cnd.gld.schedule.cycle_2_or_6_or_8. IsPTS and guild types do not fit the community name cndIsTimeLimited. Engine use unknown.",
+  "confidence": "proved"
+ },
+ "40000002bb835990": {
+  "meaning": "Hydra trigger fires for companions.",
+  "evidence": "927 uses. 289 On Enter and On Exit entries have only this flag, 224 in companion-bark scripts (cc_poi_barks, trig_cc_bark_*), the rest mostly ambient triggers, e.g. location.belsavis.ambient.republic.trig_blown_prison. No in-game check.",
+  "confidence": "likely"
+ },
+ "40000002bb835991": {
+  "meaning": "Hydra trigger fires for NPCs.",
+  "evidence": "768 uses. 141 On Enter and On Exit entries have only this flag, e.g. flashpoint boss trig_leash_boss and event trig_hostage_despawn, which only make sense for an NPC crossing the volume. No in-game check.",
+  "confidence": "likely"
+ },
+ "4000002a0e062ca2": {
+  "meaning": "Action run by a conversation node, with its argument in 0e062ca3: Travel_Path, Travel_Any, Travel_Instance, SetAdvancedClass or StartConversation.",
+  "evidence": "Values Travel_Path 345, Travel_Any 154, SetAdvancedClass 17, Travel_Instance 14, StartConversation 9. Arguments in 0e062ca3 fit each: Travel_Path = waypoint name (a_taxi_tomb2, shuttle_waypoint), StartConversation = cnv fqn (cnv.exp.02.intro.republic), SetAdvancedClass = GUID of a class.pc.advanced.* object (class.pc.advanced.operative), Travel_Any and Travel_Instance = 0x40000... area-form ids.",
+  "confidence": "proved"
+ },
+ "40000042e413d370": {
+  "meaning": "Step-level companion of qstShowPlayButton: this step shows the quest's play button.",
+  "evidence": "All 92 quests with this flag also have named quest-level qstShowPlayButton (4000004eebd33f18, 103 quests), on alliance, exp and flashpoint content. The relation is proved; the UI effect is taken from the sibling's name and was not observed.",
+  "confidence": "likely"
+ },
+ "4000004ec86c22f2": {
+  "reason": "Always true on 512 quests: conquests, fpaccess, dailies, activities and dynamic events, 89% repeatable. All 212 quests with no qstCommandPointValue have it, and flagged quests with a value mostly have large ones (16,000 to 60,000 against the usual 600). That points at command-XP handling, but no value is explained. Comparing Command XP on flagged and unflagged completions would settle it."
+ },
+ "40000002bb835994": {
+  "reason": "Always true on 385 Hydra trigger entries, nearly all On Enter, 334 in location class-story content and the rest test scripts. 89% have deactivation scope Instigator. They run Play Conversation at 22% (base about 6%), and Set Quest State and Is Phase Owner are over-represented, so this fits solo story triggers. The community name DeactivateForInstigatorOnly duplicates the enum field, and nothing separates it from alternatives. Two players entering one in game would settle it."
+ },
+ "4000000cd6b80e69": {
+  "meaning": "Marks a Hydra script as space combat content.",
+  "evidence": "290 of 467 hyd.space_combat.* scripts have it; of 34,356 others, 52 do, 50 of them under test.users and test.andrewg. Why some space_combat scripts lack it is not shown.",
+  "confidence": "likely"
+ },
+ "4000004f83648418": {
+  "reason": "Always true on 336 script entries, dynamic_events 175, ventures 56, flashpoint 33, daily_area 29, operation 22. Over-represented actions: Execute Ability, Achievement Event, Set Quest Removed, Take Items, Contact Set Role (all 12 of 12), which all act on a person, hinting at per-participant execution; this is only an association. A multi-player test of a flagged and an unflagged script would settle it."
+ },
+ "4000004267d92710": {
+  "meaning": "Number identifying a bind point (hearth stone) map note; the 140 unflagged BindPoint notes presumably hold 0.",
+  "evidence": "291 uses, all on map notes with type BindPoint (7946402a), out of 431 such notes; values 1 to 248, 154 distinct, repeating across planets. Hydra's 'Discover Bindpoint' action (485 uses) carries a 64-bit value, not this number. Whether it is a per-planet discovery bit index is not shown.",
+  "confidence": "likely"
+ },
+ "40000002bb835992": {
+  "meaning": "Hydra trigger fires for the listed NPCs in 40000002bb835993.",
+  "evidence": "Of 293 triggers with a non-empty bb835993 NPC list, 232 have this flag, and of 262 with this flag 232 have a list. The flag-only entries are on leash volumes (trig_leash_volume), which fit a specific boss crossing. The community name says 'custom' only.",
+  "confidence": "likely"
+ },
+ "4000004c7fbdaf73": {
+  "meaning": "Which participant the achievement condition tests: 2 means the event's target; absent means the player. The name AchConditionEffectTagOwner is too narrow.",
+  "evidence": "Enum value 2 on all 228. Type 3 class test: kill_10_marauders and other kill_10_* have it, metrics.level.*_consular do not. Type 11 faction: bestiary killed_imperial_forces_3 has it, pvp imperial_conscript_victory does not. Also 98+9 of 145 type 18 conditions, e.g. conquests.class abilities.",
+  "confidence": "proved"
+ },
+ "4000000b8c279059": {
+  "meaning": "Credit reward tier of a quest branch: a key into qstrewardscreditsData, like the quest-level qstRewardsCredits.",
+  "evidence": "151 branches, using exactly the 5 values of qstRewardsCredits (8c27905a), each a key in singleton qstrewardscreditsData's per-level curves. It differs from the quest's own tier in many quests, e.g. tython attack_of_the_flesh_raiders branch 2 only. The singleton qstrewardscreditsdifficultyscale has a branchscale column (Normal 0.5 against questscale 1); that this field uses it is inferred and needs an in-game reward check.",
+  "confidence": "proved"
+ },
+ "400003d3834751e1": {
+  "reason": "Integer always 1, on 117 of 133 qst.dynamic_events.dantooine quests and nowhere else, all with qstRequiredWorldEventId. Most biome and zone_progress quests have it; missions and world_boss quests do not. No other Dantooine field or value explains it, and with one value there is nothing to join. A future build with other values or a Dantooine play test would be needed."
+ },
+ "4000004eab41b49b": {
+  "meaning": "Area in which the step's mount package override (mrp.*, 4000004eab41b49a) applies; the community reading is a polymorph area.",
+  "evidence": "114 of 117 steps with eab41b49a have this. 100 of 114 values also occur as qstTaskMapLink or step area ids, and they pair consistently: mrp.exp.seasons.02.ep_00_hk_bonus.story.hk_55 with 4611686355809927011 on 23 steps, mrp.alliance.legacy_reborn.* with 4611690224900330001. The mrp names are characters and vehicles (hk_55, lana, republic_walker). That the override is limited to the area is inferred from the pairing.",
+  "confidence": "likely"
+ },
+ "4000004e2bd6139b": {
+  "reason": "Always true on 87 conversation script calls, most labelled with companion actions: Summon <companion>, Unlock <companion>, Add <companion>, Dismiss, and a few others (become_turret, on_explode). This suggests a call scoped to one participant rather than all, but it is an association from labels only. Testing a flagged call in a group conversation would settle it."
+ },
+ "4000003d08886730": {
+  "reason": "Always true on 62 steps, 47 of which have qstCanBeFailed, with test quests qst.test.users.bsm.failany and failure_info_test and 22 space_combat. So it relates to failure, but 15 lack qstCanBeFailed and only 24 have fail objects. Failing a flagged and an unflagged step in game would settle it."
+ },
+ "40000044badbff89": {
+  "meaning": "Group-finder category of a featured-content quest; one hash per category.",
+  "evidence": "All 41 are qst.group_finder.featured_content.*. Value -1554341568796659796 on all 31 flashpoint quests, -50309505061997617 on all 10 uprising quests. The value itself is not resolved to a name.",
+  "confidence": "proved"
+ },
+ "400000005ce63fcc": {
+  "meaning": "Marks a task as an auto-generated force-conversation task.",
+  "evidence": "On 33 tasks, all with progress variable named *_fc_* (e.g. _fc_b1_s0_t0), and no other task has such a name; 32 also have named qstTaskForceConversationAssociatedObject (5d551476). 'fc' as force conversation comes from that sibling. Runtime effect not observed.",
+  "confidence": "likely"
+ },
+ "400000431424d192": {
+  "meaning": "Marks a quest as a replayable story chapter.",
+  "evidence": "27 quests, exactly the set whose 4000004eae529e18 resolves to a glb_repeat_* or repeat variable: 26 qst.exp.seasons.* chapters and qa.gameplay_persistence. All 27 have qstIsEpisode. Replay as the effect is read from the variable names, not observed.",
+  "confidence": "likely"
+ },
+ "4000004f08946439": {
+  "reason": "Always true on 24 steps, all the second step of their branch (2, 3 or 5 steps) on shared daily and weekly quests (qst.pvp.warzone.weekly_*, pvp.arena, daily_area.iokath.shared), all with qstStepIsShareable. The tasks are ordinary counters, and nothing else distinguishes the step. Sharing or abandoning one of these quests in game, compared with a similar unflagged one, would be needed."
+ },
+ "4000004e43444e78": {
+  "meaning": "Number of quests picked from a random-pool conversation node.",
+  "evidence": "All 23 uses are on nodes with cnvConditionType 5 (cnvConditionType_RandomPool, 0-based), whose cnvNodeQuestGrants list the pool: mission boards such as iokath mission_board_imp (values 1 and 2) and makeb mission_terminal_new (6). The value is below the pool size on all 23 (1 of 2 to 7, 2 of 4 or 7, 6 of 10). In-game picks not counted.",
+  "confidence": "likely"
+ },
+ "4000004f5c32a43a": {
+  "meaning": "Count compared by a HasCountOfActivePerkTag condition: how many active guild perks with the tag.",
+  "evidence": "All 13 uses: cndConditionType 72, with cndPerkTag and cndPerkTagComparisonOp 4 (cndComparison_GreaterThanOrEqualTo). 1 on cnd.gld.perk.has_category_* and 4 on cnd.gld.set_bonus.*. The community name fits only the set-bonus half.",
+  "confidence": "proved"
+ },
+ "40000001c65955ed": {
+  "reason": "Always true on 12 branches (7 location, 4 test, 1 dynamic event), e.g. waylaid_double_negative branch 3, contract_negotiations 2 to 4. Unlike qstBranchIsAlternateEnding, it shows no link to a named field. Playing one of these branches through would be needed."
+ },
+ "40000043fdef4852": {
+  "meaning": "Item or loot spec id tested by a bad-luck-protection condition.",
+  "evidence": "All 11 uses are cndConditionType 84 (IsAtBadLuckPreventionCapForSpec, 0-based) on cnd.itm.loot_protection.*. Paired hit_ and not_hit_ conditions share the same value and differ by cndNegate, e.g. ilum_lair.*_loot_protection_rare_mount. The id does not resolve as an object.",
+  "confidence": "proved"
+ },
+ "0000000000000000": {
+  "meaning": "Not a game field: preamble bytes misread by the conversation root search.",
+  "evidence": "8 test conversations. The payload bytes before the root are e.g. c4 06 00 00 19 04, and the value 25769810180 is 0x0600001904, exactly those bytes after the c4 prefix (cnv.test.pete.mister_imp_revan); likewise cc 12 00 00 19 04 gives 77309417732. The real first field cf 40 00 00 07 66 83 c6 6d follows. graph_root in field_sweep.rs accepts the first offset that reads to the end, here one early.",
+  "confidence": "proved"
+ },
+ "4000004e43444e7a": {
+  "meaning": "Random-pool reset setting of a conversation node: 1 means weekly (member of cnvRandomPoolReset).",
+  "evidence": "8 uses, all with value 1 on RandomPool nodes. Client enums cnvRandomPoolPer and cnvRandomPoolReset exist with consecutive hashes, which fits the id order e79 then e7a. Spring festival egg hunt boards have this and quest interval -6861156100148308393 (mask 4 in qstRepeatIntervalProto), unlike -5303584831447202882 (mask 127). But makeb mission_terminal_new also has it with mask 127, so the assignment is not exclusive.",
+  "confidence": "likely"
+ },
+ "4000004e43444e79": {
+  "meaning": "Random-pool scope setting of a conversation node: 1 means per player (member of cnvRandomPoolPer).",
+  "evidence": "2 uses, both value 1 on RandomPool nodes: mek_sha acquisitions_overseer_daily and cnv.test.qa.emulkey.terminal_test. Assigned by the id order against client enums cnvRandomPoolPer and cnvRandomPoolReset, with only two samples.",
+  "confidence": "likely"
+ },
+ "4000004f2fb0c04a": {
+  "reason": "A single use, true, on cnd.ventures.basilisk_prototype.lanes_lab.can_claim_bb, type 46 HasCollectionItemUnlocked with cndCollectionItemMtxId. One sample has nothing to compare against. Finding a second use in a later build, or testing that claim in game, would be needed."
+ }
+}

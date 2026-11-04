@@ -18,8 +18,8 @@
 //!
 //! Type tags (`GomTypeId`): `01` UInt64, `02` Int64, `03` Bool, `04` Float,
 //! `05` Enum, `06` String, `07` List, `08` Map, `09` EmbeddedClass,
-//! `0E` and `14`/`15` numbers, `0F` ClassRef, `11` engine stub (12 numbers),
-//! `12` Vector3, `18` embedded struct (same layout as `09`).
+//! `0E` a number, `0F` ClassRef, `11` Timer, `12` Vector3, `14` TimeSpan and `15` Time (signed
+//! numbers), `18` Tuple.
 //!
 //! Container layout (each container re-reads its element type tag inline):
 //! - List: `<elem_tag> <len> <len2> { <idx> <value> }*`  (`len == len2`)
@@ -43,21 +43,20 @@ mod tag {
     pub const LIST: u8 = 0x07;
     pub const MAP: u8 = 0x08;
     pub const EMBEDDED: u8 = 0x09;
-    /// Seen in 8.0 singletons (lgcVentures_Prototype, itmUpgradesPrototype).
-    /// Same wire layout as `EMBEDDED`: script type, field count, then
-    /// `<delta_id><tag><value>` per field.
-    pub const EMBEDDED_STRUCT: u8 = 0x18;
+    /// Two equal counts, then `<index> <tag> <value>` per element, with the index counting
+    /// from 1. Seen in 8.0 singletons (lgcVentures_Prototype, itmUpgradesPrototype).
+    pub const TUPLE: u8 = 0x18;
     pub const CLASS_REF: u8 = 0x0F;
     /// One number; only `guiScaleFormGFxProto` uses it.
     pub const NUMBER_0E: u8 = 0x0E;
-    /// Twelve numbers; only the eight engine stub singletons use it.
-    pub const ENGINE_STUB: u8 = 0x11;
+    /// A serialized timer: see `Reader::read_timer`.
+    pub const TIMER: u8 = 0x11;
     /// Three little-endian f32 (`Dynamic` position, rotation, scale).
     pub const VECTOR3: u8 = 0x12;
-    /// One number; the values read as durations in milliseconds.
-    pub const DURATION: u8 = 0x14;
-    /// One number; the values read as milliseconds since 1601.
-    pub const DATE: u8 = 0x15;
+    /// A signed number; the values read as durations in milliseconds.
+    pub const TIME_SPAN: u8 = 0x14;
+    /// A signed number; the values read as milliseconds since 1601.
+    pub const TIME: u8 = 0x15;
 }
 
 /// A decoded GOM value. Enums carry the zero-based member index (the engine
@@ -261,16 +260,12 @@ impl<'a> Reader<'a> {
             tag::STRING => Ok(GomValue::Str(self.read_string()?)),
             tag::LIST => self.read_list(),
             tag::MAP => self.read_map(),
-            tag::EMBEDDED | tag::EMBEDDED_STRUCT => self.read_object(),
+            tag::EMBEDDED => self.read_object(),
+            tag::TUPLE => self.read_tuple(),
             tag::CLASS_REF => Ok(GomValue::ClassRef(self.read_number()?)),
-            tag::NUMBER_0E | tag::DURATION | tag::DATE => Ok(GomValue::U64(self.read_number()?)),
-            tag::ENGINE_STUB => {
-                let mut numbers = Vec::with_capacity(12);
-                for _ in 0..12 {
-                    numbers.push(GomValue::U64(self.read_number()?));
-                }
-                Ok(GomValue::List(numbers))
-            }
+            tag::NUMBER_0E => Ok(GomValue::U64(self.read_number()?)),
+            tag::TIME_SPAN | tag::TIME => Ok(GomValue::I64(self.read_signed_number()?)),
+            tag::TIMER => self.read_timer(),
             tag::VECTOR3 => Ok(GomValue::Vector3([
                 self.read_f32()?,
                 self.read_f32()?,
@@ -281,6 +276,46 @@ impl<'a> Reader<'a> {
                 self.pos - 1
             ),
         }
+    }
+
+    /// `<total> <stored> { <index> <tag> <value> }*`, with the index counting from 1.
+    fn read_tuple(&mut self) -> Result<GomValue> {
+        let total = self.read_number()?;
+        let stored = self.read_number()?;
+        if total != stored {
+            bail!("gom_reader: tuple length mismatch ({total} != {stored})");
+        }
+        let mut items = Vec::with_capacity(stored.min(1 << 16) as usize);
+        for position in 1..=stored {
+            let index = self.read_number()?;
+            if index != position {
+                bail!("gom_reader: tuple index {index} where {position} was due");
+            }
+            items.push(self.read_tagged()?);
+        }
+        Ok(GomValue::List(items))
+    }
+
+    /// A serialized timer, as a list in wire order: state since, state, real time, start, stop,
+    /// last fired, fire rate, elapsed, marker, script, then tick count and elapsed ticks when
+    /// the marker is `0xDEADBEEF`. All are signed numbers but real time, one byte.
+    fn read_timer(&mut self) -> Result<GomValue> {
+        const TICKS_MARKER: i64 = 0xDEAD_BEEF;
+        let mut items = Vec::with_capacity(12);
+        items.push(GomValue::I64(self.read_signed_number()?));
+        items.push(GomValue::I64(self.read_signed_number()?));
+        items.push(GomValue::Bool(self.read_u8()? != 0));
+        for _ in 0..5 {
+            items.push(GomValue::I64(self.read_signed_number()?));
+        }
+        let marker = self.read_signed_number()?;
+        items.push(GomValue::I64(marker));
+        items.push(GomValue::I64(self.read_signed_number()?));
+        if marker == TICKS_MARKER {
+            items.push(GomValue::I64(self.read_signed_number()?));
+            items.push(GomValue::I64(self.read_signed_number()?));
+        }
+        Ok(GomValue::List(items))
     }
 
     /// `<elem_tag> <len> <len2> { <idx> <value> }*`
@@ -407,9 +442,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn duration_is_a_number() -> Result<()> {
+    fn a_time_span_is_a_number() -> Result<()> {
         let mut r = Reader::new(&[0xCA, 0x15, 0x3D, 0x80], 0);
-        assert_eq!(r.read_value(tag::DURATION)?, GomValue::U64(1_392_000));
+        assert_eq!(r.read_value(tag::TIME_SPAN)?, GomValue::I64(1_392_000));
         Ok(())
     }
 
@@ -528,22 +563,51 @@ mod tests {
     }
 
     #[test]
-    fn embedded_struct_tag_reads_like_embedded() {
-        // From lgcVentures_Prototype (8.0 PTS): a map value of tag 0x18.
-        // script type 3, 3 fields: +1 u64 (8-byte), +1 i64 1, +1 i64 negative.
+    fn a_tuple_is_its_values_in_order() {
+        // From lgcVentures_Prototype (8.0 PTS): a map value of tag 0x18, three elements.
         let buf = [
             0x03, 0x03, 0x01, 0x01, 0xCF, 0x69, 0x91, 0x4C, 0x16, 0x20, 0x38, 0xE5, 0x12, 0x02,
             0x02, 0x01, 0x03, 0x02, 0xC0, 0x05,
         ];
-        let v = Reader::new(&buf, 0)
-            .read_value(tag::EMBEDDED_STRUCT)
-            .unwrap();
+        let v = Reader::new(&buf, 0).read_value(tag::TUPLE).unwrap();
         assert_eq!(
-            v.embedded_field(1),
-            Some(&GomValue::U64(0x6991_4C16_2038_E512))
+            v,
+            GomValue::List(vec![
+                GomValue::U64(0x6991_4C16_2038_E512),
+                GomValue::I64(1),
+                GomValue::I64(-5),
+            ])
         );
-        assert_eq!(v.embedded_field(3), Some(&GomValue::I64(1)));
-        assert_eq!(v.embedded_field(6), Some(&GomValue::I64(-5)));
+    }
+
+    #[test]
+    fn a_tuple_index_out_of_order_is_refused() {
+        let buf = [0x01, 0x01, 0x02, 0x02, 0x01];
+        assert!(Reader::new(&buf, 0).read_value(tag::TUPLE).is_err());
+    }
+
+    #[test]
+    fn a_time_span_can_be_negative() -> Result<()> {
+        let mut r = Reader::new(&[0xC0, 0x05], 0);
+        assert_eq!(r.read_value(tag::TIME_SPAN)?, GomValue::I64(-5));
+        Ok(())
+    }
+
+    #[test]
+    fn a_timer_reads_its_ticks_only_after_the_marker() -> Result<()> {
+        let with_ticks = vec![
+            0, 1, 1, 0, 0, 0, 0, 0, 0xCB, 0xDE, 0xAD, 0xBE, 0xEF, 0, 7, 8,
+        ];
+        let timer = Reader::new(&with_ticks, 0).read_value(tag::TIMER)?;
+        assert_eq!(timer.as_list().map(<[_]>::len), Some(12));
+        let short = [0, 1, 1, 0, 0, 0, 0, 0, 0, 0];
+        let mut r = Reader::new(&short, 0);
+        assert_eq!(
+            r.read_value(tag::TIMER)?.as_list().map(<[_]>::len),
+            Some(10)
+        );
+        assert_eq!(r.pos(), short.len());
+        Ok(())
     }
 
     #[test]
