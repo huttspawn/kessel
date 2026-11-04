@@ -1,0 +1,351 @@
+{
+ "40000004e27e11d1": {
+  "meaning": "An effect entry's duration parameters: a map from effParam to milliseconds, one of the effect-map param fields. Empty on most entries.",
+  "evidence": "Every key resolves in the effParam enum: effParam_Duration 34284, MaxDuration 30854, RateLimitInterval 12116, Interval 8847, InitialDelay 5696, TravelTime 2578, Interval1..9 74 each, Phase1/2Duration. SetDuration holds Duration and MaxDuration, SetTickRate holds Interval, InvokeProjectile holds TravelTime. 591 of 779 'for N seconds' phrases in ability text equal N*1000 in a SetDuration of the same ability; the rest name no SetDuration on that FQN or a different one. Community name effTimeIntervalParams fits.",
+  "confidence": "proved"
+ },
+ "4000004c65bd7ee0": {
+  "meaning": "Tag exclusions on an effect trigger: a map from tag hash to true. A trigger does not fire for an ability carrying one of these tags. The field exists on all effect entries but is non-empty only on triggers.",
+  "evidence": "Non-empty in 316 of 52,677 e251d1c3 trigger entries and nowhere else; 557 keys, 82 of 86 distinct keys resolve in the tags table (top: tag.abl.debuff.damage_over_time 187, utility.is_aoe 82, itm.relic.onhit_damage 77). abl.smuggler.stealth OnDamageTaken excludes tag.abl.utility.does_not_break_stealth. abl.bounty_hunter.skill.shield_tech.flame_engine OnDamageDealt excludes damage_over_time and its description says 'Direct damage attacks'. Community name effTagExclusions fits.",
+  "confidence": "proved"
+ },
+ "4000004f191f29c8": {
+  "meaning": "Item rating as it applies to this item: the rating table value for (itmEnhanceableCache_Level if present, else itmBaseLevel, else 0) at the item's quality. Quality absent means cheap (member 0).",
+  "evidence": "item_rating_table join matches 118,233 of 118,233: 87,429 by itmBaseLevel, 29,832 by itmEnhanceableCache_Level, 972 with no level. Quality enum 1 standard, 2 premium, 3 prototype, 4 artifact, 5 legendary, 6 legacy, 7 quest, 8 moddable. Example itm.endgame.cdps1.lightsaber.artifact.01x1i: base level 51, cache level 52, value 128 = rating(52, artifact).",
+  "confidence": "proved"
+ },
+ "40000006f87f166a": {
+  "meaning": "On every effect variant: max(the parent ability's ablCastingTime, ablChannelingTime) in milliseconds plus 1500. A cached timing value; what the client does with it is not shown. The community name says cast plus channel, but where both are set the larger is used, not the sum.",
+  "evidence": "108,711 of 108,715 variants within 1 ms of max(cast, channel)*1000+1500, joining by FQN to the canonical row; 447 are 1 ms low from float truncation (0.7 s gives 2199). abl.qtr...hgt_inside_spawn_adds_channel cast 3, channel 30, value 31500. The 4 misses are test abilities (abl.test.qa.hschulz.force_slam, ...kquinn...range_attack).",
+  "confidence": "proved"
+ },
+ "400003d2a9eaf0f2": {
+  "reason": "A float, 1.0 on 92,109 items and 1.15 on 104, and those 104 are exactly the itm.gen.lots.*.operation_deepstation.ilvl_0158.artifact.* items. Their itmEquipModStats equal the same item under .operation. at 1.0 (Rakata-tier peers, rating 340), so it does not scale the stored stats. A 15% multiplier on something, but nothing in the data says what. Settle by comparing an equipped deepstation ilvl_0158 artifact piece with its .operation. twin in game. client.gom types this int32, which the f32 values contradict."
+ },
+ "400000410f505109": {
+  "meaning": "Item rating from base level: the rating table value for (itmBaseLevel, quality). Present only on items without itmEnhanceableCache_Level; 4000004f191f29c8 carries the rating for all of them.",
+  "evidence": "88,401 of 88,401 equal item_rating_table(itmBaseLevel, quality) and equal 4000004f191f29c8. Item rows: both fields 88,401, only 4000004f191f29c8 29,832, and those 29,832 are exactly the rows with itmEnhanceableCache_Level.",
+  "confidence": "proved"
+ },
+ "4000000d5c7a4baf": {
+  "meaning": "On a package's ability entry: the NPC attack waves in which the ability is active. [0] means no wave restriction.",
+  "evidence": "List of ints in 0..15, the same range as effParam_AttackWave on effAction_SetAttackWave (0..15). [0] on 30,080 of 33,703 entries; other values occur only in NPC, operation and flashpoint packages. Where a package's own abilities set waves (137 packages), 343 of 420 listed wave values are set by them; apn...lady_dominique.watchdog lists 1,2,3,4 and sets 1,2,3,4; apn...cz_predator_droid lists and sets 1,2,3. Community name ablAbilityActiveDuringAttackWaves fits. Not proved because 276 packages with waves have no setter among their own abilities.",
+  "confidence": "likely"
+ },
+ "40000004e251d1ce": {
+  "meaning": "The trigger of an entry in e251d1c3: a value of enum effTrigger. So e251d1c3 is the effect's trigger list, not its conditions (memory 01a17c0c says effCondition, which is wrong). Conditions are in effConditions with effConditionName e251d1cd.",
+  "evidence": "Params per member match effTrigger, not effCondition. Member 1 OnTick holds TickNumber (2594 of 2594 in a 20% sample). Member 2 OnTravelComplete holds ProjectileHit (509). Member 9 OnDamageDealt holds RateLimitInterval, WeaponMode, DamageType, ProcChancePercent. Member 13 OnChargesIncreased holds Count. Member 39 OnAbilityPostActivate holds AbilitySpec, FromActor. Read as effCondition, member 2 would be IsAlive and member 9 IsNotInCombat, which take none of those. flame_engine: member 9, 75% ProcChancePercent, 15000 RateLimitInterval. Values range to 54, within effTrigger's 61 members.",
+  "confidence": "proved"
+ },
+ "4000004e55d76728": {
+  "meaning": "On a package's ability entry: the quickbar slot positions the ability is placed in when the package is granted. Empty for most entries.",
+  "evidence": "Non-empty on 1,377 of 33,703 entries, mostly apc.tutorial (880) and temporary-ability packages such as apc.daily_area.iokath.esne.esne. Values 1..60 and never repeat within a package (555 of 555). Second values run 48 above the first ([8,56], [1,49]), which reads as a second bar page. Agrees with the ability's ablQuickslotNumber in only 263, so it is the package's own placement. Community name says temporary quickbar; tutorial packages suggest it is wider than temporary.",
+  "confidence": "likely"
+ },
+ "40000002eeb6a660": {
+  "meaning": "On a package's ability entry: the health percentage that gates AI use of the ability. -1 means none. Whether the gate is at-or-below the value is not shown.",
+  "evidence": "-1 on 33,531 of 33,703; other values 1..100. Set on defensive and last-resort abilities: saber_ward 9, shield_probe 11, dark_heal 7, berserk 6, medicine 5, invincible 4. Names agree: buffstate_50 is 50, buffstate_75 is 75, buffstate under apc..shade_25 is 25. lightning_shield_75/50/25 are -1, so such gates can also live elsewhere. Sibling of ablAbilityDataAIChanceToUse. Community name ablAbilityDataAIHealthThreshold fits.",
+  "confidence": "likely"
+ },
+ "400000024db5b1e6": {
+  "meaning": "An ability's quickbar slot, 1..12, with -1 for none. How it differs from ablQuickslotNumber is not shown; the community name's cover-bar reading has no support in the data.",
+  "evidence": "-1 on 30,300 of 30,749. When set it equals ablQuickslotNumber in 412 of 449; the rest have ablQuickslotNumber absent or -1 and are temporary, quest or companion abilities (abl.quest.location.ilum.datacron.fleet 2). Same value range as ablQuickslotNumber. Only 420 of 2,057 abilities with a quickslot have it set.",
+  "confidence": "likely"
+ },
+ "4000000197d6d791": {
+  "meaning": "The ability breaks stealth on use. Absence means it does not. Not proved because some named exceptions exist.",
+  "evidence": "Of 35 abilities whose text says it does not break stealth, 34 lack the flag (abl.sith_inquisitor.force_speed, abl.agent.exfiltrate). Of 72 with tag.abl.utility.does_not_break_stealth, 69 lack it. Stealth and evasion abilities lack it (abl.agent.stealth, abl.smuggler.stealth, abl.agent.evasion); abl.agent.shiv has it. Set on 26,250 of 35,348 canonical abilities. Against: abl.agent.backstab lacks it, and 2,879 passives carry it, where it can have no effect.",
+  "confidence": "likely"
+ },
+ "40000004e251d1cf": {
+  "meaning": "The target of an entry in e251d1c1: a value of enum effTargetOverride. So e251d1c1 is the effect's target-override list.",
+  "evidence": "Params per member match the names. Member 2 AoeSphere holds Radius, MaxTargets, SortType (1917 of 1917 in a 20% sample). Member 4 AoeCone holds Angle, Direction, Distance. Member 14 AoeCylinder holds Radius, Distance, Direction. Member 17 RandomEnemy holds IgnorePC, IgnoreNPC. Member 1 Caster holds nothing. Maximum value 24, the last of 25 members. Community name effTargetOverrideName fits.",
+  "confidence": "proved"
+ },
+ "4000000a71b336b1": {
+  "meaning": "On a package's ability entry: the AI priority of the ability, where higher is preferred. Filler and passive abilities sit at the bottom.",
+  "evidence": "Values 1..10000. Companion package apc...nathema_voreclaw.healer: single_stun and taunt 1000, heal 980, attack 960, passive, buff_controller and unarmed 1. Median by ability name across packages: enrage 1000, interrupt_immunity 1000, grapple 100, flurry (auto attack) 25, buff_controller_new 1, passive 1. Separate from ablAbilityDataAIChanceToUse on the same entry. No direct test of the ordering exists in static data.",
+  "confidence": "likely"
+ },
+ "400001057c8da5f0": {
+  "meaning": "A research-outcome key on craftable items: the group that reverse engineering this item rolls on, for items with no fixed prfItemResearchSchematic. Some values key itmModifierSetTablePrototype. The community name itmTransactionFee is wrong: the values are shared 64-bit hashes.",
+  "evidence": "All 11,026 items carrying it are made by a schematic (prfSchematicItemSpec). Of 15,459 such items, every one has this or sibling prfItemResearchSchematic (id one higher): 10,951 this only, 4,433 that only, 75 both. 117 distinct values, shared by groups (mod.support, mod.overlay share one over 2,500 items). 52 of 117 values, 4,772 uses, are keys of itmModifierSetTablePrototype; 65 values appear nowhere else, so they cannot be followed. That reverse engineering uses it is inferred from the sibling.",
+  "confidence": "likely"
+ },
+ "400000429f09b921": {
+  "meaning": "On a schematic with materials: a hash for what breaking the product down returns, tied to the material set. Shares its id space with prfDisassembleLoot.",
+  "evidence": "Present on 9,440 schematics, all of which have prfSchematicMaterials and MaterialOrder, and on none of the 1,828 without materials. 266 of 303 distinct values, 8,060 of 9,440 uses, are values of prfDisassembleLoot in prfDisassembleInfoPrototype. 710 of 782 material sets map to a single value. Could not reproduce a table key from the product item's level, quality and category, so the lookup is unshown.",
+  "confidence": "likely"
+ },
+ "4000000896914d57": {
+  "reason": "A true-only flag on 4,875 placeables of many kinds (doors, clickables, barriers, boss pads), with no enrichment for any model, state or ability field. Community name plcAreaReplicate cannot be tested: replication is server behaviour and leaves no static trace. A network capture or server source would settle it."
+ },
+ "40000013407c89a3": {
+  "meaning": "The loot package this item grants when opened (lockboxes, cartel packs, boxes).",
+  "evidence": "Same id space as plcdynLootPackage on placeables and field 956d8c70 on NPCs. 29 uses in abl.ventures.basilisk_prototype.loot_boxes.* ability effects carry the item's value as effParam_LootPackage on effAction_GrantLootFromPackage, joining abl...open_daily_quest to itm...daily_quest_box. All 4,094 items are containers: itm.mtx.lootboxes 1,754, itm.loot.lockbox 901. Community name itmTreasurePackageId fits.",
+  "confidence": "proved"
+ },
+ "400000089d5b473f": {
+  "meaning": "Effect-variant copy of effInitializer_SetAreaRestricted's IsAreaRestricted: the effect is area restricted.",
+  "evidence": "2,904 of 2,904 variants have that initializer with IsAreaRestricted true; 10 more variants have the initializer without it set.",
+  "confidence": "proved"
+ },
+ "400000021c168bd8": {
+  "reason": "Always 100, on exactly the 2,412 variants holding effAction_InvokeProjectile (2412 of 2412 both ways). So it belongs to projectile effects, but a constant says nothing about its unit or use, and no InvokeProjectile param carries the value 100 in any meaningful number (TravelSpeed twice, TravelTime once). The client's projectile code or a changed value in a later patch would settle it."
+ },
+ "40000044bbf3b15d": {
+  "meaning": "The ability's cooldown is shared with a group (adrenals, relics, grenades): it has a second, shared timer in ablCooldownTimerSpecs.",
+  "evidence": "All 2,089 abilities with two cooldown specs have the flag, and none lack it. The first spec is unique to the ability; the second has 158 distinct values shared by up to 221 abilities: abl.itm.relic.onuse.dps_alacrity.* 221, abl.itm.potion.adrenal.* 195, abl.itm.potion.grenade.ice.* 95. Not proved because 190 flagged abilities have one spec (trophies, abl.test.holy_nova).",
+  "confidence": "likely"
+ },
+ "40000018a8f5a9c2": {
+  "reason": "A 64-bit hash on 2,104 class rows with 35 distinct values, one covering 1,089, one covering 190 class.cc rows. It matches no object GUID and no value or key anywhere in the objects or singletons, so nothing can be joined. Community name chrClassDataStatPkgId is untested. Finding the table these key into, likely hashed outside the GOM, would settle it."
+ },
+ "400000427551a394": {
+  "reason": "A value with the E000 GUID prefix on 2,104 class rows, 19 distinct, 0xE000D13519265EDB on 1,885. No extracted object has that GUID, and find_guid over all 101 .tor files (715,742 objects, little-endian) found no hit for that top value. Groupings overlap: class.cc 0xE000B7317D6E732B, some ranged NPCs 0xE00038D63470616F. The target record is missing from the archives, so a client-side or server source is needed."
+ },
+ "400000082d01fc9a": {
+  "reason": "True on 2,083 of 2,104 NPC and companion classes. Absent on class.pc.*, mounted turrets, dianoga_tentacle and also class.cc.humanoid.melee.dps, so neither immobility nor player status explains the gap. The community name chrPreferRanged belongs on its neighbour 400000082d01fc99 and fails here: melee classes carry this field too. Toggling it in a server test is the only check."
+ },
+ "4000004e142db5e8": {
+  "meaning": "On a package's ability entry: every rank in ablAbilityDataRanks is learned automatically as the character reaches it, with no trainer step.",
+  "evidence": "2,011 entries, nearly all in class and test packages (apc.sith_warrior.marauder.base). All 2,011 have ablAbilityDataRequiredLevel equal to the first rank, and 1,990 have a rank range of 3 or more. Entries with ablAbilityDataAutoAcquire and no flag mostly hold a single rank ([0] 3,108, [1] 664); 203 hold a range. Community name ablAbilityDataAutoAcquireAllRanks fits. Grant behaviour cannot be observed statically.",
+  "confidence": "likely"
+ },
+ "400003d24eef77c1": {
+  "meaning": "A discipline's utility tiers: a map from unlock level to the utility bits unlocked at that level. Inverse of disDisciplineUtilityBitToUnlockLevel.",
+  "evidence": "48 of 48 disciplines match the inverse exactly. dis.powertech.firebug: {23:[1,3,2], 27:[4,6,5], ... 73:[22,24,23]}, 8 tiers of 3. Community name disDisciplineUnlockLevelToUtilityBits fits.",
+  "confidence": "proved"
+ },
+ "4000004341f10fd0": {
+  "meaning": "On an NPC package's ability entry: a cbtToughness value gating the ability by NPC toughness. Whether it is a minimum or an exact match is not shown.",
+  "evidence": "Values 1,2,3,4,5,8,9,10, all valid cbtToughness members, and never 6 player or 7 companion, on 1,518 NPC package entries: strong 649, boss_1 611, boss_2 151. Value 5 boss_raid occurs only in packages used by NPCs of toughness 5 or 10 (NPC toughness read from field 618ec27c). Values 3 and 4 appear in packages shared by standard, strong and boss_1 NPCs, so entries can sit on an NPC they do not apply to. The enum name is inferred from the range and those joins; no client type names it.",
+  "confidence": "likely"
+ },
+ "400000309daa45c2": {
+  "reason": "A true-only flag on 1,310 canonical abilities: Bolster and ReverseBolster 71 and 56, group buffs (abl.agent.coordination_group_buff), area dispels, team ids (abl.qtr.1x2.pvp.denova.id_team_a), polymorphs. 1,276 have ablTargetRule 10, but about 3,450 other abilities do too. No field or enum separates them. A server-side test of how such an ability treats its target would settle it."
+ },
+ "4000004e1d9dc988": {
+  "reason": "A true-only flag on 1,212 canonical abilities, 988 under abl.placeables: UsePlaceable 783 of 851, LootPlaceable 53 of 57, plus abl.player.revive*, abl.player.exit_flashpoint and some star_fortress boss abilities. It marks non-combat interactions, but the boss abilities and the 68 UsePlaceable abilities without it mean no behaviour fits all. Enriched alongside ablUseableWhileSilenced and ablUseableWhileStunned. In-game use while under a specific state, compared flag on and off, would settle it."
+ },
+ "4000000ba38ca339": {
+  "meaning": "Effect-variant copy of effInitializer_SetScalesWithCharges: the effect's strength scales with its charges.",
+  "evidence": "1,194 of 1,194 variants carrying it hold that initializer, and all 1,194 holding that initializer carry it.",
+  "confidence": "proved"
+ },
+ "4000004d1fc86729": {
+  "meaning": "The ship a starfighter component copy belongs to: a key of MasterComponentMap and scFFShipsDataPrototype. The community name scFFComponentShipId fits.",
+  "evidence": "1,128 of 1,128 _scs objects: MasterComponentMap[value] lists this object's GUID under a slot. 40 distinct values, the 40 keys of MasterComponentMap, scFFShipDefaultLoadouts and scFFShipsData; each is one ship (1791091081562884805 is rep_scout).",
+  "confidence": "proved"
+ },
+ "4000004d550391d8": {
+  "meaning": "An identity hash for a starfighter component design, the same on every ship's copy of that component. Nothing else refers to it.",
+  "evidence": "484 distinct values and 484 _scs kinds, one to one both ways over 1,128 objects: shield_rep_scout_quick_charge_scs.rep_scout.speed_a and .battle_b share a value. It appears in no other field or singleton.",
+  "confidence": "proved"
+ },
+ "400000279fbbd8f9": {
+  "meaning": "On a companion package's ability entry: the ability auto-casts by default, on the companion's ability bar.",
+  "evidence": "1,030 of 1,041 are in apc.companion.*. Flagged: single_target_attack, aoe_attack, shield, taunts, heals; 850 non-passive against 180 passive. Unflagged companion entries are controllers and passives: buff_controller_new, bark_controller, weapon and armour proficiencies; 818 passive against 79 not. Community name ablAbilityDataAutoCastActiveByDefault fits. The default-on state is only visible in game.",
+  "confidence": "likely"
+ },
+ "4000004eab77dfc8": {
+  "reason": "A true-only flag on 1,015 schematics, 994 under schem.itm.* and 21 under schem.mod (those sampled are augments). In the pair checked, schem.itm.mod.support.att_alac_def_end.artifact.basemod_mk901 has the same product as unflagged schem.mod.support...mk901. Every flagged one also has prfSchematicResearchChances and never prfTrainingCost (0 of 1,015, against 1,905 unflagged). So it marks a schematic you do not train. It is not explained by prfItemResearchSchematic (401 of 1,015) or itmTeachesValue (21 of 1,015). Learning a flagged schematic in game would show how it is obtained."
+ },
+ "400000082d01fc99": {
+  "meaning": "The class prefers ranged combat. The community name chrPreferRanged fits this field.",
+  "evidence": "Of NPC classes with ranged in the FQN, 243 of 246 carry it; with melee, 8 of 243. All 997 also have 400000082d01fc9a. Present on class.cc.* companions (104). AI behaviour itself is not observable in static data.",
+  "confidence": "likely"
+ },
+ "400000111b17b376": {
+  "meaning": "Using the ability does not dismount the player. The community name ablStayMounted fits.",
+  "evidence": "882 canonical abilities that make sense while mounted: vanity pet summons (effAction_SummonPet 459 of 815, abl.itm 415), reputation trophies (GrantReputation 126 of 127), abl.player.mount.*, abl.player.summon_companion, abl.player.consumable_quick_travel_selection, abl.gld.perk.mount_shield. Enriched with effIsUseableOnTaxi. Dismount behaviour is not observable in static data.",
+  "confidence": "likely"
+ },
+ "400000087e508067": {
+  "meaning": "A despawn-type timer in milliseconds on usable and lootable placeables. On chests it runs far longer than plcDespawnTime, which fits the community name plcPartialLootTimer: how long a part-looted object stays.",
+  "evidence": "881 placeables, 787 with plcdynLootState. Range 2000..600000. On chests 120000 or 360000 where plcDespawnTime is 15000 (treasure_small, treasure_medium). On non-chests often equal to plcDespawnTime: 297 of 847 (scanners, quest items). The partial-loot reading is not excluded by anything but also not shown; an in-game chest left part-looted would settle it.",
+  "confidence": "likely"
+ },
+ "400000445dc59599": {
+  "meaning": "The item's itmUsageAbility is an on-use ability that needs the item equipped, as on relics. Consumables with a usage ability lack it.",
+  "evidence": "859 items, all with itmUsageAbility, and 826 list conSlotEquipHumanRelic (member 48 of conSlot) first in itmSlotTypes (itm.gen.*.relic_*_onuse). 844 relic-named usage items have it, 104 do not, and those are boxes, schematics and cosmetics (itm.schem.gen.artifice.relics..., ...lockbox_boots_relic). Of the 16,358 unflagged usage items, 15,601 have a slot list beginning member 0 and 752 beginning member 30, which are not equip-first lists; only 4 quest tools start with an equip-like member in the prefixes checked. Equip requirement is inferred; test in game by using one unequipped.",
+  "confidence": "likely"
+ },
+ "400000004b6f9130": {
+  "meaning": "Effect-variant copy of effInitializer_SetTimeLine's Interval1..Interval9: nine millisecond intervals as a list.",
+  "evidence": "74 of 74 lists equal [Interval1..Interval9] from that variant's SetTimeLine in order, and all 74 SetTimeLine variants carry it. abl.exp.seasons.02_uprisings.imp_ship.trash.ravage: [300,300,2100,0,0,0,0,0,0], for a three-second Ravage.",
+  "confidence": "proved"
+ },
+ "4000001cc29b7480": {
+  "meaning": "The vehicle used for a taxi: a key of spnVehicleProtoData. Set on the terminal as a default (625) and on individual routes as an override (86).",
+  "evidence": "711 of 711 are keys of spnVehicleProtoData, whose entries name the vehicle: tax.meksha.rep_flight_pad resolves to veh.taxi.speeder_air, tax.makeb.taxi_h2_e1_poi038_emp to veh.taxi.speeder_van. Community name taxVehicleSpec fits.",
+  "confidence": "proved"
+ },
+ "4000003075bd0524": {
+  "meaning": "The quest variable belonging to this taxi point. The join shows the id space. That the variable tracks unlocking is not shown, though the owning quests suggest it.",
+  "evidence": "420 of 424 distinct values are qstVariableFqnId or qstVariableFqnIds in 21 quests: qst.global.taxi_terminals 542 hits, qst.exp.01.makeb.taxi.taxi_makeb 72, qst.exp.03.mek_sha.taxi 24. Also hydHintID in hyd.exp.04.manaan.taxi.* and in qstSharedInformationPrototype. 418 are unique to one terminal; 6 shared values cover grouped ones such as escape pods. Community name taxQuestVariable fits.",
+  "confidence": "proved"
+ },
+ "40000040e0f57ec0": {
+  "meaning": "Effect-variant copy of effInitializer_SetType's IgnoreTokenThreat.",
+  "evidence": "433 of 433 variants have SetType with IgnoreTokenThreat true, and those are the only 433 with that param true. Id is one below effCannotToggleOff (e0f57ec1), which is SetType's CannotToggleOff in the same way.",
+  "confidence": "proved"
+ },
+ "4000001ccb271b90": {
+  "reason": "A true-only flag on 423 placeables: fly-bys, force fields, announcement groups, habitat props, unusable shrines. No field or fqn pattern splits them from others of the same kind. Community name plcAlwaysVisible cannot be tested from static data; removing it in a client, or comparing draw distance in game on flagged and unflagged twins, would settle it."
+ },
+ "40000041c9d1fba2": {
+  "meaning": "The utility a placeable provides: 1 door between stronghold rooms, 2 stronghold directory, 3 bank or cargo hold, 4 player ship door, 5 appearance station, 6 guild bank, 7 legacy bank, 8 mailbox, 9 exit door, 10 command console. The client enum's name is not identified. Community name plcUtilityType fits.",
+  "evidence": "Grouping 386 rows by FQN: 1 is door_* with plcRoomA/plcRoomB (plcRoomB on 165 rows, the count of value 1), 3 is bank, cargobay, captains_locker, 6 is guildbank, guild_banking_terminal, 7 is cargobay_legacy, 8 is mailbox 45 of 53, 9 is door_exit, escape_pod. Exceptions: bank twice under 8, bank once under 10. Searching the client's enums for door, mail and bank terms found none with this order.",
+  "confidence": "proved"
+ },
+ "40000044b79e87c4": {
+  "meaning": "On a discipline utility package's ability entry: this is the discipline's default pick for its utility tier. Community name ablAbilityModSelectedByDefault fits.",
+  "evidence": "Joining disDisciplineUtilityPackageId to the package: all 320 flagged ability entries have ablAbilityDataUtilityBitIndex in disDisciplineUnlockLevelToDefaultUtilityBit, and none of the 584 unflagged do.",
+  "confidence": "proved"
+ },
+ "40000003b981a0b0": {
+  "meaning": "The taxi route flies its path backwards. Community name taxRoutePathIsReversed fits.",
+  "evidence": "Grouping 862 routes by pth. path: 268 of 269 paths used by two routes have exactly one end flagged and one not. tax.tython.poi05_kalikori_village flagged, tax.tython.poi_jedi_temple not, on the same path.",
+  "confidence": "proved"
+ },
+ "400000419f736ce2": {
+  "meaning": "Effect-variant marker for effInitializer_SetGroundTargetAtTargetPosition: the effect's ground target is placed at its target's position.",
+  "evidence": "300 of 300 variants carrying it hold that initializer, and all 300 holding it carry it. Examples are NPC ground-target attacks: abl.flashpoint.copero.bonus_boss.orbital_strike, abl.npc.ability.skytrooper.missile.high_ground.",
+  "confidence": "proved"
+ },
+ "4000004e41cddb6c": {
+  "meaning": "Radius in meters of a ground-targeted ability's area.",
+  "evidence": "227 of 250 have ablTargetRule 8, against 1,174 of 35,348 canonical abilities. 128 of 129 with an 'N meter' phrase in the text have that N: V-6 Rakata Freeze Bomb value 6, 'within 6 meters of the selected area'. The miss is abl...stealth_reveal_cone_impact, 15 against 30.",
+  "confidence": "proved"
+ },
+ "4000000fb68c8c37": {
+  "meaning": "Effect-variant marker for effInitializer_SetIgnoreScoreboardStats: the effect is left out of scoreboard statistics.",
+  "evidence": "220 of 220 variants carrying it hold that initializer, and all 220 holding it carry it. Examples: abl.itm.potion.medpac.*, abl.sith_warrior.endure_pain, abl.jedi_consular.battle_readiness.",
+  "confidence": "proved"
+ },
+ "4000004988ce4520": {
+  "meaning": "A treasure chest's level band, coarser than plcdynLootLevel. Community name plcTreasureChestLootLevel fits only as a band.",
+  "evidence": "Only on 111 chests. Value against plcdynLootLevel range: 1 covers 1..10, 5 covers 11..14, 10 covers 15..20, 15 covers 21..27, 25 covers 28..36, 30 covers 37..43, 35 covers 44..46, 40 covers 47..49, 45 covers 50, 48 covers 50..61. Outliers: rock_mound_chest 1 at level 60, one chest 20 at level 20. Used for what is not shown: not by plcdynLootPackage, as 10 of 22 packages span more than one band.",
+  "confidence": "likely"
+ },
+ "4000004eab7791a8": {
+  "meaning": "An ordinal for an unlockable crew mission within its crew skill.",
+  "evidence": "Exactly the 111 mission schematics with prfMissionUnlockable (111 both ways of 1,122). Values 1..20 never repeat within a skill (all 8 skills). Rising with prfMissionLevel: research 24 is 2, 32 is 3 to 5, 130 is 18. One low-numbered exception per skill: research 102 prototype is 1. Purpose inferred from the sequence.",
+  "confidence": "likely"
+ },
+ "400000412f8cba33": {
+  "meaning": "Bolt or projectile speed of a starfighter weapon. 1e7 and 1e8 on railguns and lock-on missiles means effectively instant.",
+  "evidence": "85 spvp weapon controllers. 70 on 46, the common blaster value, the same as named scFFTurbolaser_BoltSpeed (68..71.5) on tl.* turbolasers; 85 on heavy lasers, 100 on spawn turrets. 1e8 on all spvp.sweaponcontroller.lockon.*, 1e7 on chargeup railguns. No stat or text gives the unit.",
+  "confidence": "likely"
+ },
+ "4000004ef6bad788": {
+  "meaning": "Effect-variant marker for effInitializer_SetPersistAtZeroCharge: the effect stays when its charges reach zero.",
+  "evidence": "84 of 84 variants carrying it hold that initializer, and all 84 holding it carry it. 77 also hold SetCharges.",
+  "confidence": "proved"
+ },
+ "40000042b699fb76": {
+  "reason": "A true-only flag on 75 package entries, 63 with ablAbilityDataAutoAcquire. 49 are sprint in apc.tutorial.*, the rest other passives (turret_passive, mouse_droid_passive, passives). Too few and too similar to separate what it does. An in-game look at those tutorial characters would help."
+ },
+ "40000044b79e87c5": {
+  "meaning": "On a discipline utility package's talent entry: this is the discipline's default pick for its utility tier. Talent counterpart of 40000044b79e87c4, id one higher.",
+  "evidence": "All 64 flagged talent entries in ablPackageTalentsList have talTalentDataUtilityBitIndex in disDisciplineUnlockLevelToDefaultUtilityBit, and none of the 184 unflagged do.",
+  "confidence": "proved"
+ },
+ "40000008d92e8668": {
+  "meaning": "Which auction network a GTN terminal uses: a value of enum ahNetwork (1 Empire, 2 Republic, 3 Neutral). Community name plcAuctionNetwork fits.",
+  "evidence": "Enum members ahNetworkNone, Empire, Republic, Neutral. All 5 value-1 rows are empire named (plc.test.alderaan.auction.auction_empire, auction_imp_kiosk); all 4 value-2 rows are republic named. The other 50 rows, including every plc.location terminal, are 3. Npc field d92e8658 is named ahNetwork.",
+  "confidence": "proved"
+ },
+ "400000412fbfb111": {
+  "meaning": "Seconds between shots of a starfighter weapon: the inverse of stat_spc_weapon_rate_of_fire.",
+  "evidence": "54 of 54 equal 1 over modStatBase member 332 stat_spc_weapon_rate_of_fire within 0.002. Light laser 0.333, rapid laser 0.25, quad and laser cannon 0.4, heavy 0.5, burst 0.75.",
+  "confidence": "proved"
+ },
+ "400000416d8b16b0": {
+  "reason": "A float count by weapon type on 54 spvp controllers: 12 on burst laser, 3 on rapid laser, 2 on light and quad lasers, 1 on heavy lasers, flak, rocket pods and turrets. It matches no rate or damage stat in modStatBase. It could be bolts drawn per shot or emitter count; watching each weapon fire in game would settle it. client.gom types this int32, which the f32 values contradict."
+ },
+ "400000443f357cd0": {
+  "meaning": "Marks a level-sync or bolster ability.",
+  "evidence": "46 canonical abilities: abl.flashpoint.level_sync.*, abl.operation.level_sync.*, abl.player.level_lock.*. 43 hold ReverseBolster, 41 hold Bolster. Other Bolster abilities (77 total) lack it, so what it adds to them is not shown.",
+  "confidence": "likely"
+ },
+ "400000457622f5f0": {
+  "meaning": "Effect-variant marker for effInitializer_SetObservable: the effect can be observed by others. The behaviour of Observable is only named by that initializer.",
+  "evidence": "30 of 30 variants carrying it hold that initializer, and all 30 holding it carry it.",
+  "confidence": "proved"
+ },
+ "40000003d0b8ed03": {
+  "meaning": "Effect-variant copy of effInitializer_SetAura's Radius: an aura's radius.",
+  "evidence": "22 of 22 equal SetAura's Radius in that variant. The other 3 SetAura variants have neither. abl.quest.generic.use_in_area_aura.aura value 3.0, described as marking the usable radius.",
+  "confidence": "proved"
+ },
+ "4000004180b8c1b4": {
+  "meaning": "Effect-variant copy of effInitializer_SetDuration's IsShortDurationPersist.",
+  "evidence": "19 of 19 variants have SetDuration with IsShortDurationPersist true, and those are the only 19 with it true.",
+  "confidence": "proved"
+ },
+ "4000004d592acd5f": {
+  "reason": "A float per turbolaser node in scFFTurbolaser entries, between named Hue and BoltSpeed: 2.3..2.6 on tl.imp_4 and tl.imp_16, 5.0 on tl.TestTurbo. Only 18 values, varying slightly per node, and unrelated to Hue, BoltSpeed 68..71.5 or BoltDistance. It could be firing interval. Timing a turbolaser in game would settle it. client.gom types this int32, which the f32 values contradict."
+ },
+ "4000004eab9ec8c0": {
+  "meaning": "The starting gear of an advanced class: a key of itmSetTablePrototype. Community name chrAdvancedClassStartingItemsPkg fits.",
+  "evidence": "16 of 16 are keys of itmSetTablePrototype. class.pc.advanced.sorcerer lists itm.eq.class.inq.base.chest.light.cheap.class_quest_01_a, feet, legs, itm.gen.quest.starting_items.mainhand_vibroblade, offhand_force_focus. powertech gets heavy armour, blaster, tech generator; gunslinger medium armour, blaster.",
+  "confidence": "proved"
+ },
+ "40000043392a0d71": {
+  "meaning": "The tier of a QA gameplay-persistence GC item, 1..5. Field exists only on those 10 items; what GC does with it is not shown.",
+  "evidence": "Exactly itm.qa.gameplay_persistence.gc.light_1..5 and dark_1..5, and the value equals N in the name. Paired with 40000043392a82a0.",
+  "confidence": "likely"
+ },
+ "40000043392a82a0": {
+  "meaning": "The signed tier of a QA gameplay-persistence GC item: positive for light, negative for dark. Field exists only on those 10 items; what GC does with it is not shown.",
+  "evidence": "Exactly itm.qa.gameplay_persistence.gc.light_N with +N and dark_N with -N, for N 1..5. Paired with 40000043392a0d71.",
+  "confidence": "likely"
+ },
+ "400003d25f81b763": {
+  "reason": "On talent stat entries (40000044b704dfd1): the constant enum value 2 on all 8 uses, each paired with a tag hash in 400003d25f81b764. It may select what the partner field means, but with one value and no matching client enum nothing distinguishes that. Community name talTalentStatTagObject is untested. A row with another value would settle it."
+ },
+ "400003d25f81b764": {
+  "meaning": "On a talent stat entry: the tag of the abilities the stat bonus applies to.",
+  "evidence": "All 8 uses, 5 distinct values, resolve in the tags table to an ability tag: tal...incendiary_ignition to tag.abl.bounty_hunter.inc_missile_dot, tal.trooper.skill.gunnery.mods.gravitating_bolt to tag.abl.trooper.gravity_vortex_crushing, tal.bounty_hunter.skill.arsenal.mods.tracing_residue to tag.abl.bounty_hunter.tracing_residue. Those tags appear in ability effTags and effFunctionTags. Community name talTalentStatTag fits.",
+  "confidence": "proved"
+ },
+ "4000004f15769428": {
+  "reason": "A true-only flag on 7 of 348 itm.companion.skin items: shae_vizla (4 skins), koth, lana, senya full_01. Otherwise identical in fields to flagged-off skins such as vette custom_04. These are a few story companions and full-body skins, but no field distinguishes why. Applying one in game beside an unflagged skin would show the difference."
+ },
+ "400003d26229a5e1": {
+  "reason": "A true-only flag on 6 of 8 talent stat entries with the tag field (signature_shot, gravitating_bolt, incendiary_ignition, and so on; absent on gravitating_compound and tracing_residue). Community name admits it is unknown. It does not follow the value or stat; six rows cannot settle it. An in-game test of whether the bonus stacks or applies at a stage would."
+ },
+ "4000004ce7bda1d3": {
+  "reason": "A float on the 5 freelook.camera.* objects: 1.0 on four, 2.0 on bomber. Sibling fields change with it on bomber (e7bda1d4 0.5 to 1.0, e7bda1d5 2.0 to 3.5). Bomber being larger suggests camera distance or scale, but five rows with one variation cannot separate that. Changing it in a client and flying would settle it. client.gom types it int32, which the f32 values contradict."
+ },
+ "4000004ce7bda1d4": {
+  "reason": "A float on the 5 freelook.camera.* objects: 0.5 on four, 1.0 on bomber. Same limit as e7bda1d3: one variation on five rows. Changing it in a client and flying would settle it."
+ },
+ "4000004ce7bda1d6": {
+  "reason": "A float on the 5 freelook.camera.* objects: 4.0 on all. A constant has no variation to join against. Changing it in a client and flying would settle it."
+ },
+ "4000004ce7bda1d7": {
+  "reason": "A float on the 5 freelook.camera.* objects: 0.25 on all. A constant has no variation to join against. Changing it in a client and flying would settle it."
+ },
+ "400003d329662250": {
+  "meaning": "Effect-variant copy of effInitializer_SetPaused as a bitmask of enum effEffectPause: 1 InWarzone, 2 OnTaxi, 4 InGroupfinderFlashpoints, 8 InGroupfinderOperations. Effect timers pause in those places.",
+  "evidence": "5 of 5 variants hold SetPaused. Value 3 has PauseInWarzone and PauseOnTaxi true (abl.event.rakghoul.new_disease). Value 15 has those plus PauseInGroupfinderFlashpoints and PauseInGroupfinderOperations (abl.ventures.basilisk_prototype.utility.grant_temporary_basilisk). Only two distinct values, so the bit order past the first two follows the enum order, not separate rows.",
+  "confidence": "proved"
+ },
+ "40000007cee804d9": {
+  "meaning": "Effect-variant copy of effInitializer_SetStaminaCost's Stamina. Only use is a test ability.",
+  "evidence": "1 use: abl.test.dbscott.electrocution value 15 holds SetStaminaCost with Stamina 15.",
+  "confidence": "proved"
+ },
+ "400000088aaba5da": {
+  "reason": "One use: a true flag on plc.test.baker.test_chest, a test object with prfProfessionRequired and a level. One test row cannot be told from any default. Nothing but another row or a client source would settle it."
+ },
+ "4000004d76712812": {
+  "reason": "One use: true on dec.stronghold.technological.machines.gree.reconstructed_hypergate. The community name decUnknownHypergateFlag only restates that. Placing that decoration in a stronghold and comparing it to others would show the effect."
+ },
+ "400003d2e9b2c2d0": {
+  "reason": "One use: true on dec.stronghold.civic.structures.rto.spring_fountain. The community name decUnknownQuestStatusFlag only restates a guess. Placing that decoration in a stronghold and comparing it to others would show the effect."
+ }
+}

@@ -17,7 +17,7 @@ use std::collections::HashMap;
 const EMBEDDED: u8 = 0x09;
 
 fn root(payload: &[u8]) -> Option<(usize, GomValue)> {
-    (0..payload.len().min(96)).find_map(|start| {
+    (33..34).find_map(|start| {
         let mut reader = Reader::new(payload, start);
         let value = reader.read_value(EMBEDDED).ok()?;
         (reader.pos() == payload.len()).then_some((start, value))

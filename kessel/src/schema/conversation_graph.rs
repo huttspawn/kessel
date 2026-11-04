@@ -1,13 +1,13 @@
-//! A conversation's node graph (#287). After a conversation's empty field stream lies one GOM
-//! object holding every node, so the whole tree reads with the ordinary reader; only its start
-//! varies, by a few bytes of preamble.
+//! A conversation's node graph (#287). After a conversation's 33-byte preamble lies one GOM
+//! object holding every node, so the whole tree reads with the ordinary reader.
 
 use crate::gom_reader::{GomValue, Reader};
 use std::collections::{BTreeMap, HashSet};
 
 const EMBEDDED_TAG: u8 = 0x09;
-/// The preamble is under 40 bytes in every conversation; the bound only limits the search.
-const MAX_PREAMBLE: usize = 96;
+/// Every conversation reads from here to its exact end. Some also read from another offset, by
+/// chance, into a frame with a bogus field, so the first offset that reads is not the answer.
+const PREAMBLE: usize = 33;
 
 const ROOT_FIELD: u32 = 0x5028_1a20;
 const NODES_FIELD: u32 = 0x6683_c66d;
@@ -74,14 +74,12 @@ pub struct ConversationGraph {
 }
 
 impl ConversationGraph {
-    /// Decode a conversation payload's graph. `None` when no offset reads to the payload's end;
+    /// Decode a conversation payload's graph. `None` when it does not read to the payload's end;
     /// a conversation with no node map decodes to no nodes.
     pub fn read(payload: &[u8]) -> Option<ConversationGraph> {
-        (0..payload.len().min(MAX_PREAMBLE)).find_map(|start| {
-            let mut reader = Reader::new(payload, start);
-            let root = reader.read_value(EMBEDDED_TAG).ok()?;
-            (reader.pos() == payload.len()).then(|| Self::from_root(&root))
-        })
+        let mut reader = Reader::new(payload, PREAMBLE);
+        let root = reader.read_value(EMBEDDED_TAG).ok()?;
+        (reader.pos() == payload.len()).then(|| Self::from_root(&root))
     }
 
     fn from_root(root: &GomValue) -> ConversationGraph {
@@ -313,7 +311,7 @@ pub(crate) mod testing {
             ),
             (0x6683_c66d, GomValue::Map(nodes)),
         ]);
-        let mut out = vec![0xFF, 0xFF, 0xFF];
+        let mut out = vec![0xFF; 33];
         encode(&root, &mut out);
         out
     }
@@ -447,6 +445,15 @@ mod tests {
         );
         let graph = ConversationGraph::read(&looped).ok_or_else(|| anyhow::anyhow!("no graph"))?;
         assert_eq!(graph.decisions()[0].len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn a_frame_readable_before_the_preamble_ends_is_not_the_graph() -> anyhow::Result<()> {
+        // From offset 33 an empty object stops a byte short; from offset 34 one reads to the end.
+        let mut bytes = vec![0xFF; 33];
+        bytes.extend([0, 0, 0]);
+        assert_eq!(ConversationGraph::read(&bytes), None);
         Ok(())
     }
 
