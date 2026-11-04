@@ -450,9 +450,9 @@ mod tests {
 
     #[test]
     fn a_frame_readable_before_the_preamble_ends_is_not_the_graph() -> anyhow::Result<()> {
-        // A bare object with no fields, ending the payload early, reads nothing at offset 33.
+        // From offset 33 an empty object stops a byte short; from offset 34 one reads to the end.
         let mut bytes = vec![0xFF; 33];
-        bytes.extend([0, 0, 0xFF]);
+        bytes.extend([0, 0, 0]);
         assert_eq!(ConversationGraph::read(&bytes), None);
         Ok(())
     }
