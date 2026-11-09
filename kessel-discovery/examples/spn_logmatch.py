@@ -1,6 +1,6 @@
 """Match NPC positions in combat logs to spawner instances from spn_assets area output.
 
-usage: logmatch.py <spice> <area jsonl> <log area id> <log files...>
+usage: spn_logmatch.py <spice> <area jsonl> <log area id> <log files...>
 Log position (a, b, c) = 10 x world (x, z, y).
 """
 import json, math, re, sqlite3, sys, collections

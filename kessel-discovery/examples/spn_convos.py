@@ -1,5 +1,5 @@
 """For each 'In Conversation' in an area, the NPC from the TargetSet just before it and its spawner distance.
-usage: convos.py <spice> <area jsonl> <log area id> <log file>"""
+usage: spn_convos.py <spice> <area jsonl> <log area id> <log file>"""
 import json, math, re, sqlite3, sys, collections
 
 spice, jl, log_area, f = sys.argv[1:5]

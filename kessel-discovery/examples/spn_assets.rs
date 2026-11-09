@@ -1,6 +1,6 @@
 //! What `/resources/server/spn/*.spn_c` names, and where each spawner stands.
 //!
-//! Research probe for #365 and #366. Two modes:
+//! Research probe for #365 and #366. Three modes:
 //!
 //! `census`: checks whether any `/resources/server/spn/` file ships in the
 //! client archives (by the filename hash of every dictionary path), parses the
@@ -15,11 +15,21 @@
 //! instance: area, room, instance, asset, spawn FQN, spawner type, entities it
 //! spawns, timer preset names, local and world position.
 //!
+//! `questvol <spice.sqlite>`: for every quest, prints the start-volume script
+//! its field `40000045816cd2a0` names (a `hyd.*` trig script), resolved by GUID.
+//!
+//! Room `.dat` parsing also lives in `area_graph.rs`, which reads the instance
+//! table structurally and is canonical for rooms and trigger volumes. This
+//! probe is canonical for spawner world positions: its parent-chain composer is
+//! the one checked against combat-log NPC positions (Hutta 378 of 378).
+//!
 //! Usage:
 //!   cargo run --release -p kessel-discovery --example spn_assets -- \
 //!     census <assets_dir> <hashes_filename.txt> <spice.sqlite>
 //!   cargo run --release -p kessel-discovery --example spn_assets -- \
-//!     area <assets_dir> <hashes_filename.txt> <spice.sqlite> <area dir id>
+//!     area <assets_dir> <hashes_filename.txt> <spice.sqlite> <area dir id> [--yaw-neg]
+//!   cargo run --release -p kessel-discovery --example spn_assets -- \
+//!     questvol <spice.sqlite>
 
 use anyhow::{bail, Context, Result};
 use base64::Engine;
@@ -561,7 +571,7 @@ fn main() -> Result<()> {
             area(&args[2], &hashes, &args[4], &args[5], yaw)
         }
         _ => bail!(
-            "usage: spn_assets census <assets> <hashes> <spice> | area <assets> <hashes> <spice> <area dir id> [--yaw-neg]"
+            "usage: spn_assets census <assets> <hashes> <spice> | area <assets> <hashes> <spice> <area dir id> [--yaw-neg] | questvol <spice>"
         ),
     }
 }

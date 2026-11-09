@@ -1,5 +1,8 @@
 //! Decode many objects from a spice.sqlite into JSON lines.
 //!
+//! `field_values.rs` does the same walk but prints only chosen fields; use it
+//! when you need a few fields across a prefix, this one for whole objects.
+//!
 //! Walks every canonical object whose FQN starts with one of the given
 //! prefixes, decodes its payload with `gom_reader`, and prints one line per
 //! object: `{"fqn", "guid", "string_id", "fields"}`. Field ids are the low 32

@@ -1,4 +1,4 @@
-"""Nearest spawner instances to a log position. usage: near.py <area jsonl> a b c [n]"""
+"""Nearest spawner instances to a log position. usage: spn_near.py <area jsonl> a b c [n]"""
 import json, math, sys
 rows = [json.loads(l) for l in open(sys.argv[1])]
 p = tuple(float(x) for x in sys.argv[2:5])

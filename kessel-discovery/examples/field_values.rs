@@ -1,5 +1,7 @@
 //! Print chosen top-level fields of every object whose FQN starts with a prefix.
 //!
+//! `dump_objects_jsonl.rs` prints whole objects over the same walk.
+//!
 //! One JSON line per object that carries at least one of the fields:
 //! `{"fqn": ..., "guid": ..., "<field low32>": <value>}`. Values render as in
 //! `dump_singleton`, without GUID-to-FQN replacement, so joins stay numeric.

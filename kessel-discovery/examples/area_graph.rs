@@ -1,5 +1,8 @@
 //! area_graph -- room placements and trigger volumes as a graph of nodes and links.
 //!
+//! Canonical for room `.dat` instance tables and trigger volumes. `spn_assets.rs`
+//! also reads rooms (by scanning) and is canonical for spawner world positions.
+//!
 //! Reads every area under /resources/world/areas/ straight from the archives:
 //! area.dat (room list and asset table) and each room .dat (instances and
 //! their properties). Each gameplay instance (spawns, encounters, triggers,
