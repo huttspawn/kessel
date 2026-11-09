@@ -9,6 +9,7 @@
 
 use super::world::{decoded_objects, gom_str};
 use super::*;
+use rusqlite::OptionalExtension;
 
 // A quest or achievement hook's script call: a Hydra reference and the custom
 // event it sends, which fires that script's 'On Custom:<event>' handler.
@@ -55,7 +56,7 @@ impl Database {
                     for (guid, event) in hook_calls(&obj) {
                         let script: Option<String> = scripts
                             .query_row([format!("{guid:016X}")], |r| r.get(0))
-                            .ok();
+                            .optional()?;
                         if let Some(script) = script {
                             hooks.push((
                                 source_kind,
