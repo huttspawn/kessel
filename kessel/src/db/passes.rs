@@ -428,6 +428,10 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     );
     let codex_sources = timed!("codex_sources", db.populate_codex_sources())?;
     println!("  Codex sources: {codex_sources}");
+    // Every item's sources and unlocks (FR-KESSEL-025 c8), after the
+    // achievement rewards and conversation grants it reads.
+    let (item_sources, item_unlocks) = timed!("item_sources", db.populate_item_sources())?;
+    println!("  Item sources: {item_sources}; item unlocks: {item_unlocks}");
 
     // Quest_chain via NPC giver overlap. Must run AFTER both
     // populate_quest_clusters (cluster filter) and populate_conversation_refs

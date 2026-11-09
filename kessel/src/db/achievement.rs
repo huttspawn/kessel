@@ -47,7 +47,7 @@ mod reward_field {
 
 /// The raw 64 bits of a numeric GOM value. Ids and GUIDs arrive as either
 /// UInt64 or Int64 depending on the field; both are the same bits.
-fn bits(v: &GomValue) -> Option<u64> {
+pub(super) fn bits(v: &GomValue) -> Option<u64> {
     match v {
         GomValue::U64(n) => Some(*n),
         GomValue::I64(n) => Some(*n as u64),
@@ -439,7 +439,7 @@ fn achievement_guid_map(tx: &Transaction) -> Result<HashMap<u64, String>> {
 }
 
 /// GUID -> FQN for every canonical object.
-fn object_guid_map(tx: &Transaction) -> Result<HashMap<u64, String>> {
+pub(super) fn object_guid_map(tx: &Transaction) -> Result<HashMap<u64, String>> {
     guid_map(tx, "SELECT guid, fqn FROM objects WHERE is_canonical = 1")
 }
 

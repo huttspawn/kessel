@@ -2,7 +2,7 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks and FR-KESSEL-025 c4, c5 and c10. The `@local`
+//! code: the `@smoke` checks and FR-KESSEL-025 c4, c5, c8 and c10. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -111,6 +111,103 @@ fn names_granting_placeable(world: &World) {
     assert!(
         world.answer.iter().any(|a| a.starts_with(&placeable)),
         "{} answered no source naming {}: {:?}",
+        world.subject,
+        world.granter,
+        world.answer
+    );
+}
+
+// FR-KESSEL-025 c8: an item answers its sources.
+
+#[given("a build holding an armor piece dropped only by a world event")]
+fn world_event_armor(world: &mut World) {
+    // An armor piece wevEventInfoPrototype_client names as an event's drop
+    // (1bdc8ed4), read from the singleton itself, not item_sources, so the
+    // Then can fail. The event's quest (6f568b11) is the one the answer names.
+    use base64::Engine as _;
+    use kessel::gom_reader::{read_framed_object, GomValue};
+    let conn = spice(world);
+    let (header, payload): (String, String) = conn
+        .query_row(
+            "SELECT header_hex, payload_b64 FROM singletons WHERE fqn = 'wevEventInfoPrototype_client'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("wevEventInfoPrototype_client");
+    let header = hex::decode(header).expect("header hex");
+    let payload = base64::engine::general_purpose::STANDARD
+        .decode(payload)
+        .expect("payload base64");
+    let (proto, _) = read_framed_object(&header, &payload).expect("decode world events");
+    let fqn = |v: &GomValue| -> Option<String> {
+        let guid = match v {
+            GomValue::U64(n) => *n,
+            GomValue::I64(n) => *n as u64,
+            _ => return None,
+        };
+        conn.query_row(
+            "SELECT fqn FROM objects WHERE guid = ?1 AND is_canonical = 1",
+            [format!("{guid:016X}")],
+            |r| r.get(0),
+        )
+        .ok()
+    };
+    let mut drops: Vec<(String, String)> = Vec::new();
+    for (_, event) in proto
+        .embedded_field(0x395e_03f8)
+        .and_then(GomValue::as_map)
+        .unwrap_or_default()
+    {
+        let Some(quest) = event.embedded_field(0x6f56_8b11).and_then(fqn) else {
+            continue;
+        };
+        let items = event
+            .embedded_field(0x1bdc_8ed4)
+            .and_then(GomValue::as_list);
+        for item in items.unwrap_or_default().iter().filter_map(fqn) {
+            if item.contains(".armor") {
+                drops.push((item, quest.clone()));
+            }
+        }
+    }
+    drops.sort();
+    let (item, quest) = drops
+        .into_iter()
+        .next()
+        .expect("an armor piece a world event drops");
+    world.subject = item;
+    world.granter = quest;
+}
+
+#[when("kessel's agent asks for that item")]
+fn ask_item(world: &mut World) {
+    let item = world.subject.clone();
+    let mut stmt = spice(world)
+        .prepare("SELECT source_kind, source_fqn, detail FROM item_sources WHERE item_fqn = ?1")
+        .expect("item sources query");
+    let answer = stmt
+        .query_map([&item], |r| {
+            Ok(format!(
+                "{} {} {}",
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?
+            ))
+        })
+        .expect("item source rows")
+        .map(|r| r.expect("item source row"))
+        .collect();
+    drop(stmt);
+    println!("c8 {item}: {answer:?}");
+    world.answer = answer;
+}
+
+#[then("the answer names the world event that drops it")]
+fn names_world_event(world: &World) {
+    let event = format!("world_event {} ", world.granter);
+    assert!(
+        world.answer.iter().any(|a| a.starts_with(&event)),
+        "{} answered no world event {}: {:?}",
         world.subject,
         world.granter,
         world.answer
@@ -402,6 +499,7 @@ fn names_volume_codex(world: &World) {
 scenarios!(
     "tests",
     tags = "@smoke or @criterion-FR-KESSEL-025-c4 or @criterion-FR-KESSEL-025-c5 \
+            or @criterion-FR-KESSEL-025-c8 \
             or @criterion-FR-KESSEL-025-c10",
     fixtures = [world: World]
 );

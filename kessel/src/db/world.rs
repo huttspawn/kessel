@@ -639,7 +639,10 @@ impl ArchiveFiles {
 }
 
 /// Decode a singleton by FQN; `None` when absent or undecodable.
-fn load_singleton(tx: &Transaction, fqn: &str) -> Result<Option<crate::gom_reader::GomValue>> {
+pub(super) fn load_singleton(
+    tx: &Transaction,
+    fqn: &str,
+) -> Result<Option<crate::gom_reader::GomValue>> {
     let row: Option<(String, String)> = tx
         .query_row(
             "SELECT header_hex, payload_b64 FROM singletons WHERE fqn = ?1",
