@@ -65,19 +65,18 @@ fn spice(world: &mut World) -> &Connection {
 
 #[given("a build holding a datacron placeable")]
 fn datacron_placeable(world: &mut World) {
-    // A real datacron: the placeable a `data_holocron` spawner places.
+    // A real datacron: the placeable a `data_holocron` spawner places. No grant
+    // field is filtered on, so the Then can fail.
     let fqn: String = spice(world)
         .query_row(
-            "SELECT p.entity_fqn FROM placements p \
-             JOIN placeable_grants g ON g.placeable_fqn = p.entity_fqn \
-             WHERE p.spawner_fqn LIKE 'spn.location.%.data_holocron.%' \
-               AND g.conversation_fqn IS NOT NULL \
-             ORDER BY p.spawner_fqn = 'spn.location.tython.data_holocron.datacron_willpower_tython' DESC, \
-                      p.spawner_fqn LIMIT 1",
+            "SELECT entity_fqn FROM placements \
+             WHERE spawner_fqn LIKE 'spn.location.%.data_holocron.%' AND entity_fqn IS NOT NULL \
+             ORDER BY spawner_fqn = 'spn.location.tython.data_holocron.datacron_willpower_tython' DESC, \
+                      spawner_fqn LIMIT 1",
             [],
             |r| r.get(0),
         )
-        .expect("a placed datacron (spn.location.*.data_holocron.*) with a conversation");
+        .expect("a placed datacron (spn.location.*.data_holocron.*)");
     world.subject = fqn;
 }
 
@@ -85,25 +84,39 @@ fn datacron_placeable(world: &mut World) {
 fn ask_placeable(world: &mut World) {
     let fqn = world.subject.clone();
     let conn = spice(world);
-    let (ability, grants): (Option<String>, [Option<String>; 3]) = conn
+    let row: Option<[Option<String>; 4]> = conn
         .query_row(
             "SELECT use_ability_fqn, codex_fqn, conversation_fqn, script_fqn \
              FROM placeable_grants WHERE placeable_fqn = ?1",
             [&fqn],
-            |r| Ok((r.get(0)?, [r.get(1)?, r.get(2)?, r.get(3)?])),
+            |r| Ok([r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?]),
         )
-        .expect("placeable_grants row");
-    // The use ability is the cast the player plays, not a grant.
-    let mut answer: Vec<String> = ability
-        .map(|a| format!("plays use ability {a}"))
-        .into_iter()
-        .collect();
-    answer.extend(
-        ["codex", "conversation", "script"]
-            .iter()
-            .zip(grants)
-            .filter_map(|(what, v)| Some(format!("grants {what} {}", v?))),
-    );
+        .ok();
+    let [ability, codex, convo, script] = row.unwrap_or_default();
+    let mut answer = Vec::new();
+    // The use ability is the cast the player plays and the conversation is
+    // what opens; neither is a grant. What the conversation gives is.
+    if let Some(a) = ability {
+        answer.push(format!("plays use ability {a}"));
+    }
+    if let Some(c) = codex {
+        answer.push(format!("grants codex {c}"));
+    }
+    if let Some(c) = convo {
+        answer.push(format!("opens conversation {c}"));
+        let mut stmt = conn
+            .prepare("SELECT quest_fqn FROM conversation_quest_refs WHERE cnv_fqn = ?1")
+            .expect("conversation quest query");
+        let quests: Vec<String> = stmt
+            .query_map([&c], |r| r.get(0))
+            .expect("conversation quest rows")
+            .map(|q| q.expect("conversation quest row"))
+            .collect();
+        answer.extend(quests.into_iter().map(|q| format!("grants quest {q}")));
+    }
+    if let Some(s) = script {
+        answer.push(format!("grants script {s}"));
+    }
     let mut stmt = conn
         .prepare(
             "SELECT area_dir_id, world_x, world_y, world_z FROM placements \
@@ -129,9 +142,19 @@ fn ask_placeable(world: &mut World) {
 
 #[then("the answer names what it grants")]
 fn names_grant(world: &World) {
+    // c5's kinds of grant: a codex entry, an achievement event, a quest, an item.
+    let kinds = [
+        "grants codex ",
+        "grants achievement event ",
+        "grants quest ",
+        "grants item ",
+    ];
     assert!(
-        world.answer.iter().any(|a| a.starts_with("grants ")),
-        "{} grants nothing: {:?}",
+        world
+            .answer
+            .iter()
+            .any(|a| kinds.iter().any(|k| a.starts_with(k))),
+        "{} grants no codex, achievement event, quest or item: {:?}",
         world.subject,
         world.answer
     );
