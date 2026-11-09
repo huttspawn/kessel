@@ -37,6 +37,9 @@ struct World {
     /// The player's casts at the spot of a conversation since the last one
     /// began, latest first: cast id and position.
     casts: Vec<(i64, [f64; 3])>,
+    /// The string ids (log id >> 32) the player targeted in the area before
+    /// a conversation, latest first.
+    targeted: Vec<i64>,
     /// The answer: one line per fact found.
     answer: Vec<String>,
 }
@@ -673,7 +676,8 @@ fn codex_npc_placed(world: &mut World) {
 /// A logged conversation start: file, line number, log area id, the
 /// player's position, the NPC (log id, position) the player's TargetSet named
 /// within 1 s before, and the player's casts at that spot since the last
-/// conversation began, latest first.
+/// conversation began, latest first, and the string ids the player targeted
+/// in the area before it, latest first.
 type Conversation = (
     String,
     usize,
@@ -681,15 +685,23 @@ type Conversation = (
     [f64; 3],
     Option<(i64, [f64; 3])>,
     Vec<(i64, [f64; 3])>,
+    Vec<i64>,
 );
 
 fn conversations() -> Vec<Conversation> {
     let mut last: Option<(String, f64, i64, [f64; 3])> = None;
     let mut casts: Vec<(String, i64, [f64; 3])> = Vec::new();
+    let mut targeted: (String, i64, Vec<(String, i64)>) = (String::new(), 0, Vec::new());
     let mut out = Vec::new();
     for (file, n, area, t, player, line) in log_lines() {
+        if (targeted.0.as_str(), targeted.1) != (file.as_str(), area) {
+            targeted = (file.clone(), area, Vec::new());
+        }
         match line {
-            LogLine::TargetSet(id, q) => last = Some((player, t, id, q)),
+            LogLine::TargetSet(id, q) => {
+                targeted.2.push((player.clone(), id >> 32));
+                last = Some((player, t, id, q));
+            }
             LogLine::Cast(id, q) => casts.push((player, id, q)),
             LogLine::Conversation(p) => {
                 let fresh = last
@@ -702,7 +714,14 @@ fn conversations() -> Vec<Conversation> {
                     .filter(|(who, _, q)| *who == player && dist(*q, p) <= REACH)
                     .map(|(_, id, q)| (id, q))
                     .collect();
-                out.push((file, n, area, p, fresh, here));
+                let mine = targeted
+                    .2
+                    .iter()
+                    .rev()
+                    .filter(|(who, _)| *who == player)
+                    .map(|(_, sid)| *sid)
+                    .collect();
+                out.push((file, n, area, p, fresh, here, mine));
             }
         }
     }
@@ -713,7 +732,7 @@ fn conversations() -> Vec<Conversation> {
     "a combat-log line where the player enters a conversation at a position beside that NPC in that area"
 )]
 fn conversation_line(world: &mut World) {
-    for (file, n, area, p, target, casts) in conversations() {
+    for (file, n, area, p, target, casts, targeted) in conversations() {
         let Some((id, q)) = target else { continue };
         if let Some((_, _, fqn, _)) = world
             .targets
@@ -725,7 +744,7 @@ fn conversation_line(world: &mut World) {
             );
             world.subject = fqn.clone();
             (world.log_area_id, world.positions, world.target_set) = (area, vec![p], target);
-            world.casts = casts;
+            (world.casts, world.targeted) = (casts, targeted);
             return;
         }
     }
@@ -736,7 +755,7 @@ fn conversation_line(world: &mut World) {
 fn ask_conversation(world: &mut World) {
     type Owner = (Option<i64>, String, String, String, [f64; 3]);
     let (area, p, target) = (world.log_area_id, world.positions[0], world.target_set);
-    let casts = world.casts.clone();
+    let (casts, targeted) = (world.casts.clone(), world.targeted.clone());
     let conn = spice(world);
     let mut stmt = conn
         .prepare(
@@ -782,13 +801,51 @@ fn ask_conversation(world: &mut World) {
         ),
         None => used().or_else(|| nearest(p, &|_| true, REACH)),
     };
-    world.answer = match found {
-        Some(((_, kind, owner, convo, _), d)) => {
+    // Else the quest a used placeable (or its spawner) counts toward: of that
+    // quest's conversations, the one whose owner the player targeted last.
+    let quest = || {
+        casts.iter().find_map(|(cast, q)| {
+            let (placeable, ..) = use_target(conn, area, *cast, *q)?;
+            let mut stmt = conn
+                .prepare(
+                    "SELECT DISTINCT o.quest_fqn, r.cnv_fqn FROM quest_objectives o \
+                     JOIN conversation_quest_refs r ON r.quest_fqn = o.quest_fqn \
+                     WHERE o.target_fqn = ?1 OR o.target_fqn IN \
+                       (SELECT spawner_fqn FROM placements WHERE entity_fqn = ?1)",
+                )
+                .expect("quest conversation query");
+            let quests: Vec<(String, String)> = stmt
+                .query_map([&placeable], |r| Ok((r.get(0)?, r.get(1)?)))
+                .expect("quest conversation rows")
+                .map(|r| r.expect("quest conversation row"))
+                .collect();
+            let targeted_at = |cnv: &str| {
+                targeted.iter().position(|sid| {
+                    rows.iter()
+                        .any(|r| r.3 == cnv && r.0.is_some_and(|o| o >> 32 == *sid))
+                })
+            };
+            quests
+                .into_iter()
+                .filter_map(|(quest, cnv)| Some((targeted_at(&cnv)?, quest, cnv)))
+                .min()
+                .map(|(_, quest, cnv)| (placeable, quest, cnv))
+        })
+    };
+    world.answer = match (found, found.is_none().then(quest).flatten()) {
+        (Some(((_, kind, owner, convo, _), d)), _) => {
             let mut answer = vec![format!("{kind} {owner} conversation {convo} at {d:.2}")];
             answer.extend(codex_grants(conn, None, Some(convo), None));
             answer
         }
-        None => vec!["nothing that grants stands within reach".to_string()],
+        (None, Some((placeable, quest, convo))) => {
+            let mut answer = vec![format!(
+                "placeable {placeable} quest {quest} conversation {convo}"
+            )];
+            answer.extend(codex_grants(conn, None, Some(&convo), None));
+            answer
+        }
+        (None, None) => vec!["nothing that grants stands within reach".to_string()],
     };
     println!("c9 conversation answer: {:?}", world.answer);
 }
