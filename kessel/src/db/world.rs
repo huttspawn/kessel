@@ -1137,11 +1137,25 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id;
             -- What a placeable is and what using it triggers (FR-KESSEL-025
             -- c9): its codex entry (plcCodexSpec), its conversation
-            -- (plcConvo), its On Use script's granting, quest and
-            -- conversation actions, and the quest tasks it is an
-            -- interaction object of (quest_task_objects, created by quest),
-            -- which using it advances.
+            -- (plcConvo), every action of its On Use script that changes game
+            -- state or moves the player, following Execute Hydra Script
+            -- ('<script>:<event>' runs that script's 'On Custom:<event>')
+            -- with a cycle guard, and the quest tasks it is an interaction
+            -- object of (quest_task_objects, created by quest), which using
+            -- it advances. Pure presentation and expression steps are left out.
             CREATE VIEW IF NOT EXISTS placeable_triggers AS
+                WITH RECURSIVE reach(placeable_fqn, script_fqn, handler, path) AS (
+                    SELECT placeable_fqn, script_fqn, 'On Use', ',' || script_fqn || ','
+                    FROM placeable_grants WHERE script_fqn IS NOT NULL
+                    UNION
+                    SELECT r.placeable_fqn, substr(a.value, 1, instr(a.value, ':') - 1),
+                           'On Custom:' || substr(a.value, instr(a.value, ':') + 1),
+                           r.path || substr(a.value, 1, instr(a.value, ':') - 1) || ','
+                    FROM reach r
+                    JOIN script_actions a ON a.script_fqn = r.script_fqn AND a.handler = r.handler
+                    WHERE a.action = 'Execute Hydra Script' AND instr(a.value, ':') > 0
+                      AND instr(r.path, ',' || substr(a.value, 1, instr(a.value, ':') - 1) || ',') = 0
+                )
                 SELECT placeable_fqn, 'codex' AS kind, codex_fqn AS target_fqn,
                        'plcCodexSpec' AS detail
                 FROM placeable_grants WHERE codex_fqn IS NOT NULL
@@ -1149,14 +1163,18 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 SELECT placeable_fqn, 'conversation', conversation_fqn, 'plcConvo'
                 FROM placeable_grants WHERE conversation_fqn IS NOT NULL
                 UNION ALL
-                SELECT g.placeable_fqn, 'on_use', COALESCE(a.target_fqn, a.value),
-                       a.action || ' (' || a.script_fqn || ')'
-                FROM placeable_grants g
-                JOIN script_actions a ON a.script_fqn = g.script_fqn AND a.handler = 'On Use'
-                WHERE a.action IN ('Grant Codex', 'Achievement Event', 'Grant Title',
-                                   'Give Items', 'Give Quest Item', 'Play Conversation',
-                                   'Play Ambush Conversation', 'Set Quest State',
-                                   'Set Quest Granted')
+                SELECT DISTINCT r.placeable_fqn, 'on_use', COALESCE(a.target_fqn, a.value, ''),
+                       a.action || ' (' || a.script_fqn || ' ' || a.handler || ')'
+                FROM reach r
+                JOIN script_actions a ON a.script_fqn = r.script_fqn AND a.handler = r.handler
+                WHERE a.action NOT IN ('Execute Hydra Script', 'Play SFX', 'Play SFX From Camera',
+                                       'Play Animation', 'Wait', 'Broadcast String',
+                                       'Broadcast String From Player', 'Debug Broadcast String',
+                                       'Set Target', 'Set Facing', 'Play Appearance', 'Play VFX',
+                                       'Play Targeted VFX', 'Stop Character VFX',
+                                       'Play Camera Shake', 'Play Music', 'Play Ambient',
+                                       'Fade to Black', 'Fade from Black', 'Fade to Color',
+                                       'Set Callback Timer', '=', '+', '-')
                 UNION ALL
                 SELECT o.placeable_fqn, 'quest_task', o.quest_fqn,
                        'task (' || o.branch || ',' || o.step || ',' || o.task || ') '''
@@ -1481,7 +1499,11 @@ mod tests {
              INSERT INTO script_actions (script_fqn, handler, ordinal, action, target_fqn, value)
                  VALUES ('hyd.lore', 'On Use', 0, 'Play SFX', NULL, 'Play_x'),
                         ('hyd.lore', 'On Use', 1, 'Achievement Event', NULL, 'read_lore'),
-                        ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other');
+                        ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other'),
+                        ('hyd.lore', 'On Use', 2, 'Execute Hydra Script', NULL, 'hyd.called:Go'),
+                        ('hyd.called', 'On Custom:Go', 0, 'Teleport To', NULL, 'dock'),
+                        ('hyd.called', 'On Custom:Go', 1, 'Execute Hydra Script', NULL, 'hyd.lore:Back'),
+                        ('hyd.lore', 'On Custom:Back', 0, 'Give Items', 'itm.loop', 'itm.loop');
              INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, json)
                  VALUES ('g', 's', 'h', 'G', 'plc.device', 'Placeable', '{}'),
                         ('g2', 's2', 'h2', 'G2', 'plc.core', 'Placeable', '{}');
@@ -1497,14 +1519,17 @@ mod tests {
         )
         .unwrap();
         let rows: Vec<(String, String, String, String)> = conn
-            .prepare("SELECT * FROM placeable_triggers ORDER BY placeable_fqn, kind")
+            .prepare("SELECT * FROM placeable_triggers ORDER BY placeable_fqn, kind, detail")
             .unwrap()
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
             .unwrap()
             .collect::<rusqlite::Result<_>>()
             .unwrap();
         let row = |p: &str, k: &str, t: &str, d: &str| (p.into(), k.into(), t.into(), d.into());
-        // Play SFX and the On Enter handler trigger nothing a use counts. A
+        // Play SFX and the On Enter handler trigger nothing a use counts; the
+        // On Use script's Execute Hydra Script reaches hyd.called's
+        // 'On Custom:Go' (Teleport To), whose call back into hyd.lore is a
+        // cycle and is not followed (no Give Items). A
         // task naming only the spawner (spn.core) reaches the placeable it
         // places; plc.device, named both ways, appears once.
         assert_eq!(
@@ -1528,7 +1553,13 @@ mod tests {
                     "plc.lore",
                     "on_use",
                     "read_lore",
-                    "Achievement Event (hyd.lore)"
+                    "Achievement Event (hyd.lore On Use)"
+                ),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "dock",
+                    "Teleport To (hyd.called On Custom:Go)"
                 ),
             ]
         );
