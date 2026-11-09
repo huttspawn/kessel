@@ -1416,29 +1416,42 @@ fn c9_use_casts_answer_what_the_placeable_triggers() {
     };
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .unwrap_or_else(|e| panic!("open {path}: {e}"));
-    let cases = [
+    const GRANT_KILL: &str =
+        " (Grant Codex (hyd.location.flashpoint.raid.eternity_vault.phase.raid_events On Custom:Grant_Kill))";
+    let ev = |codex: &str| {
+        format!("grants codex cdx.achievements.flashpoint.the_eternity_vault.{codex}{GRANT_KILL}")
+    };
+    let cases: [(&str, &str, &str, Vec<String>); 4] = [
         (
             "combat_2026-11-09_05_45_53_516397.txt",
             "[06:28:45.782]",
             "placeable plc.location.tython.class.jedi_knight.enemy_force.surviellance_device_2 ",
-            "triggers quest_task qst.location.tython.class.jedi_knight.enemy_force (task (0,5,1) 'Plant a Device in Sector 02'",
+            vec!["triggers quest_task qst.location.tython.class.jedi_knight.enemy_force (task (0,5,1) 'Plant a Device in Sector 02'".into()],
         ),
         (
             "combat_2026-10-31_20_43_20_205597.txt",
             "[21:12:55.889]",
             "placeable plc.location.hutta.class.spy.the_new_truth.security_camera ",
-            "triggers quest_task qst.location.hutta.bonus.storm_the_grounds_of_fa_athra_s_palace (task (0,1,0) 'Disable Fa'athra Security Cameras'",
+            vec!["triggers quest_task qst.location.hutta.bonus.storm_the_grounds_of_fa_athra_s_palace (task (0,1,0) 'Disable Fa'athra Security Cameras'".into()],
         ),
         // A task that names only the core's spawner.
         (
             "combat_2026-05-02_01_10_39_857937.txt",
             "[02:14:37.690]",
             "placeable plc.location.flashpoint.shared.directive_7.event.zadd_core.mentor_processing_core_2 ",
-            "triggers quest_task qst.location.flashpoint.shared.directive_7.directive_7 (task (0,11,0) 'Defeat Mentor'",
+            vec!["triggers quest_task qst.location.flashpoint.shared.directive_7.directive_7 (task (0,11,0) 'Defeat Mentor'".into()],
+        ),
+        // Codex entries reached through Execute Hydra Script into another
+        // handler (Grant_Kill) of a script already on the call path.
+        (
+            "combat_2026-06-02_15_47_03_587192.txt",
+            "[18:58:24.878]",
+            "placeable plc.location.flashpoint.raid.eternity_vault.puzzle.rakata_obelisk.confirm_button_1 ",
+            vec![ev("puzzle"), ev("hardmode.puzzle"), ev("nightmare.puzzle")],
         ),
     ];
     let lines = log_lines();
-    for (file, at, placeable, trigger) in cases {
+    for (file, at, placeable, triggers) in cases {
         let (_, n, area, _, _, line) = lines
             .iter()
             .find(|l| {
@@ -1460,10 +1473,15 @@ fn c9_use_casts_answer_what_the_placeable_triggers() {
         let answer = resolve_use(&conn, *area, *cast, *p);
         println!("c9 {file} line {n} {at}: {answer:?}");
         assert!(
-            answer.iter().any(|a| a.starts_with(placeable))
-                && answer.iter().any(|a| a.starts_with(trigger)),
+            answer.iter().any(|a| a.starts_with(placeable)),
             "{file} {at}: {answer:?}"
         );
+        for t in &triggers {
+            assert!(
+                answer.iter().any(|a| a.starts_with(t.as_str())),
+                "{file} {at}: no {t:?} in {answer:?}"
+            );
+        }
     }
 }
 

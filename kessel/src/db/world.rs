@@ -378,6 +378,8 @@ const MAP_AREA_LOG_ID: u32 = 0x0027_bf7f;
 // Spawn: entity list, each naming the template it places.
 const SPN_ENTRIES: u32 = 0xaa61_0ec0;
 const SPN_ENTRY_TEMPLATE: u32 = 0xb78d_6eec;
+// Spawn entry: the script the placed entity runs (RESEARCH 01a1c274).
+const SPN_ENTRY_SCRIPT: u32 = 0x4fa1_4a23;
 // Encounter: slot letter -> spawner FQN.
 const ENC_SLOTS: u32 = 0xd9a5_2ab9;
 // Placeable: plcAbilitySpecOnUse, plcCodexSpec, plcConvo, On Use script.
@@ -470,7 +472,9 @@ impl Database {
                 }
             }
 
-            let spawn_entities: HashMap<String, String> = decoded_objects(tx, "Spawn")?
+            let spawns = decoded_objects(tx, "Spawn")?;
+            insert_spawner_scripts(tx, &spawns)?;
+            let spawn_entities: HashMap<String, String> = spawns
                 .into_iter()
                 .filter_map(|(fqn, obj)| {
                     let first = obj.embedded_field(SPN_ENTRIES)?.as_list()?.first()?;
@@ -751,6 +755,44 @@ fn placeable_refs(obj: &crate::gom_reader::GomValue) -> PlaceableRefs {
         convo: obj.embedded_field(PLC_CONVO).and_then(gom_str),
         script: guid(PLC_SCRIPT),
     }
+}
+
+/// The script each spawner's first entry runs (`aa610ec0[0].4fa14a23`), the
+/// entry whose template `placements.entity_fqn` names.
+fn insert_spawner_scripts(
+    tx: &Transaction,
+    spawns: &[(String, crate::gom_reader::GomValue)],
+) -> Result<u64> {
+    tx.execute("DELETE FROM spawner_scripts", [])?;
+    let mut by_guid = tx.prepare(
+        "SELECT fqn FROM objects WHERE guid = ?1 AND kind = 'Hydra' AND is_canonical = 1 LIMIT 1",
+    )?;
+    let mut insert = tx.prepare(
+        "INSERT OR REPLACE INTO spawner_scripts (spawner_fqn, script_fqn) VALUES (?1, ?2)",
+    )?;
+    let mut written = 0;
+    for (fqn, obj) in spawns {
+        let script = obj
+            .embedded_field(SPN_ENTRIES)
+            .and_then(crate::gom_reader::GomValue::as_list)
+            .and_then(<[crate::gom_reader::GomValue]>::first)
+            .and_then(|e| e.embedded_field(SPN_ENTRY_SCRIPT))
+            .and_then(crate::gom_reader::GomValue::as_i64)
+            .filter(|g| *g != 0);
+        let Some(guid) = script else { continue };
+        let found: Option<String> = by_guid
+            .query_row([format!("{:016X}", guid as u64)], |r| r.get(0))
+            .map(Some)
+            .or_else(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                e => Err(e),
+            })?;
+        if let Some(script) = found {
+            insert.execute(params![fqn, script])?;
+            written += 1;
+        }
+    }
+    Ok(written)
 }
 
 fn insert_placeable_grants(tx: &Transaction) -> Result<u64> {
@@ -1054,6 +1096,12 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             -- What a placeable names: its use ability (and the id the log
             -- prints for it, string_id << 32), codex entry, conversation and
             -- On Use script.
+            -- The script a spawner's entry runs for the entity it places
+            -- (aa610ec0[0].4fa14a23).
+            CREATE TABLE IF NOT EXISTS spawner_scripts (
+                spawner_fqn TEXT PRIMARY KEY,
+                script_fqn  TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS placeable_grants (
                 placeable_fqn       TEXT PRIMARY KEY,
                 use_ability_fqn     TEXT,
@@ -1137,28 +1185,43 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id;
             -- What a placeable is and what using it triggers (FR-KESSEL-025
             -- c9): its codex entry (plcCodexSpec), its conversation
-            -- (plcConvo), every action of its On Use script that changes game
+            -- (plcConvo), every action of its On Use script (its own, or the
+            -- one its spawner's entry runs, spawner_scripts) that changes game
             -- state or moves the player, following Execute Hydra Script
-            -- ('<script>:<event>' runs that script's 'On Custom:<event>')
-            -- with a cycle guard, and the quest tasks it is an interaction
+            -- ('<script>:<event>' runs that script's 'On Custom:<event>');
+            -- the path holds script|handler pairs, so only a call back into
+            -- a handler already on the path is a cycle, and the quest tasks it is an interaction
             -- object of (quest_task_objects, created by quest), which using
             -- it advances. Pure presentation and expression steps are left out.
             CREATE VIEW IF NOT EXISTS placeable_triggers AS
                 WITH RECURSIVE reach(placeable_fqn, script_fqn, handler, path) AS (
-                    SELECT placeable_fqn, script_fqn, 'On Use', ',' || script_fqn || ','
+                    SELECT placeable_fqn, script_fqn, 'On Use', ',' || script_fqn || '|On Use,'
                     FROM placeable_grants WHERE script_fqn IS NOT NULL
+                    UNION
+                    SELECT DISTINCT p.entity_fqn, s.script_fqn, 'On Use',
+                           ',' || s.script_fqn || '|On Use,'
+                    FROM placements p JOIN spawner_scripts s ON s.spawner_fqn = p.spawner_fqn
+                    WHERE p.entity_fqn IS NOT NULL
                     UNION
                     SELECT r.placeable_fqn, substr(a.value, 1, instr(a.value, ':') - 1),
                            'On Custom:' || substr(a.value, instr(a.value, ':') + 1),
-                           r.path || substr(a.value, 1, instr(a.value, ':') - 1) || ','
+                           r.path || substr(a.value, 1, instr(a.value, ':') - 1)
+                             || '|On Custom:' || substr(a.value, instr(a.value, ':') + 1) || ','
                     FROM reach r
                     JOIN script_actions a ON a.script_fqn = r.script_fqn AND a.handler = r.handler
                     WHERE a.action = 'Execute Hydra Script' AND instr(a.value, ':') > 0
-                      AND instr(r.path, ',' || substr(a.value, 1, instr(a.value, ':') - 1) || ',') = 0
+                      AND instr(r.path, ',' || substr(a.value, 1, instr(a.value, ':') - 1)
+                                || '|On Custom:' || substr(a.value, instr(a.value, ':') + 1) || ',') = 0
                 )
                 SELECT placeable_fqn, 'codex' AS kind, codex_fqn AS target_fqn,
                        'plcCodexSpec' AS detail
                 FROM placeable_grants WHERE codex_fqn IS NOT NULL
+                UNION ALL
+                -- With no script anywhere, the use ability is what using it does.
+                SELECT placeable_fqn, 'use_ability', use_ability_fqn, 'plcAbilitySpecOnUse'
+                FROM placeable_grants
+                WHERE use_ability_fqn IS NOT NULL
+                  AND placeable_fqn NOT IN (SELECT placeable_fqn FROM reach)
                 UNION ALL
                 SELECT placeable_fqn, 'conversation', conversation_fqn, 'plcConvo'
                 FROM placeable_grants WHERE conversation_fqn IS NOT NULL
@@ -1174,6 +1237,9 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                                        'Play Targeted VFX', 'Stop Character VFX',
                                        'Play Camera Shake', 'Play Music', 'Play Ambient',
                                        'Fade to Black', 'Fade from Black', 'Fade to Color',
+                                       'Fade from Color', 'Fade to Overlay',
+                                       'Fade from Overlay', 'Override Fade Timeout',
+                                       'Start Looping Sound', 'Stop Looping Sound',
                                        'Set Callback Timer', '=', '+', '-')
                 UNION ALL
                 SELECT o.placeable_fqn, 'quest_task', o.quest_fqn,
@@ -1495,15 +1561,23 @@ mod tests {
         let conn = db.conn.lock().unwrap();
         conn.execute_batch(
             "INSERT INTO placeable_grants VALUES
-                 ('plc.lore', NULL, NULL, 'cdx.lore', 'cnv.lore', 'hyd.lore');
+                 ('plc.lore', NULL, NULL, 'cdx.lore', 'cnv.lore', 'hyd.lore'),
+                 ('plc.map', 'abl.placeables.galaxy_map', 1, NULL, NULL, NULL),
+                 ('plc.core', 'abl.placeables.attack', 2, NULL, NULL, NULL);
+             INSERT INTO spawner_scripts VALUES ('spn.core', 'hyd.spawned');
              INSERT INTO script_actions (script_fqn, handler, ordinal, action, target_fqn, value)
                  VALUES ('hyd.lore', 'On Use', 0, 'Play SFX', NULL, 'Play_x'),
                         ('hyd.lore', 'On Use', 1, 'Achievement Event', NULL, 'read_lore'),
                         ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other'),
+                        ('hyd.spawned', 'On Use', 0, 'Use Ability', 'abl.heal', 'abl.heal'),
                         ('hyd.lore', 'On Use', 2, 'Execute Hydra Script', NULL, 'hyd.called:Go'),
                         ('hyd.called', 'On Custom:Go', 0, 'Teleport To', NULL, 'dock'),
                         ('hyd.called', 'On Custom:Go', 1, 'Execute Hydra Script', NULL, 'hyd.lore:Back'),
-                        ('hyd.lore', 'On Custom:Back', 0, 'Give Items', 'itm.loop', 'itm.loop');
+                        ('hyd.lore', 'On Custom:Back', 0, 'Give Items', 'itm.back', 'itm.back'),
+                        ('hyd.lore', 'On Custom:Back', 1, 'Execute Hydra Script', NULL, 'hyd.loop:x'),
+                        ('hyd.loop', 'On Custom:x', 0, 'Execute Hydra Script', NULL, 'hyd.loop:y'),
+                        ('hyd.loop', 'On Custom:y', 0, 'Set Active', NULL, 'true'),
+                        ('hyd.loop', 'On Custom:y', 1, 'Execute Hydra Script', NULL, 'hyd.loop:x');
              INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, json)
                  VALUES ('g', 's', 'h', 'G', 'plc.device', 'Placeable', '{}'),
                         ('g2', 's2', 'h2', 'G2', 'plc.core', 'Placeable', '{}');
@@ -1526,15 +1600,25 @@ mod tests {
             .collect::<rusqlite::Result<_>>()
             .unwrap();
         let row = |p: &str, k: &str, t: &str, d: &str| (p.into(), k.into(), t.into(), d.into());
-        // Play SFX and the On Enter handler trigger nothing a use counts; the
+        // plc.core runs its spawner entry's script (spn.core -> hyd.spawned),
+        // so its use ability is not listed; plc.map has no script anywhere,
+        // so its use ability is what it does.
+        // Play SFX and the On Enter handler trigger nothing a use counts. The
         // On Use script's Execute Hydra Script reaches hyd.called's
-        // 'On Custom:Go' (Teleport To), whose call back into hyd.lore is a
-        // cycle and is not followed (no Give Items). A
+        // 'On Custom:Go' (Teleport To), whose call back into another handler
+        // of hyd.lore ('On Custom:Back', Give Items) is followed; hyd.loop's
+        // x -> y -> x loop is stopped by the guard, with y's Set Active once. A
         // task naming only the spawner (spn.core) reaches the placeable it
         // places; plc.device, named both ways, appears once.
         assert_eq!(
             rows,
             vec![
+                row(
+                    "plc.core",
+                    "on_use",
+                    "abl.heal",
+                    "Use Ability (hyd.spawned On Use)"
+                ),
                 row(
                     "plc.core",
                     "quest_task",
@@ -1558,8 +1642,26 @@ mod tests {
                 row(
                     "plc.lore",
                     "on_use",
+                    "itm.back",
+                    "Give Items (hyd.lore On Custom:Back)"
+                ),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "true",
+                    "Set Active (hyd.loop On Custom:y)"
+                ),
+                row(
+                    "plc.lore",
+                    "on_use",
                     "dock",
                     "Teleport To (hyd.called On Custom:Go)"
+                ),
+                row(
+                    "plc.map",
+                    "use_ability",
+                    "abl.placeables.galaxy_map",
+                    "plcAbilitySpecOnUse"
                 ),
             ]
         );
