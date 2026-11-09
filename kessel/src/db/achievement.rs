@@ -73,10 +73,6 @@ const HOOK_EVENT: u32 = 0xcdeb_4375;
 /// Condition type 18 tests that a participant carries an effect.
 const COND_HAS_EFFECT: i64 = 18;
 const COND_EFFECT_TAGS: i64 = 8;
-/// The log prints an effect as its owning ability's string id << 32 plus the
-/// effect's index; an ability's first effect is index 256 (str.abl id1 256,
-/// Party Jawa's 3044178330124544).
-const FIRST_EFFECT_INDEX: i64 = 256;
 
 /// The raw 64 bits of a numeric GOM value. Ids and GUIDs arrive as either
 /// UInt64 or Int64 depending on the field; both are the same bits.
@@ -755,20 +751,32 @@ impl Database {
                 }
             }
 
-            // Effect tag -> (effect ability, the id the log prints for it):
-            // the ability the tag is named after (tag.abl.x -> abl.x), else
-            // an ability ability_tags finds carrying it. The default extract
-            // keeps one object per fqn, so the tag's name is the surer key.
+            // Effect tag -> (effect ability, the id the log prints for its
+            // ApplyEffect). The ability is the one the tag is named after
+            // (tag.abl.x -> abl.x; the default extract keeps one object per
+            // fqn, so the tag's name is the surer key), else the one ability
+            // ability_tags finds carrying the tag, else the name alone (a tag
+            // many abilities carry, such as tag.abl.debuff.burn, names no
+            // single ability). The log id is read,
+            // never built: the effect name ids of an ability are its str.abl
+            // rows at id1 256+ (its locTextRetrieverMap keys), and the tag's
+            // own ability names the effect that carries the ability's name
+            // (Party Jawa 256, Damage Overcharge 259). Anything else is NULL.
             let mut effects: HashMap<String, (String, Option<i64>)> = HashMap::new();
             {
                 let mut stmt = tx.prepare(
-                    "SELECT t.tag_hash, COALESCE(o.fqn, a.ability_fqn, substr(t.tag_fqn, 5)), \
-                            COALESCE(o.string_id, ao.string_id) \
+                    "SELECT t.tag_hash, \
+                            COALESCE(o.fqn, (SELECT MIN(a.ability_fqn) FROM ability_tags a \
+                                             WHERE a.tag_hash = t.tag_hash \
+                                             HAVING COUNT(*) = 1), substr(t.tag_fqn, 5)), \
+                            (SELECT (o.string_id << 32) | MIN(e.id1) FROM strings n \
+                             JOIN strings e ON e.fqn LIKE 'str.abl.%' AND e.id2 = n.id2 \
+                              AND e.locale = n.locale AND e.id1 >= 256 AND e.text = n.text \
+                             WHERE n.fqn LIKE 'str.abl.%' AND n.id2 = o.string_id \
+                               AND n.id1 = 0 AND n.locale = 'en-us' AND n.text <> '' \
+                             HAVING COUNT(*) = 1) \
                      FROM tags t \
-                     LEFT JOIN objects o ON o.fqn = substr(t.tag_fqn, 5) AND o.is_canonical = 1 \
-                     LEFT JOIN ability_tags a ON a.tag_hash = t.tag_hash \
-                     LEFT JOIN objects ao ON ao.fqn = a.ability_fqn AND ao.is_canonical = 1 \
-                     ORDER BY a.ability_fqn",
+                     LEFT JOIN objects o ON o.fqn = substr(t.tag_fqn, 5) AND o.is_canonical = 1",
                 )?;
                 let rows = stmt.query_map([], |r| {
                     Ok((
@@ -778,10 +786,8 @@ impl Database {
                     ))
                 })?;
                 for row in rows {
-                    let (tag, ability, string_id) = row?;
-                    effects
-                        .entry(tag)
-                        .or_insert((ability, string_id.map(|s| (s << 32) | FIRST_EFFECT_INDEX)));
+                    let (tag, ability, log_id) = row?;
+                    effects.insert(tag, (ability, log_id));
                 }
             }
 
@@ -896,8 +902,12 @@ impl Database {
                 }
             }
 
+            // Deduplicated here on the table's key: achievement_fqn may be
+            // NULL, which a SQLite key never collapses, and an achievement
+            // counting the code in several tasks is listed once.
+            let mut written = std::collections::HashSet::new();
             let mut ins_hidden = tx.prepare(
-                "INSERT OR REPLACE INTO hidden_earnables \
+                "INSERT INTO hidden_earnables \
                    (event_name, event_code, script_fqn, handler, trigger, credits, achievement_fqn) \
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             )?;
@@ -915,6 +925,9 @@ impl Database {
                     None => vec![None],
                 };
                 for ach in achievements {
+                    if !written.insert((code, script.as_str(), handler.as_str(), ach)) {
+                        continue;
+                    }
                     ins_hidden.execute(params![
                         name,
                         format!("{code:016X}"),
@@ -926,8 +939,7 @@ impl Database {
                     ])?;
                 }
             }
-            // Rows written, not inserts: an action repeated in one handler
-            // lands on the same hidden_earnables row.
+            // Rows in each table, counted after writing.
             let rows = |t: &str| -> Result<u64> {
                 Ok(tx.query_row(&format!("SELECT COUNT(*) FROM {t}"), [], |r| r.get(0))?)
             };
