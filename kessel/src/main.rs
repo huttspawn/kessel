@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+mod area;
 mod buckets_info;
 mod db;
 mod dds;
@@ -770,7 +771,8 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
                 | "flashpoint"
                 | "dynamic_events"
                 | "world_design"
-                | "placeables"
+                // `abl.placeables.*` is kept (FR-KESSEL-025): a placeable's
+                // use ability is how a logged use cast finds the placeable.
                 | "ballistics"
                 | "state"
                 | "creature"
@@ -956,6 +958,7 @@ mod tests {
             "nco.companions_original.warrior.broonmark",
             "mrp.galactic_seasons.season_5.mouse_droid",
             "ipp.custom.sow.progresson.ge_a13_purple_holo.legs",
+            "abl.placeables.examine_lore_object",
         ];
         for fqn in samples {
             assert!(
