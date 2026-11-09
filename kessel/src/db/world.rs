@@ -1135,6 +1135,39 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                      AND a.target_fqn IS NOT NULL
                 JOIN placements p ON p.entity_fqn = g.placeable_fqn
                 JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id;
+            -- What a placeable is and what using it triggers (FR-KESSEL-025
+            -- c9): its codex entry (plcCodexSpec), its conversation
+            -- (plcConvo), its On Use script's granting, quest and
+            -- conversation actions, and the quest tasks it is an
+            -- interaction object of (quest_task_objects, created by quest),
+            -- which using it advances.
+            CREATE VIEW IF NOT EXISTS placeable_triggers AS
+                SELECT placeable_fqn, 'codex' AS kind, codex_fqn AS target_fqn,
+                       'plcCodexSpec' AS detail
+                FROM placeable_grants WHERE codex_fqn IS NOT NULL
+                UNION ALL
+                SELECT placeable_fqn, 'conversation', conversation_fqn, 'plcConvo'
+                FROM placeable_grants WHERE conversation_fqn IS NOT NULL
+                UNION ALL
+                SELECT g.placeable_fqn, 'on_use', COALESCE(a.target_fqn, a.value),
+                       a.action || ' (' || a.script_fqn || ')'
+                FROM placeable_grants g
+                JOIN script_actions a ON a.script_fqn = g.script_fqn AND a.handler = 'On Use'
+                WHERE a.action IN ('Grant Codex', 'Achievement Event', 'Grant Title',
+                                   'Give Items', 'Give Quest Item', 'Play Conversation',
+                                   'Play Ambush Conversation', 'Set Quest State',
+                                   'Set Quest Granted')
+                UNION ALL
+                SELECT o.object_fqn, 'quest_task', o.quest_fqn,
+                       'task (' || o.branch || ',' || o.step || ',' || o.task || ') '''
+                         || COALESCE(t.text, '') || ''' hook ' || COALESCE(h.hook_id, '')
+                FROM quest_task_objects o
+                JOIN objects ob ON ob.fqn = o.object_fqn AND ob.kind = 'Placeable'
+                     AND ob.is_canonical = 1
+                LEFT JOIN quest_tasks t ON t.quest_fqn = o.quest_fqn AND t.branch = o.branch
+                     AND t.step = o.step AND t.task = o.task
+                LEFT JOIN quest_task_hooks h ON h.quest_fqn = o.quest_fqn AND h.branch = o.branch
+                     AND h.step = o.step AND h.task = o.task;
         "#,
     )?;
     Ok(())
@@ -1425,6 +1458,59 @@ mod tests {
                 (Some(67878 << 32), "npc.bela".into(), "cnv.bela".into(), 4.0),
                 (None, "plc.cache".into(), "cnv.cache".into(), 8.0),
                 (None, "plc.lore".into(), "cnv.lore".into(), 1.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn placeable_triggers_union_codex_conversation_on_use_and_quest_tasks() {
+        let path = temp_db_path("placeable_triggers");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let conn = db.conn.lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO placeable_grants VALUES
+                 ('plc.lore', NULL, NULL, 'cdx.lore', 'cnv.lore', 'hyd.lore');
+             INSERT INTO script_actions (script_fqn, handler, ordinal, action, target_fqn, value)
+                 VALUES ('hyd.lore', 'On Use', 0, 'Play SFX', NULL, 'Play_x'),
+                        ('hyd.lore', 'On Use', 1, 'Achievement Event', NULL, 'read_lore'),
+                        ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other');
+             INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, json)
+                 VALUES ('g', 's', 'h', 'G', 'plc.device', 'Placeable', '{}');
+             INSERT INTO quest_tasks (quest_fqn, branch, step, task, text)
+                 VALUES ('qst.q', 0, 5, 1, 'Plant a Device');
+             INSERT INTO quest_task_hooks VALUES ('qst.q', 0, 5, 1, 77);
+             INSERT INTO quest_task_objects VALUES
+                 ('qst.q', 0, 5, 1, 'plc.device'), ('qst.q', 0, 5, 1, 'spn.device');",
+        )
+        .unwrap();
+        let rows: Vec<(String, String, String, String)> = conn
+            .prepare("SELECT * FROM placeable_triggers ORDER BY placeable_fqn, kind")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        let row = |p: &str, k: &str, t: &str, d: &str| (p.into(), k.into(), t.into(), d.into());
+        // Play SFX and the On Enter handler trigger nothing a use counts; the
+        // spawner row is not a placeable.
+        assert_eq!(
+            rows,
+            vec![
+                row(
+                    "plc.device",
+                    "quest_task",
+                    "qst.q",
+                    "task (0,5,1) 'Plant a Device' hook 77"
+                ),
+                row("plc.lore", "codex", "cdx.lore", "plcCodexSpec"),
+                row("plc.lore", "conversation", "cnv.lore", "plcConvo"),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "read_lore",
+                    "Achievement Event (hyd.lore)"
+                ),
             ]
         );
     }

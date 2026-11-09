@@ -567,45 +567,78 @@ fn targets(conn: &Connection, sql: &str) -> Vec<Target> {
     .collect()
 }
 
-/// The codex entries a placeable or conversation grants: its own codex
-/// entry, its On Use script's Grant Codex actions and its conversation's
-/// codex sources.
-fn codex_grants(
-    conn: &Connection,
-    codex: Option<String>,
-    convo: Option<&str>,
-    script: Option<&str>,
-) -> Vec<String> {
-    let mut answer: Vec<String> = codex
-        .into_iter()
-        .map(|c| format!("grants codex {c}"))
-        .collect();
-    let mut via = |sql: &str, key: &str| {
+/// The non-codex script actions that grant something.
+const GRANT_ACTIONS: &str = "'Achievement Event', 'Grant Title', 'Give Items'";
+
+/// What a conversation grants: its codex sources, the quest tasks its nodes
+/// start or complete (a 'quest' node action's hook, named in
+/// `quest_task_hooks`), and the grant actions of the scripts its nodes call.
+/// Every line starts "grants ".
+fn grants(conn: &Connection, convo: &str) -> Vec<String> {
+    let mut answer = Vec::new();
+    let mut add = |sql: &str| {
         let mut stmt = conn.prepare(sql).expect("grant query");
         let rows = stmt
-            .query_map([key], |r| {
-                Ok(format!(
-                    "grants codex {} via {key} {}",
-                    r.get::<_, String>(0)?,
-                    r.get::<_, String>(1)?
-                ))
-            })
+            .query_map([convo], |r| r.get::<_, String>(0))
             .expect("grant rows");
         answer.extend(rows.map(|r| r.expect("grant row")));
     };
-    if let Some(s) = script {
-        via(
-            "SELECT target_fqn, handler FROM script_actions \
-             WHERE script_fqn = ?1 AND action = 'Grant Codex' AND target_fqn IS NOT NULL",
-            s,
-        );
+    add(
+        "SELECT 'grants codex ' || codex_fqn || ' via ' || source_fqn || ' ' || via \
+         FROM codex_sources WHERE source_kind = 'conversation' AND source_fqn = ?1",
+    );
+    add(
+        "SELECT DISTINCT 'grants quest ' || a.quest_fqn || ' node ' || a.node_id || \
+                CASE WHEN h.step IS NULL THEN ' advances it' \
+                     WHEN h.step = 0 THEN ' starts it' \
+                     ELSE ' completes task (' || h.branch || ',' || h.step || ',' || h.task \
+                          || ') ''' || COALESCE(t.text, '') || '''' END \
+         FROM conversation_node_actions a \
+         LEFT JOIN quest_task_hooks h ON h.quest_fqn = a.quest_fqn AND h.hook_id = a.task_hook_id \
+         LEFT JOIN quest_tasks t ON t.quest_fqn = h.quest_fqn AND t.branch = h.branch \
+           AND t.step = h.step AND t.task = h.task \
+         WHERE a.conversation_fqn = ?1 AND a.kind = 'quest' \
+         ORDER BY a.node_id, h.branch, h.step, h.task",
+    );
+    add(&format!(
+        "SELECT DISTINCT 'grants ' || s.action || ' ' || COALESCE(s.target_fqn, s.value) \
+                || ' via ' || s.script_fqn || ' ' || s.handler \
+         FROM conversation_node_actions a \
+         JOIN script_actions s ON s.script_fqn = a.script_fqn AND s.handler = a.handler \
+         WHERE a.conversation_fqn = ?1 AND a.kind = 'script' AND s.action IN ({GRANT_ACTIONS})"
+    ));
+    answer
+}
+
+/// What a placeable is and what using it triggers, from `placeable_triggers`,
+/// then what each conversation it plays grants.
+fn placeable_answer(conn: &Connection, placeable: &str) -> Vec<String> {
+    let mut stmt = conn
+        .prepare("SELECT kind, target_fqn, detail FROM placeable_triggers WHERE placeable_fqn = ?1")
+        .expect("placeable triggers query");
+    let triggers: Vec<(String, String, String)> = stmt
+        .query_map([placeable], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .expect("placeable trigger rows")
+        .map(|r| r.expect("placeable trigger row"))
+        .collect();
+    let mut answer = Vec::new();
+    let mut convos: Vec<&str> = Vec::new();
+    for (kind, target, detail) in &triggers {
+        if kind == "codex" || detail.starts_with("Grant Codex ") {
+            answer.push(format!("grants codex {target} ({detail})"));
+        } else {
+            answer.push(format!("triggers {kind} {target} ({detail})"));
+        }
+        let plays = kind == "conversation" || detail.starts_with("Play Conversation ");
+        if plays && !convos.contains(&target.as_str()) {
+            convos.push(target);
+        }
     }
-    if let Some(c) = convo {
-        via(
-            "SELECT codex_fqn, via FROM codex_sources \
-             WHERE source_kind = 'conversation' AND source_fqn = ?1",
-            c,
-        );
+    if triggers.is_empty() {
+        answer.push("triggers nothing the build shows".to_string());
+    }
+    for c in convos {
+        answer.extend(grants(conn, c));
     }
     answer
 }
@@ -678,21 +711,21 @@ fn use_target(conn: &Connection, area: i64, cast: i64, p: [f64; 3]) -> Option<Us
 #[when("kessel's agent asks what that use granted")]
 fn ask_use(world: &mut World) {
     let (area, cast, p) = (world.log_area_id, world.cast_id, world.positions[0]);
-    let conn = spice(world);
-    world.answer = match use_target(conn, area, cast, p) {
-        Some((fqn, codex, convo, script, d)) => {
+    world.answer = resolve_use(spice(world), area, cast, p);
+    println!("c9 use answer: {:?}", world.answer);
+}
+
+/// What a logged use cast used and what using it triggers: the nearest
+/// placeable of the area and cast id within reach, and `placeable_answer`.
+fn resolve_use(conn: &Connection, area: i64, cast: i64, p: [f64; 3]) -> Vec<String> {
+    match use_target(conn, area, cast, p) {
+        Some((fqn, _, _, _, d)) => {
             let mut answer = vec![format!("placeable {fqn} at {d:.2}")];
-            answer.extend(codex_grants(
-                conn,
-                codex,
-                convo.as_deref(),
-                script.as_deref(),
-            ));
+            answer.extend(placeable_answer(conn, &fqn));
             answer
         }
         None => vec!["nothing that grants stands within reach".to_string()],
-    };
-    println!("c9 use answer: {:?}", world.answer);
+    }
 }
 
 #[then("the answer names the placeable and its codex entry")]
@@ -857,7 +890,7 @@ fn resolve_conversation(
     match found {
         Some(((_, kind, owner, convo, _), d)) => {
             let mut answer = vec![format!("{kind} {owner} conversation {convo} at {d:.2}")];
-            answer.extend(codex_grants(conn, None, Some(convo), None));
+            answer.extend(grants(conn, convo));
             answer
         }
         None => casts
@@ -901,7 +934,8 @@ fn quest_conversation(conn: &Connection, placeable: &str) -> Option<Vec<String>>
             let mut answer = vec![format!(
                 "placeable {placeable} quest {quest} conversation {convo}"
             )];
-            answer.extend(codex_grants(conn, None, Some(convo), None));
+            answer.extend(placeable_answer(conn, placeable));
+            answer.extend(grants(conn, convo));
             return Some(answer);
         }
     }
@@ -1190,13 +1224,16 @@ fn hidden_listed(world: &World) {
     );
 }
 
-/// FR-KESSEL-025 c9 on two real conversations a quest task plays: Tython
-/// 06:28:53 (a holocall after planting a surveillance device) and Hoth
-/// 11:02:53 (after accessing a security panel). Local only, like the
-/// `@local` scenarios: skipped unless `KESSEL_SPICE` and `KESSEL_COMBAT_LOG`
-/// are set.
+/// FR-KESSEL-025 c9 on real Tython and Hoth conversation starts: what each
+/// is and what it grants. 06:19:57 and 06:20:50 are the flesh-raider corpse
+/// (by position, then by its 'Opening' cast), 06:28:53 a holocall after
+/// planting a surveillance device (by the quest join), 06:31:35 the datacron,
+/// and Hoth 11:02:53 follows accessing a security panel (by the quest join).
+/// Local only, like the `@local` scenarios: skipped unless `KESSEL_SPICE`
+/// and `KESSEL_COMBAT_LOG` are set.
 #[test]
 fn c9_quest_task_conversations_resolve() {
+    const TYTHON: &str = "combat_2026-11-09_05_45_53_516397.txt";
     let (Ok(path), Ok(_)) = (
         std::env::var("KESSEL_SPICE"),
         std::env::var("KESSEL_COMBAT_LOG"),
@@ -1205,16 +1242,37 @@ fn c9_quest_task_conversations_resolve() {
     };
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .unwrap_or_else(|e| panic!("open {path}: {e}"));
-    let cases = [
+    let corpse = [
+        "conversation cnv.location.tython.bronze.flesh_eating_baby.fleshraider_parent_corpse",
+        "grants quest qst.location.tython.bronze.the_littlest_flesh_raider node 15 starts it",
+        "grants quest qst.location.tython.bronze.the_littlest_flesh_raider node 22 completes task (0,2,0) 'Return to the Flesh Raider Baby'",
+    ];
+    let cases: [(&str, &str, &[&str]); 5] = [
+        (TYTHON, "[06:19:57.859]", &corpse),
+        (TYTHON, "[06:20:50.198]", &corpse),
         (
-            "combat_2026-11-09_05_45_53_516397.txt",
+            TYTHON,
             "[06:28:53.886]",
-            "conversation cnv.location.tython.class.jedi_knight_new.master_orgus_din",
+            &[
+                "conversation cnv.location.tython.class.jedi_knight_new.master_orgus_din",
+                "grants quest qst.location.tython.class.jedi_knight.enemy_force node 209 completes task (0,6,0) 'Use Your Personal Holocom'",
+            ],
+        ),
+        (
+            TYTHON,
+            "[06:31:35.619]",
+            &[
+                "conversation cnv.location.tython.data_holocron.datacron_b_tython",
+                "grants quest qst.location.tython.data_holocron.tyt_willpower_i node 16 starts it",
+            ],
         ),
         (
             "combat_2026-10-31_00_33_45_643179.txt",
             "[11:02:53.428]",
-            "conversation cnv.location.hoth.world.imperial.breaking_the_maw.fixer_308_holo",
+            &[
+                "conversation cnv.location.hoth.world.imperial.breaking_the_maw.fixer_308_holo",
+                "grants quest qst.location.hoth.world.imperial.breaking_the_maw node 68 completes task (1,2,0) 'Find information on White Maw holdings'",
+            ],
         ),
     ];
     let all = conversations();
@@ -1235,8 +1293,67 @@ fn c9_quest_task_conversations_resolve() {
             .unwrap_or_else(|| panic!("no conversation start {at} in {file}"));
         let answer = resolve_conversation(&conn, *area, *p, *target, casts);
         println!("c9 {file} line {n} {at}: {answer:?}");
+        for e in expected {
+            assert!(
+                answer.iter().any(|a| a.contains(e)),
+                "{file} {at}: no {e:?} in {answer:?}"
+            );
+        }
+    }
+}
+
+/// FR-KESSEL-025 c9 on use casts whose placeable names no codex entry and no
+/// conversation: what each is and what using it advances, from
+/// `placeable_triggers`. Local only, like the `@local` scenarios.
+#[test]
+fn c9_use_casts_answer_what_the_placeable_triggers() {
+    let (Ok(path), Ok(_)) = (
+        std::env::var("KESSEL_SPICE"),
+        std::env::var("KESSEL_COMBAT_LOG"),
+    ) else {
+        return;
+    };
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .unwrap_or_else(|e| panic!("open {path}: {e}"));
+    let cases = [
+        (
+            "combat_2026-11-09_05_45_53_516397.txt",
+            "[06:28:45.782]",
+            "placeable plc.location.tython.class.jedi_knight.enemy_force.surviellance_device_2 ",
+            "triggers quest_task qst.location.tython.class.jedi_knight.enemy_force (task (0,5,1) 'Plant a Device in Sector 02'",
+        ),
+        (
+            "combat_2026-10-31_20_43_20_205597.txt",
+            "[21:12:55.889]",
+            "placeable plc.location.hutta.class.spy.the_new_truth.security_camera ",
+            "triggers quest_task qst.location.hutta.bonus.storm_the_grounds_of_fa_athra_s_palace (task (0,1,0) 'Disable Fa'athra Security Cameras'",
+        ),
+    ];
+    let lines = log_lines();
+    for (file, at, placeable, trigger) in cases {
+        let (_, n, area, _, _, line) = lines
+            .iter()
+            .find(|l| {
+                l.0.ends_with(file)
+                    && matches!(l.5, LogLine::Cast(..))
+                    && std::fs::read(&l.0)
+                        .map(|b| {
+                            String::from_utf8_lossy(&b)
+                                .lines()
+                                .nth(l.1 - 1)
+                                .is_some_and(|x| x.starts_with(at))
+                        })
+                        .unwrap_or(false)
+            })
+            .unwrap_or_else(|| panic!("no cast {at} in {file}"));
+        let LogLine::Cast(cast, p) = line else {
+            unreachable!("matched a cast")
+        };
+        let answer = resolve_use(&conn, *area, *cast, *p);
+        println!("c9 {file} line {n} {at}: {answer:?}");
         assert!(
-            answer.iter().any(|a| a.contains(expected)),
+            answer.iter().any(|a| a.starts_with(placeable))
+                && answer.iter().any(|a| a.starts_with(trigger)),
             "{file} {at}: {answer:?}"
         );
     }
