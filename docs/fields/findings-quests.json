@@ -313,7 +313,9 @@
   "meaning": "Per-task event map (achEvents): key = an achievement event code. A code is the 48-bit fold of FNV-1a 64 over the UPPERCASED event name under prefix 0xE000: h = fnv1a64(upper(name)); code = 0xE000000000000000 | (h & 0x0000FFFFFFFF0000) | ((h ^ (h >> 48)) & 0xFFFF). The name is an object fqn (npc, ach, qst, itm, cdx, abl, rdd) or a name a Hydra 'Achievement Event' action raises."
  },
  "4000004e134fd908": {
-  "reason": "Only two values, 3588848902734087 (0xCC00A00000107) and 3588848902734088, on 3,694 conversation nodes in exp.seasons and character.combat_style and 3 scrolling-text nodes. They resolve to no object, quest variable or string, and occur on player, NPC, text and silent nodes alike. Viewing a conversation with both values in game, or a client trace, would be needed."
+  "confidence": "proved",
+  "evidence": "3,694 values, all high 32 = 835594: 3,326 are 263 (exp.seasons chapters), 368 are 264. The earlier 'resolves to no string' was because the gui table is not in the strings table; dump_stb reads it.",
+  "meaning": "String id of the leave-conversation warning: str/gui/conversationforceescapedialog.stb (id2 835594) 263 'If you leave this conversation, you will exit the chapter...' or 264 '...exit the area and be sent to the fleet'."
  },
  "4000004e2bd6139a": {
   "confidence": "proved",
@@ -440,5 +442,75 @@
   "confidence": "proved",
   "evidence": "14,145 of 17,735 values in the filtered build equal the qstHookId of a task of the quest in the node's cnvActionQuest; see 40000034b21f4106 for the rest.",
   "meaning": "The qstHookId of the task of cnvActionQuest that this node completes."
+ },
+ "40000034bc126752": {
+  "confidence": "proved",
+  "evidence": "10,391 non-empty lists, all length 3. Operand ids resolve through qstVariableFqnId (40000034b21e56a4) to 8,797 variables; in 8,795 the variable belongs to the node's cnvActionQuest. Op agrees with the variable's list: 11 only on qstSimpleBool/qstPermanentBool/link variables (7,154; values 0/1), 12 only on int/permanent int/counter/stringid variables, with the rhs a qstConstVariableDefinition id whose qstVariableIdValue is the value (glb_broonmark_status := const_broonmark_recruited = 2). 14 adds: cnv.test.bret.test_blackjack adds card consts 1..11 to int_pc_points; turn-in counters (int_caches_found += const_1, counter_supplies_turned_in += 1). 15 appears on the same up/down variables as 14 (cnv_elara_happiness, mias_affection, gbl_smuggler_alignment). 1,501 lists have variable 0 and no quest. Of the 6,453 cnvActionQuest nodes with no cnvActionHookId, 6,055 carry an expression (5,977 resolve, all in the named quest) and 398 carry neither. Tool kessel-discovery/examples/cnv_actions.rs.",
+  "meaning": "cnvActionExpressionCompiled: what a conversation node sets when reached. Always three tokens [variable, value, op], op 11 = set bool variable to literal 0/1, 12 = set int variable to a value (const variable id or literal), 14 = add value, 15 = subtract value. The variable is a quest variable of the node's cnvActionQuest; 0 as the variable is an inert placeholder."
+ },
+ "40000034bc126754": {
+  "confidence": "likely",
+  "evidence": "622,641 nodes; 193,408 are [1,1,8] (true AND true). The commonest forms read 1 1 <is_jedi_knight> 1 11 <is_jedi_wizard> 9 <is_trooper> 9 ... 8 8: class flags ORed (9) after an equality test (11), ANDed (8) into the leading true. 12 compares int variables to const ids (glb_broonmark_status 12 const_broonmark_recruited). 3,235 of the 5,278 variables conversation actions set are tested by some conversation condition. Op 3 and 10 seen rarely; their meaning is not settled.",
+  "meaning": "cnvConditionCompiled: the node's display condition in the same postfix code as cnvActionExpressionCompiled: literals and quest variable ids, op 8 AND, 9 OR, 11 bool equals, 12 int equals; the unconditioned node is [1, 1, 8]."
+ },
+ "4000000b8c279053": {
+  "confidence": "proved",
+  "evidence": "All four keys on 3,301 nodes resolve to a row of the singleton; the keys hash: fnv1a64('SMALL') = 2959999436154067372, 'MEDIUM' = 589686270506543030, 'LARGE' = -2493745135610518796, 'VERY LARGE' = 5787183427540372334. Use: SMALL 1,744, MEDIUM 1,034, LARGE 325, VERY LARGE 70 nodes. The 50/100/150/200 tiers match the known in-game LS/DS choice values.",
+  "meaning": "cnvRewardForceAmount: the light or dark side points a choice gives, as a key into qstrewardsconvoforcealignmentData (qstRewardsPerLevelData): FNV-1a 64 of SMALL = 50, MEDIUM = 100, LARGE = 150, VERY LARGE = 200, flat over levels 0-80. cnvRewardForceType (4000000ea744d62a) says light (1) or dark (2)."
+ },
+ "4000000b8c279058": {
+  "confidence": "proved",
+  "evidence": "98 nodes, 3 keys; fnv1a64('LOW') = 2693367092410997505, 'MEDIUM' = 589686270506543030, 'HIGH' = -5509327477874054083, the three keys of qstrewardsconvocreditsData.",
+  "meaning": "cnvRewardCredits: credits a node pays, as a key into qstrewardsconvocreditsData: FNV-1a 64 of LOW, MEDIUM, HIGH, each a per-level credit curve (LOW level 1 = 5, HIGH level 1 = 20)."
+ },
+ "4000000b8c279055": {
+  "confidence": "proved",
+  "evidence": "Present as an empty map on all 622,641 nodes of 10,752 conversations.",
+  "meaning": "cnvRewardAffectionRewards: the pre-4.0 per-node companion affection reward. Empty on every 7.x node; companion influence from choices is now cnvNpcReactions."
+ },
+ "400000426c54c424": {
+  "confidence": "proved",
+  "evidence": "57,281 reactions on 23,160 nodes, 129 companions (NpcCompanion objects); 57,277 keys are in the 75-row map. Influence per reaction: 200 on 39,171 ('<<1>> approves.', 'greatly approves.'), 50 on 17,900 ('disapproves.'), 0 on 149, larger one-offs 500-10,000 on 58. Texts from str/gui/conversationreactions.stb (id2 832245), 75/75 resolve.",
+  "meaning": "cnvNpcReactions: the companion reactions a choice triggers, a list of {cnvReactionNpcId companion, cnvReactionType key}; the key looks up cnvReactionsDataPrototype's cnvNpcReactionMap for the message and the influence gained."
+ },
+ "400000426c54c421": {
+  "confidence": "proved",
+  "evidence": "57,281 of 57,281 resolve to NpcCompanion objects, e.g. nco.companions_original.bounty_hunter.mako 3,044.",
+  "meaning": "cnvReactionNpcId: the companion that reacts (an NpcCompanion object)."
+ },
+ "400000426c54c422": {
+  "confidence": "proved",
+  "evidence": "57,277 of 57,281 resolve in cnvNpcReactionMap; fnv1a64('WILL_REMEMBER_THAT') = the key of the row whose text is '<<1>> will remember that.'",
+  "meaning": "cnvReactionType: key of the reaction row in cnvReactionsDataPrototype (FNV-1a 64 of the uppercased reaction name, e.g. WILL_REMEMBER_THAT)."
+ },
+ "40000042946e6bf1": {
+  "confidence": "proved",
+  "evidence": "269 nodes: items 243, credits 44, influence 2. Known exchange: cnv.alliance.camp.doctor_oggurobb node 990 debits 1 itm.loot.lockbox.alliance.supply_crate.locked.alien_research and credits 1 ...unlocked.alien_research plus 500 influence with nco.alliance.doctor_oggurobb: the Alliance specialist crate trade (hand in a locked crate, get the unlocked crate and influence). Iokath vendor nodes debit 10-25 itm.loot.token.iokath.shards plus 2,000 credits. Error strings 270-272 of str/sys/cnvconfirmationtext.stb name credits, influence and items as what the player lacks.",
+  "meaning": "cnvDebitTransaction: what the player gives up when the node fires: items (cnvTransactionItems, item -> count), credits (cnvTransactionPlayerCredits), influence. The node asks first (cnvConfirmationDialogLocId 'Proceed with this transaction?') and fails with 'Not enough credits / influence / Missing required item(s)'."
+ },
+ "40000042946e6bf2": {
+  "confidence": "proved",
+  "evidence": "169 nodes: items 101, influence 72, credits 6. Same proof as the debit: the Oggurobb crate trade credits the unlocked crate and 500 influence; Lokin's turn-ins (cnv.alliance.alderaan.lokin.lokin) debit 24 bio samples and credit 300 influence to nco.companions_updated.eckard_lokin_updated; error string 273 'Not enough space in inventory' is the credit side.",
+  "meaning": "cnvCreditTransaction: what the player receives when the node fires: items, credits, companion influence (cnvTransactionInfluenceChanges, companion -> amount)."
+ },
+ "400000429a7ba581": {
+  "confidence": "proved",
+  "evidence": "72 credit and 2 debit transactions; keys are NpcCompanion objects, values 250-2,000 (Alliance specialists 500).",
+  "meaning": "cnvTransactionInfluenceChanges: companion -> influence points moved by the transaction."
+ },
+ "400000429a7ba580": {
+  "confidence": "proved",
+  "evidence": "243 debit and 101 credit transactions; keys resolve to Item objects.",
+  "meaning": "cnvTransactionItems: item -> count moved by the transaction."
+ },
+ "40000042946e6bfb": {
+  "confidence": "proved",
+  "evidence": "44 debits (e.g. 2,000 at the Iokath vendor) and 6 credits.",
+  "meaning": "cnvTransactionPlayerCredits: credits moved by the transaction."
+ },
+ "40000042946e6bfc": {
+  "confidence": "proved",
+  "evidence": "312 of 312 values have high 32 = 856957 and low 32 = an entry of cnvconfirmationtext.stb; 107 are 261 'Proceed with this transaction?', 52 are 264 'Are you sure you wish to unlock this companion?'.",
+  "meaning": "cnvConfirmationDialogLocId: string id (str/sys/cnvconfirmationtext.stb, id2 856957) of the confirmation the client shows before the node fires: 'Proceed with this transaction?' (261), romance and companion-loss warnings."
  }
 }

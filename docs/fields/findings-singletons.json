@@ -1623,5 +1623,65 @@
   "meaning": "The area's display-name id, which is also the area id the combat log prints on AreaEntered; with mapAreasDataAreaId (0027bf77) it maps a log area to its /resources/world/areas/<id>/ directory.",
   "evidence": "mapAreasDataProto, 240 entries. 82 of 83 distinct AreaEntered area ids in the 2026 combat logs (~/swtor/logs and the live CombatLogs folder) equal a 0027bf7f value; the miss is Space (945872057663605, GSF). Ilum 137438955315 -> 4611686039258170278, Hutta 137438988437 -> 4611686019802841877, Tatooine 137438987025 -> 4611686018427650020. 21 log ids name several directories (instanced copies), so a log area can need position to pick one. Spawner positions read from those directories match logged NPC positions (kessel-discovery/examples/spn_assets.rs).",
   "confidence": "proved"
+ },
+ "4000004270f28f35": {
+  "confidence": "proved",
+  "evidence": "75 rows; 75/75 string ids resolve in str/gui/conversationreactions.stb. 'approves'/'greatly approves' = 200, 'disapproves'/'greatly disapproves' = 50 (influence does not fall in 7.x), story reactions 500-10,000.",
+  "meaning": "cnvNpcReactionMap (cnvReactionsDataPrototype): reaction key -> {cnvReactionStringId, cnvReactionInfluence, cnvReactionDisplayChange}; the influence a companion reaction grants."
+ },
+ "4000004270f28f32": {
+  "confidence": "proved",
+  "evidence": "46 rows carry it: 50, 200, 250, 500, 800, 1,000, 2,500, 3,000, 10,000; -1 once.",
+  "meaning": "cnvReactionInfluence: influence points the reaction grants (absent = 0)."
+ },
+ "4000004270f28f31": {
+  "confidence": "proved",
+  "evidence": "75 of 75 resolve, e.g. 832245/300 '<<1>> will remember that.'",
+  "meaning": "cnvReactionStringId: string id of the reaction message in str/gui/conversationreactions.stb (id2 832245)."
+ },
+ "4000004e4ffc3a18": {
+  "confidence": "likely",
+  "evidence": "16 rows, all with influence 250-3,000 ('Your actions have strengthened <<1>>'s military operations.').",
+  "meaning": "cnvReactionDisplayChange: the reaction shows its influence change; set on the Alliance and large story rows."
+ },
+ "4000000849010a7f": {
+  "confidence": "proved",
+  "evidence": "189 companions. Mako: Technology 5, Underworld Good 4, Weapon/Luxury/Cultural Artifact/Trophy 3, rest 1; romanced map Courting 5. Jedipedia nco/mako lists Technology Love ++++, Underworld Good Favorite +++; Swtorista lists the same likes and romanced Courting love.",
+  "meaning": "chrCompanionInfo_gift_interest_unromanced_map: companion -> gift type (itmGiftType) -> interest (chrCompanionGiftInterest): 5 love, 4 favorite, 3 like, 1 neutral."
+ },
+ "4000000849010a80": {
+  "confidence": "proved",
+  "evidence": "Mako: Courting 5 (Swtorista: Courting gives Love once romanced).",
+  "meaning": "chrCompanionInfo_gift_interest_romanced_map: the gift interests that change once the companion is romanced, same coding."
+ },
+ "4000000854bd7f1a": {
+  "confidence": "likely",
+  "evidence": "Keys are chrCompanionGiftInterest values used in the companion maps; how the multiplier enters the gift formula is not proved.",
+  "meaning": "itmGiftCategoryInterestMap: influence multiplier per gift interest: neutral (1) 0, like (3) 4, favorite (4) 9, love (5) 16."
+ },
+ "4000000854bd7f19": {
+  "confidence": "likely",
+  "evidence": "7 rows keyed by quality enum; the gift item ranks in fqn (standard, premium, prototype, artifact, legendary) are the likely keys.",
+  "meaning": "itmGiftQualityMap: influence multiplier per gift quality: 0.5, 1, 8, 16, 32, 80, 81."
+ },
+ "4000000854bd7f1b": {
+  "confidence": "likely",
+  "evidence": "19 rows keyed -9..9.",
+  "meaning": "itmGiftDeltaRankMap: influence multiplier by gift rank minus companion rank: 0 -> 1.0, +1 1.2, +2 1.4, +3 and up 1.6, -1 0.8, -2 0.6, -3 0.4, -4 0.2, -5 and below 0.1."
+ },
+ "400000428b61fc20": {
+  "confidence": "proved",
+  "evidence": "51 values = (n+1)^2*100 for n = 1..50 exactly; matches the community rank^2*100 influence curve.",
+  "meaning": "chrAllianceContactInfluenceLevels: influence needed for each companion influence rank: rank r -> r+1 costs (r+1)^2 x 100 (400, 900, ... 260,100 for 50 ranks)."
+ },
+ "40000008623c15ef": {
+  "confidence": "likely",
+  "evidence": "9 rows keyed by chrCompanionAffectionRank; not used by 7.x influence ranks.",
+  "meaning": "chrCompanionAffectionValueToRankMap: the pre-4.0 affection value at each affection rank (-1,000, 3,600, 10,000, 22,500, 40,000, 90,000, 160,000, 250,000, 360,000)."
+ },
+ "4000004c320bb353": {
+  "confidence": "likely",
+  "evidence": "5 brackets in itmGiftReactionsData; string table not resolved.",
+  "meaning": "itmGiftReactionBracketList: gift reaction bark by computed gift value: -9,999..-1, 0, 1..70, 71..140, 141..9,999, each with an itmGiftReactionStringId."
  }
 }
