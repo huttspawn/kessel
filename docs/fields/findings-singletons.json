@@ -213,6 +213,24 @@
  "40000013a5bca46b": {
   "reason": "Single 1.0, a coefficient. Hint kiting distance; nothing confirms."
  },
+ "40000018ae425253": {
+  "confidence": "proved",
+  "meaning": "The player title table: a list whose position plus one is the title id that every grant names (hydra Grant Title, item teach value, collection title).",
+  "evidence": "1,036 rows, 577 with text. Hydra Grant Title 114 (hyd.title.class.jedi_knight.master) lands on row 114 \"Master <<1>>\" codex cdx.titles.class.knight.master; 159 (gree superboss) on \"Combat Specimen <<1>>\" cdx.titles.event.combat_specimen; 207 of 210 Grant Title actions land on a filled row and the script names agree. Item teach value (dc16d5e3, category 5) names the same title as the item's \"Title: X\" name on 386 of 402 items, the other 16 differ only in wording. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "40000018ae425254": {
+  "confidence": "proved",
+  "meaning": "Title text: string reference (id2 << 32 | id1) into /resources/en-us/str/pc/title.stb, id2 469654. The text carries <<1>> for the character name.",
+  "evidence": "577 of 577 references resolve in pc/title.stb (605 entries), read from the archive by hashed path. Not a gui table. Several rows share one text (e.g. two \"Padawan <<1>>\" rows for Knight and Consular), so the low 32 bits are a string id, not the title id. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "40000018ae425255": {
+  "reason": "True on 27 rows, all prefix-form titles (text starts before <<1>>): the launch class and social prefixes (Darth, Sergeant .. Major, Padawan, Lord, Friendly, Chatterbox, Warzone Hero, Flygirl). 130 other prefix-form titles do not carry it, so it is not \"is a prefix\". The hashed name titleDetailLegacyPrefix suggests a prefix the legacy name can take; nothing in the data separates that from \"launch-era title\". Settling it needs the client UI code or a live check of which titles show beside a legacy name."
+ },
+ "40000018ae425258": {
+  "confidence": "likely",
+  "meaning": "Engine grant code -> player title ids: the codes the game itself grants titles by (class story ranks, social rank, alignment rank, advanced class, space and PvP).",
+  "evidence": "97 codes, 99 ids, all filled rows. Code families read cleanly: 2000-2003 trooper ranks Sergeant..Major, 2100-2703 one block per class story, 3001-3007 social ranks (Outgoing..Leader), 3010-3013 social prefixes, 3020-3024 dark side ranks (Vicious..Malevolent), 3040-3044 light side ranks (Respectable..Benevolent), 5001-5016 the 16 advanced classes in client order (Sniper..Vanguard), 10000/50000-50002 space, 30000-30001 warzones. The 24 social and alignment titles have no other grant path in the data, consistent with the engine granting them on rank. Likely, not proved: no consumer of the codes was found in game data. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
  "40000018b16934d1": {
   "reason": "Ids per alignment tier, light 650,651,92,652,93 and dark 647,648,87,649..., in threshold order. Hint says title id. No string table has fitting text at those ids: pc/legacytitle.stb gives 'The Notorious', gui/alignment.stb has none. An in-game title check at Light V would settle it."
  },
@@ -389,6 +407,16 @@
  "40000040eded80bd": {
   "reason": "True on 640 of 1,360 rows in modDerivedStatModifiersList, on 8 of the 17 derived-stat keys for all 80 levels. Always on percentage rows (those with divisor and cap), never on flat ones, but 2 percentage keys lack it (e.g. 5403721675210785623, divisor 0.5605, cap 0.6). Stat keys are unnamed ids, so it cannot be tied to a stat kind; naming the 17 keys would settle it."
  },
+ "40000040f6395f99": {
+  "confidence": "proved",
+  "meaning": "Per reputation rank, the legacy title the Empire side earns at that rank (0 = none).",
+  "evidence": "Values are legacy title ids: Makeb ranks 3 and 6 -> Imperial Infiltrator, Terror of Makeb; GSI -> GSI Preferred Contractor, GSI Most Valued Partner; Gree -> Gree Research Assistant, Honored Silver Acute, Perfect Gold Bisector. As player title ids they would read Homewrecker, Agent, Sergeant, which do not fit. 99 legacy titles come from reputation ranks. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "40000040f6395f9a": {
+  "confidence": "proved",
+  "meaning": "Per reputation rank, the legacy title the Republic side earns at that rank (0 = none).",
+  "evidence": "Same reading as f6395f99, same evidence; shared factions repeat the Empire values. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
  "40000040f764e740": {
   "reason": "Single 0.3; the hint itself says unknown (Unk1Scale). Scale and alpha might fit a UI or screen effect but nothing shows which."
  },
@@ -462,6 +490,11 @@
  },
  "400000412fecdb95": {
   "reason": "Single value 1000 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
+ },
+ "40000041352bc8a0": {
+  "confidence": "proved",
+  "meaning": "Legacy title the achievement reward grants (lgcTitleId, not a codex bit).",
+  "evidence": "Corrects the earlier codex-bit reading in #369. 321 of 330 values resolve to a legacy title; achievement to title matches published lists: Living Legend -> Living Legend, Meatbags -> Meatbag, Date Night: Romancing the Spy -> Theron's Treasure, set bonus achievement Hunter Killer -> Hunter Killer. 309 achievements reach 308 legacy titles through achRewards (deaaa365). Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  },
  "40000041395eeb00": {
   "reason": "Single value 250 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
@@ -1116,10 +1149,25 @@
  "4000004c91738753": {
   "reason": "Single value 7 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
+ "4000004ca21d88fb": {
+  "confidence": "proved",
+  "meaning": "Player title id a collection entry grants (Cartel Market collections).",
+  "evidence": "89 of 89 collection entries with a value: every value is a player title that one of the entry's own items teaches (dc16d5e3 with category 5). Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
  "4000004ca29b6b88": {
   "confidence": "proved",
   "evidence": "1074 entries, all values are mtxStorefrontItemMtxId and keys of d4f3ead1. Whether one table is a subset class of the other was not determined, only their sizes differ.",
   "meaning": "Index -> store mtx item id. The hint calls it a collection index; the data shows only the mapping."
+ },
+ "4000004ca875fc5a": {
+  "confidence": "proved",
+  "meaning": "Legacy title text: string reference into /resources/en-us/str/pc/legacytitle.stb, id2 746295.",
+  "evidence": "460 of 471 resolve in pc/legacytitle.stb (463 entries); the 11 misses carry no text in that table. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "4000004ca875fc5f": {
+  "confidence": "proved",
+  "meaning": "Legacy title id (equals the map key). Achievement reward rows (352bc8a0), teaching items (dc16d5e3 with category 9) and reputation ranks (f6395f99/9a) name legacy titles by this id.",
+  "evidence": "Equals its key on 471 of 471. 321 of 330 achievement reward legacy-title values resolve to a row with text, all 42 category-9 items do, and their item names read \"Legacy Title: <same text>\". Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  },
  "4000004cb99a42c8": {
   "confidence": "proved",

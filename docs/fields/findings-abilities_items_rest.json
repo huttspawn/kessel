@@ -347,5 +347,20 @@
  },
  "400003d2e9b2c2d0": {
   "reason": "One use: true on dec.stronghold.civic.structures.rto.spring_fountain. The community name decUnknownQuestStatusFlag only restates a guess. Placing that decoration in a stronghold and comparing it to others would show the effect."
+ },
+ "4000010bdc16d5e1": {
+  "confidence": "proved",
+  "meaning": "What a learnable item teaches (with itmTeachesValue): 5 = player title, 9 = legacy title, 2 = schematic, 3 = ability (mounts, pets), 6 = decoration, 8 = flair, 7 = stronghold label.",
+  "evidence": "9,723 items. Category 5: 402 items, all named \"Title: X\", value is a player title id whose text matches X on 386 (the rest differ in wording). Category 9: 42 items named \"Legacy Title: X\", value a legacy title id with text X on all 42. Category 2 values point at schem objects (2,752), 6 at dec (3,393). Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "4000010bdc16d5e3": {
+  "confidence": "proved",
+  "meaning": "What the item teaches: a player title id (category 5), a legacy title id (category 9), or a GUID of the schematic, ability or decoration (other categories).",
+  "evidence": "See itmTeachesCategory: the title values resolve to the titles the item names. These items use abl.mtx.unlock.learn_title as their usage ability (itmUsageAbility 2d7b8779), which is generic; the title comes from this field. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "4000004bdeaaa365": {
+  "confidence": "proved",
+  "meaning": "The achievement's reward row: a key of achRewardsTable_Prototype (0f72cd27), which holds points, items, cartel coins and the legacy title.",
+  "evidence": "7,362 of 7,362 values are keys of the reward table. 263 reward ids are shared by more than one achievement. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  }
 }
