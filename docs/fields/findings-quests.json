@@ -440,5 +440,15 @@
   "confidence": "proved",
   "evidence": "14,145 of 17,735 values in the filtered build equal the qstHookId of a task of the quest in the node's cnvActionQuest; see 40000034b21f4106 for the rest.",
   "meaning": "The qstHookId of the task of cnvActionQuest that this node completes."
+ },
+ "400003d2b05565b3": {
+  "confidence": "proved",
+  "meaning": "achRepeatInterval: how often a repeatable achievement (conquest, Galactic Seasons, ventures) can complete again. Client enum lgcAchievementRepeatInterval (400003D2B05565B2): 0 Never (absent), 1 Infinitely, 2 Daily, 3 Weekly. It is a repeat interval, not a character-or-legacy scope.",
+  "evidence": "The client.gom enum record lists lgcAchievementRepeatIntervalNever, Infinitely, Daily, Weekly in that order. Zero-based index proved by a join: in cnqConquestInfoAchievementMap (8f33cf59) every objective carries a cnqConquestAchievementTypeEnum, and on all 4,732 event-objective pairs where both are set they agree under that index with no exception: Infinitely <-> Repeatable 374, Daily <-> DailyRepeatable 4,018, Weekly <-> Unrepeatable 340; the 8,245 pairs with the field absent (Never) are all Unrepeatable. Galactic Seasons names agree: all 30 'Daily PO: ...' objectives are 2 and all 12 'Weekly PO: ...' are 3. Exarch's conquest sheet (Mission Type Daily / Weekly / Infinitely Repeatable) agrees on 1,952 of 2,023 event-objective rows; the 71 disagreements are mostly '... Eternal' objectives and second-tier objectives such as 'Crafting: Inventor 2' that the sheet marks Weekly where the data says Daily or Infinitely (live 7.x)."
+ },
+ "400003d2b05565b1": {
+  "confidence": "proved",
+  "meaning": "achType: which system an achievement belongs to. Client enum lgcAchievementType: 0 Standard (absent), 1 Conquest, 2 GalacticSeasons, 3 PvPSeasons, 4 Ventures.",
+  "evidence": "The client.gom enum record lists lgcAchievementTypeStandard, Conquest, GalacticSeasons, PvPSeasons, Ventures in that order. Zero-based index proved by FQN family on all 1,221 uses: 1 on 397 ach.conquests.*; 2 on 570 ach.galactic_seasons.* and 42 ach.conquests.galactic_seasons.priority_objectives.*; 3 on 36 ach.pvp_seasons.*; 4 on 176 ach.ventures.*; no exception. Every conquest objective a conquest event lists carries it; 367 ach.conquests.* that no event lists lack it (live 7.x)."
  }
 }
