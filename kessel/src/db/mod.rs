@@ -25,6 +25,7 @@ mod quest;
 mod schema;
 mod schematic;
 mod stats_systems;
+mod title;
 mod world;
 pub(crate) use world::find_planet_code_after_cc;
 #[cfg(test)]
@@ -197,6 +198,7 @@ impl Database {
             world::create_tables(&tx)?;
             cnv::create_tables(&tx)?;
             codex::create_tables(&tx)?;
+            title::create_tables(&tx)?;
             npc::create_tables(&tx)?;
             ability::create_tables(&tx)?;
             item::create_tables(&tx)?;
