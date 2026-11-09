@@ -37,9 +37,6 @@ struct World {
     /// The player's casts at the spot of a conversation since the last one
     /// began, latest first: cast id and position.
     casts: Vec<(i64, [f64; 3])>,
-    /// The string ids (log id >> 32) the player targeted in the area before
-    /// a conversation, latest first.
-    targeted: Vec<i64>,
     /// The answer: one line per fact found.
     answer: Vec<String>,
 }
@@ -676,8 +673,7 @@ fn codex_npc_placed(world: &mut World) {
 /// A logged conversation start: file, line number, log area id, the
 /// player's position, the NPC (log id, position) the player's TargetSet named
 /// within 1 s before, and the player's casts at that spot since the last
-/// conversation began, latest first, and the string ids the player targeted
-/// in the area before it, latest first.
+/// conversation began, latest first.
 type Conversation = (
     String,
     usize,
@@ -685,23 +681,15 @@ type Conversation = (
     [f64; 3],
     Option<(i64, [f64; 3])>,
     Vec<(i64, [f64; 3])>,
-    Vec<i64>,
 );
 
 fn conversations() -> Vec<Conversation> {
     let mut last: Option<(String, f64, i64, [f64; 3])> = None;
     let mut casts: Vec<(String, i64, [f64; 3])> = Vec::new();
-    let mut targeted: (String, i64, Vec<(String, i64)>) = (String::new(), 0, Vec::new());
     let mut out = Vec::new();
     for (file, n, area, t, player, line) in log_lines() {
-        if (targeted.0.as_str(), targeted.1) != (file.as_str(), area) {
-            targeted = (file.clone(), area, Vec::new());
-        }
         match line {
-            LogLine::TargetSet(id, q) => {
-                targeted.2.push((player.clone(), id >> 32));
-                last = Some((player, t, id, q));
-            }
+            LogLine::TargetSet(id, q) => last = Some((player, t, id, q)),
             LogLine::Cast(id, q) => casts.push((player, id, q)),
             LogLine::Conversation(p) => {
                 let fresh = last
@@ -714,14 +702,7 @@ fn conversations() -> Vec<Conversation> {
                     .filter(|(who, _, q)| *who == player && dist(*q, p) <= REACH)
                     .map(|(_, id, q)| (id, q))
                     .collect();
-                let mine = targeted
-                    .2
-                    .iter()
-                    .rev()
-                    .filter(|(who, _)| *who == player)
-                    .map(|(_, sid)| *sid)
-                    .collect();
-                out.push((file, n, area, p, fresh, here, mine));
+                out.push((file, n, area, p, fresh, here));
             }
         }
     }
@@ -732,7 +713,7 @@ fn conversations() -> Vec<Conversation> {
     "a combat-log line where the player enters a conversation at a position beside that NPC in that area"
 )]
 fn conversation_line(world: &mut World) {
-    for (file, n, area, p, target, casts, targeted) in conversations() {
+    for (file, n, area, p, target, casts) in conversations() {
         let Some((id, q)) = target else { continue };
         if let Some((_, _, fqn, _)) = world
             .targets
@@ -744,7 +725,7 @@ fn conversation_line(world: &mut World) {
             );
             world.subject = fqn.clone();
             (world.log_area_id, world.positions, world.target_set) = (area, vec![p], target);
-            (world.casts, world.targeted) = (casts, targeted);
+            world.casts = casts;
             return;
         }
     }
@@ -753,10 +734,25 @@ fn conversation_line(world: &mut World) {
 
 #[when("kessel's agent asks what that conversation granted")]
 fn ask_conversation(world: &mut World) {
-    type Owner = (Option<i64>, String, String, String, [f64; 3]);
     let (area, p, target) = (world.log_area_id, world.positions[0], world.target_set);
-    let (casts, targeted) = (world.casts.clone(), world.targeted.clone());
-    let conn = spice(world);
+    let casts = world.casts.clone();
+    let answer = resolve_conversation(spice(world), area, p, target, &casts);
+    println!("c9 conversation answer: {answer:?}");
+    world.answer = answer;
+}
+
+/// What a logged conversation start is and grants: the NPC its fresh
+/// TargetSet named; else the conversation-owning placeable a use cast at the
+/// spot landed on; else the conversation owner nearest the player; else the
+/// conversation that completes the used placeable's quest task.
+fn resolve_conversation(
+    conn: &Connection,
+    area: i64,
+    p: [f64; 3],
+    target: Option<(i64, [f64; 3])>,
+    casts: &[(i64, [f64; 3])],
+) -> Vec<String> {
+    type Owner = (Option<i64>, String, String, String, [f64; 3]);
     let mut stmt = conn
         .prepare(
             "SELECT owner_log_id, owner_kind, owner_fqn, conversation_fqn, log_x, log_y, log_z \
@@ -801,53 +797,69 @@ fn ask_conversation(world: &mut World) {
         ),
         None => used().or_else(|| nearest(p, &|_| true, REACH)),
     };
-    // Else the quest a used placeable (or its spawner) counts toward: of that
-    // quest's conversations, the one whose owner the player targeted last.
-    let quest = || {
-        casts.iter().find_map(|(cast, q)| {
-            let (placeable, ..) = use_target(conn, area, *cast, *q)?;
-            let mut stmt = conn
-                .prepare(
-                    "SELECT DISTINCT o.quest_fqn, r.cnv_fqn FROM quest_objectives o \
-                     JOIN conversation_quest_refs r ON r.quest_fqn = o.quest_fqn \
-                     WHERE o.target_fqn = ?1 OR o.target_fqn IN \
-                       (SELECT spawner_fqn FROM placements WHERE entity_fqn = ?1)",
-                )
-                .expect("quest conversation query");
-            let quests: Vec<(String, String)> = stmt
-                .query_map([&placeable], |r| Ok((r.get(0)?, r.get(1)?)))
-                .expect("quest conversation rows")
-                .map(|r| r.expect("quest conversation row"))
-                .collect();
-            let targeted_at = |cnv: &str| {
-                targeted.iter().position(|sid| {
-                    rows.iter()
-                        .any(|r| r.3 == cnv && r.0.is_some_and(|o| o >> 32 == *sid))
-                })
-            };
-            quests
-                .into_iter()
-                .filter_map(|(quest, cnv)| Some((targeted_at(&cnv)?, quest, cnv)))
-                .min()
-                .map(|(_, quest, cnv)| (placeable, quest, cnv))
-        })
-    };
-    world.answer = match (found, found.is_none().then(quest).flatten()) {
-        (Some(((_, kind, owner, convo, _), d)), _) => {
+    match found {
+        Some(((_, kind, owner, convo, _), d)) => {
             let mut answer = vec![format!("{kind} {owner} conversation {convo} at {d:.2}")];
             answer.extend(codex_grants(conn, None, Some(convo), None));
             answer
         }
-        (None, Some((placeable, quest, convo))) => {
+        None => casts
+            .iter()
+            .find_map(|(cast, q)| {
+                let (placeable, ..) = use_target(conn, area, *cast, *q)?;
+                quest_conversation(conn, &placeable)
+            })
+            .unwrap_or_else(|| vec!["nothing that grants stands within reach".to_string()]),
+    }
+}
+
+/// The conversation that completes the quest task a used placeable belongs
+/// to: the task naming it (or its spawner) in qstTaskInteractionObjects, and
+/// the conversation whose quest node action names that quest and the hook
+/// id of that task, or else of a task of the next step. With no single such
+/// conversation, the quest and its conversations, marked unresolved.
+fn quest_conversation(conn: &Connection, placeable: &str) -> Option<Vec<String>> {
+    let rows = |sql: &str| -> Vec<(String, i64, String)> {
+        let mut stmt = conn.prepare(sql).expect("quest conversation query");
+        stmt.query_map([placeable], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .expect("quest conversation rows")
+            .map(|r| r.expect("quest conversation row"))
+            .collect()
+    };
+    // (quest, steps past the placeable's step, conversation)
+    let completing = rows(
+        "SELECT DISTINCT o.quest_fqn, h.step - o.step, a.conversation_fqn \
+         FROM quest_task_objects o \
+         JOIN quest_task_hooks h ON h.quest_fqn = o.quest_fqn AND h.branch = o.branch \
+           AND h.step IN (o.step, o.step + 1) \
+         JOIN conversation_node_actions a ON a.kind = 'quest' \
+           AND a.quest_fqn = o.quest_fqn AND a.task_hook_id = h.hook_id \
+         WHERE o.object_fqn = ?1 \
+            OR o.object_fqn IN (SELECT spawner_fqn FROM placements WHERE entity_fqn = ?1)",
+    );
+    if let Some(nearest) = completing.iter().map(|c| c.1).min() {
+        let found: Vec<&(String, i64, String)> =
+            completing.iter().filter(|c| c.1 == nearest).collect();
+        if let [(quest, _, convo)] = found.as_slice() {
             let mut answer = vec![format!(
                 "placeable {placeable} quest {quest} conversation {convo}"
             )];
-            answer.extend(codex_grants(conn, None, Some(&convo), None));
-            answer
+            answer.extend(codex_grants(conn, None, Some(convo), None));
+            return Some(answer);
         }
-        (None, None) => vec!["nothing that grants stands within reach".to_string()],
-    };
-    println!("c9 conversation answer: {:?}", world.answer);
+    }
+    let quests = rows(
+        "SELECT DISTINCT o.quest_fqn, 0, r.cnv_fqn FROM quest_task_objects o \
+         JOIN conversation_quest_refs r ON r.quest_fqn = o.quest_fqn \
+         WHERE o.object_fqn = ?1 \
+            OR o.object_fqn IN (SELECT spawner_fqn FROM placements WHERE entity_fqn = ?1)",
+    );
+    let quest = quests.first()?.0.clone();
+    let candidates: Vec<&str> = quests.iter().map(|q| q.2.as_str()).collect();
+    Some(vec![format!(
+        "placeable {placeable} quest {quest} conversation unresolved, one of: {}",
+        candidates.join(", ")
+    )])
 }
 
 #[then("the answer names the NPC, its conversation and the codex entry")]
@@ -863,6 +875,58 @@ fn names_npc_conversation_codex(world: &World) {
         world.subject,
         world.answer
     );
+}
+
+/// FR-KESSEL-025 c9 on two real conversations a quest task plays: Tython
+/// 06:28:53 (a holocall after planting a surveillance device) and Hoth
+/// 11:02:53 (after accessing a security panel). Local only, like the
+/// `@local` scenarios: skipped unless `KESSEL_SPICE` and `KESSEL_COMBAT_LOG`
+/// are set.
+#[test]
+fn c9_quest_task_conversations_resolve() {
+    let (Ok(path), Ok(_)) = (
+        std::env::var("KESSEL_SPICE"),
+        std::env::var("KESSEL_COMBAT_LOG"),
+    ) else {
+        return;
+    };
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .unwrap_or_else(|e| panic!("open {path}: {e}"));
+    let cases = [
+        (
+            "combat_2026-11-09_05_45_53_516397.txt",
+            "[06:28:53.886]",
+            "conversation cnv.location.tython.class.jedi_knight_new.master_orgus_din",
+        ),
+        (
+            "combat_2026-10-31_00_33_45_643179.txt",
+            "[11:02:53.428]",
+            "conversation cnv.location.hoth.world.imperial.breaking_the_maw.fixer_308_holo",
+        ),
+    ];
+    let all = conversations();
+    for (file, at, expected) in cases {
+        let (_, n, area, p, target, casts) = all
+            .iter()
+            .find(|c| {
+                c.0.ends_with(file)
+                    && std::fs::read(&c.0)
+                        .map(|b| {
+                            String::from_utf8_lossy(&b)
+                                .lines()
+                                .nth(c.1 - 1)
+                                .is_some_and(|l| l.starts_with(at))
+                        })
+                        .unwrap_or(false)
+            })
+            .unwrap_or_else(|| panic!("no conversation start {at} in {file}"));
+        let answer = resolve_conversation(&conn, *area, *p, *target, casts);
+        println!("c9 {file} line {n} {at}: {answer:?}");
+        assert!(
+            answer.iter().any(|a| a.contains(expected)),
+            "{file} {at}: {answer:?}"
+        );
+    }
 }
 
 scenarios!(
