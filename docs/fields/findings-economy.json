@@ -1,0 +1,92 @@
+{
+  "400000097ab2caa6": {
+    "meaning": "taxFaction: the side a taxi terminal serves, as FNV-1a 64 of the uppercased side name.",
+    "evidence": "All 625 tax objects carry one of three values, and each equals FNV-1a 64 of an uppercased name: -5750514287198089128 = NEUTRAL (311), -1855280666668608219 = EMPIRE (165), 1086966210362573345 = REPUBLIC (149). Terminal FQNs agree (*_rep on REPUBLIC, *_emp/*_imp on EMPIRE, *_neu on NEUTRAL).",
+    "confidence": "proved"
+  },
+  "40000029f75aa580": {
+    "meaning": "taxNameId: the terminal's display name, a string id (stb id2 << 32 | entry) into /resources/en-us/str/tax/terminals.stb (id2 513541).",
+    "evidence": "435 of 623 values resolve to a terminals.stb entry ('Kalikori Village Speeder' on tax.tython.poi05_kalikori_village, 'Outpost Zenta Speeder' on tax.alderaan.taxi_h4_r1_poi19_imperial_outpost_zenta_emp); the rest are test, story-instance and alliance terminals whose strings sit in other tables or are absent.",
+    "confidence": "proved"
+  },
+  "40000003b981a0b3": {
+    "meaning": "taxRoutes: the routes leaving a terminal, a list of {taxRouteCost b981a0ad, taxRouteDestination b981a0af, reversed b981a0b0, path b981a0b1, vehicle c29b7480, arrival path e68e2ef0}.",
+    "evidence": "498 of 625 terminals have routes, 862 edges; 858 destinations resolve to tax objects, 851 path names resolve to pth objects, 742 of 858 edges have a reverse edge. Decoded by kessel-discovery/examples/economy_taxi_graph.py.",
+    "confidence": "proved"
+  },
+  "40000003b981a0ad": {
+    "meaning": "taxRouteCost: the credit price of one taxi route.",
+    "evidence": "On 616 of 862 route entries, values 2 to 1,500, constant within a planet tier (Makeb 150, Mek-Sha 1000, Belsavis 300), and the client strings 'taxRouteCost'/'guiTaxiCostNetwork' name it. Absent on free story routes. Not checked against an in-game taxi screen.",
+    "confidence": "likely"
+  },
+  "40000003b981a0af": {
+    "meaning": "taxRouteDestination: the terminal a taxi route flies to.",
+    "evidence": "858 of 862 values resolve to tax objects; the 4 misses name terminals not in the client.",
+    "confidence": "proved"
+  },
+  "40000003de992c09": {
+    "meaning": "taxTerminalSpec: on an NPC, the taxi terminal it operates.",
+    "evidence": "369 NPCs carry it; 345 resolve to a tax object whose FQN matches the NPC's (npc.exp.04.manaan.taxi.rep_hq -> tax.manaan.rep_hq).",
+    "confidence": "proved"
+  },
+  "400000037c4de713": {
+    "meaning": "The vendor packages an NPC sells from: a list of pkg.vendor.* names. The packages themselves are not in the client.",
+    "evidence": "1,661 NPCs, 92% of the 1,670 npc.*vendor* NPCs against 3% of all NPCs; 892 distinct names (pkg.vendor.general.med_center.main_package 128 NPCs, pkg.vendor.space.15_28 34). None of the 892 exists as a GOM node: every canonical GUID is the 48-bit FNV-1a fold of its FQN (616,931 of 616,931), the 13 pkg.profession_trainer.* packages fold to existing GUIDs, and 0 of 892 vendor package names do. Client schema has vndCurrentVendorItems, vndItemPrice, vndItemCost and the UI script handles onChangedVendorItems, none used in any static object or singleton, so vendor stock arrives from the server.",
+    "confidence": "proved"
+  },
+  "40000009ae2f555b": {
+    "meaning": "plcdynLootPackage: the loot package a lootable placeable rolls, a hash in the same id space as the item's 407c89a3 (FNV-1a 64 of an uppercased trp.* name).",
+    "evidence": "638 placeables, 233 distinct hashes; 3 resolve by FNV-1a 64 to trp.* names (none of the 233 is an existing node). Same space as item 407c89a3, where 547 of 3,540 resolve to trp.<item fqn tail> names.",
+    "confidence": "likely"
+  },
+  "400000410344aaf8": {
+    "meaning": "colMtxItemIdToCollectionItem: the collection entries, keyed by the entry id the Collections window and scripts use.",
+    "evidence": "2,974 entries. The 11 'Grant Collection Unlock' script actions carry an entry id as value, 11 of 11 resolve, and each entry's name matches its handler (Copero 'east_guest' -> 'Key to East Wing (Copero Villa)', Basilisk 'ach_complete_gold' -> 'B3-S1 Aurodium Plating Customization').",
+    "confidence": "proved"
+  },
+  "400000410344aaf2": {
+    "meaning": "colItemStringId: a collection entry's name, an entry in /resources/en-us/str/gui/mtxstorefrontitems.stb (id2 708311).",
+    "evidence": "2,973 of 2,974 entries resolve to text that matches their items ('Prey Stalker Sniper Rifle' on itm.galactic_seasons.season_7.weapon.rifle_sniper_gs07_a01_v01).",
+    "confidence": "proved"
+  },
+  "4000004ca2180abd": {
+    "meaning": "colItemAssociatedItemIds: the items a collection entry holds (armor-set pieces, weapons, decorations, unlock items).",
+    "evidence": "1,938 of 2,974 entries carry items, every value resolves to an itm object; names agree with the entry name.",
+    "confidence": "proved"
+  },
+  "4000004ca21d88f9": {
+    "meaning": "colItemAssociatedAbilities: the mount or pet ability a collection entry grants.",
+    "evidence": "791 entries; values resolve to abl.*.mount.* (516) and abl.itm.vanity_pet.* (275).",
+    "confidence": "proved"
+  },
+  "4000004e1c69dd7e": {
+    "meaning": "colCollectionSourceIdToSource: the collection sources (Cartel packs and Cartel Market categories), each {colSourceNameId 1c69dd7f, colSourceTags 1c69dd80, colSourceImage 1c69dd81, colSourceCollectionItems 1c69dd83}.",
+    "evidence": "62 sources; all 62 names resolve in /resources/en-us/str/gui/collection.stb ('Crime Lord's Cartel Pack', 'Lightsabers', 'Vehicles'); 3,524 source -> entry links, all resolve to colMtxItemIdToCollectionItem keys; 2,312 of 2,974 entries have a source.",
+    "confidence": "proved"
+  },
+  "4000004e1c69dd83": {
+    "meaning": "colSourceCollectionItems: the collection entries a source (pack or category) contains, a map of entry id -> true.",
+    "evidence": "3,524 links, 3,524 resolve. Pack sources hold 28 to 55 entries each; 35 of 62 source names equal an itm.mtx.pack.* item's name (pack -> contents).",
+    "confidence": "proved"
+  },
+  "4000004d7671280b": {
+    "meaning": "decItemId: the item that places a stronghold decoration.",
+    "evidence": "4,610 of 4,615 dec objects resolve to an itm object (mostly itm.stronghold.*); 4,570 of those items carry an itmSourceList label, so decoration -> item -> source is the decoration's source.",
+    "confidence": "proved"
+  },
+  "400000420b8597f0": {
+    "meaning": "decMtxId: the Cartel Market storefront item that sells a decoration.",
+    "evidence": "893 decorations, 102 distinct values; 102 of 102 are keys of mtxStorefrontInfoPrototype mtxStorefrontItems (a4195b23).",
+    "confidence": "proved"
+  },
+  "4000004c98709f20": {
+    "meaning": "itmReputationTrophyGroup: the reputation group (repGroupInfosPrototype key) a trophy item raises.",
+    "evidence": "207 items. For the 202 whose use ability carries a decoded GrantReputation effect, the effect's ReputationGroupId equals this field 202 of 202 (dec-effects effects.jsonl). FQNs agree (hutt_space_navigators -> 3 'Hutt Space Navigators').",
+    "confidence": "proved"
+  },
+  "40000040fe1c7a31": {
+    "meaning": "itmRequiredReputation: the reputation an item needs, {itmRequiredReputationGroup f9b95e90, itmRequiredReputationRank f9b95e91}; what reputation vendors gate their stock by.",
+    "evidence": "1,387 items, 1,378 with a group; all 29 groups are repGroupInfosPrototype keys and ranks are 1 to 6, the six repRankInfoPrototype ranks. Mostly itm.stronghold.* decorations and reputation gear.",
+    "confidence": "proved"
+  }
+}
