@@ -1623,5 +1623,10 @@
   "meaning": "The area's display-name id, which is also the area id the combat log prints on AreaEntered; with mapAreasDataAreaId (0027bf77) it maps a log area to its /resources/world/areas/<id>/ directory.",
   "evidence": "mapAreasDataProto, 240 entries. 82 of 83 distinct AreaEntered area ids in the 2026 combat logs (~/swtor/logs and the live CombatLogs folder) equal a 0027bf7f value; the miss is Space (945872057663605, GSF). Ilum 137438955315 -> 4611686039258170278, Hutta 137438988437 -> 4611686019802841877, Tatooine 137438987025 -> 4611686018427650020. 21 log ids name several directories (instanced copies), so a log area can need position to pick one. Spawner positions read from those directories match logged NPC positions (kessel-discovery/examples/spn_assets.rs).",
   "confidence": "proved"
+ },
+ "4000004974cafaa0": {
+  "meaning": "String ref (id1 only, table lgc/unlocks.stb id2 656577): title of a legacy unlock. For datacron unlocks it names the planet and the stat (Mastery, Endurance, Presence; old Willpower/Strength/Aim/Cunning datacrons now read Mastery).",
+  "evidence": "249 rows. qst.location.tython.data_holocron.tyt_willpower_i (9ca4acd0) -> 740 'Tython Purple Mastery Datacron'; hot_cunningiii -> 709 'Hoth Orange Mastery Datacron'; tar2_willpoweriii -> 734 'Taris (Imperial) Purple Mastery Datacron'. 89 datacron rows (icon datacron_*), all with requirement 759 'Discover the location of the datacron to unlock.' and none with an effect text (74cafaa2) or an amount field.",
+  "confidence": "proved"
  }
 }
