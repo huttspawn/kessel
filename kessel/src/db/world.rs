@@ -698,7 +698,7 @@ fn decode_framed(header_hex: &str, payload_b64: &str) -> Option<crate::gom_reade
         .map(|(v, _)| v)
 }
 
-fn gom_str(v: &crate::gom_reader::GomValue) -> Option<String> {
+pub(super) fn gom_str(v: &crate::gom_reader::GomValue) -> Option<String> {
     match v {
         crate::gom_reader::GomValue::Str(s) => Some(s.clone()),
         _ => None,

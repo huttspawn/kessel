@@ -15,6 +15,7 @@ pub(crate) use crate::stb::StbEntry;
 mod ability;
 mod achievement;
 mod cnv;
+mod codex;
 mod conquest;
 mod description_values;
 mod item;
@@ -195,6 +196,7 @@ impl Database {
             conquest::create_tables(&tx)?;
             world::create_tables(&tx)?;
             cnv::create_tables(&tx)?;
+            codex::create_tables(&tx)?;
             npc::create_tables(&tx)?;
             ability::create_tables(&tx)?;
             item::create_tables(&tx)?;

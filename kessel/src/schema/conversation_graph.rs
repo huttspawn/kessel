@@ -77,9 +77,7 @@ impl ConversationGraph {
     /// Decode a conversation payload's graph. `None` when it does not read to the payload's end;
     /// a conversation with no node map decodes to no nodes.
     pub fn read(payload: &[u8]) -> Option<ConversationGraph> {
-        let mut reader = Reader::new(payload, PREAMBLE);
-        let root = reader.read_value(EMBEDDED_TAG).ok()?;
-        (reader.pos() == payload.len()).then(|| Self::from_root(&root))
+        read_root(payload).map(|root| Self::from_root(&root))
     }
 
     fn from_root(root: &GomValue) -> ConversationGraph {
@@ -190,6 +188,24 @@ impl Node {
                 .and_then(Alignment::of_reward),
         }
     }
+}
+
+/// The object holding a conversation's nodes, read from after the preamble; `None` when it does
+/// not read to the payload's end.
+pub(crate) fn read_root(payload: &[u8]) -> Option<GomValue> {
+    let mut reader = Reader::new(payload, PREAMBLE);
+    let root = reader.read_value(EMBEDDED_TAG).ok()?;
+    (reader.pos() == payload.len()).then_some(root)
+}
+
+/// A conversation root's dialog nodes (not its link nodes), each with its id.
+pub(crate) fn dialog_nodes(root: &GomValue) -> Vec<(i64, &GomValue)> {
+    root.embedded_field(NODES_FIELD)
+        .and_then(GomValue::as_map)
+        .into_iter()
+        .flatten()
+        .filter_map(|(_, node)| Some((node.embedded_field(NODE_ID_FIELD)?.as_i64()?, node)))
+        .collect()
 }
 
 fn children(node: &GomValue) -> Vec<i64> {
