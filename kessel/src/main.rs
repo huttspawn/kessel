@@ -817,6 +817,11 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
     // Skip internal items
     if prefix == "itm" && parts.len() >= 2 {
         let second = parts[1];
+        // `itm.ach.title.*` is kept (FR-KESSEL-025 c6): an achievement's
+        // reward item that teaches a title is that title's grant path.
+        if second == "ach" && parts.get(2) == Some(&"title") {
+            return true;
+        }
         if matches!(
             second,
             "npc"
@@ -973,6 +978,7 @@ mod tests {
             "ipp.custom.sow.progresson.ge_a13_purple_holo.legs",
             "abl.placeables.examine_lore_object",
             "world.areas.4611686019802841877.mapdata",
+            "itm.ach.title.slayed_the_replicator",
         ];
         for fqn in samples {
             assert!(
