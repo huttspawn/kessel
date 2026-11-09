@@ -2,7 +2,7 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks and FR-KESSEL-025 c5 and c10. The `@local`
+//! code: the `@smoke` checks and FR-KESSEL-025 c4, c5 and c10. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -17,8 +17,10 @@ struct World {
     icon_id: String,
     /// The local extract, opened read-only.
     spice: Option<Connection>,
-    /// The placeable or volume the scenario holds.
+    /// The placeable, volume or codex entry the scenario holds.
     subject: String,
+    /// The placeable the scenario says grants the subject.
+    granter: String,
     /// Codex-granting trigger volumes: log area id, volume, log-frame box.
     volumes: Vec<(i64, String, [f64; 6])>,
     /// The log area id and the log-frame positions the scenario's log lines print.
@@ -59,6 +61,60 @@ fn spice(world: &mut World) -> &Connection {
         world.spice = Some(conn);
     }
     world.spice.as_ref().unwrap()
+}
+
+// FR-KESSEL-025 c4: a codex entry answers its sources.
+
+#[given("a build holding a lore codex entry granted by using a placeable")]
+fn lore_codex(world: &mut World) {
+    // A lore object: a placeable played through an abl.placeables.examine.*
+    // ability ('Examining...') that names a cdx.lore.* entry. Read from placeable_grants, not codex_sources, so
+    // the Then can fail.
+    let (placeable, codex): (String, String) = spice(world)
+        .query_row(
+            "SELECT placeable_fqn, codex_fqn FROM placeable_grants \
+             WHERE codex_fqn LIKE 'cdx.lore.%' AND use_ability_fqn LIKE 'abl.placeables.examine.%' \
+             ORDER BY placeable_fqn LIMIT 1",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("a lore placeable naming a codex entry");
+    world.granter = placeable;
+    world.subject = codex;
+}
+
+#[when("kessel's agent asks for that codex entry")]
+fn ask_codex(world: &mut World) {
+    let codex = world.subject.clone();
+    let mut stmt = spice(world)
+        .prepare("SELECT source_kind, source_fqn, via FROM codex_sources WHERE codex_fqn = ?1")
+        .expect("codex sources query");
+    let answer = stmt
+        .query_map([&codex], |r| {
+            Ok(format!(
+                "{} {} {}",
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?
+            ))
+        })
+        .expect("codex source rows")
+        .map(|r| r.expect("codex source row"))
+        .collect();
+    drop(stmt);
+    world.answer = answer;
+}
+
+#[then("the answer names the placeable that grants it")]
+fn names_granting_placeable(world: &World) {
+    let placeable = format!("placeable {} ", world.granter);
+    assert!(
+        world.answer.iter().any(|a| a.starts_with(&placeable)),
+        "{} answered no source naming {}: {:?}",
+        world.subject,
+        world.granter,
+        world.answer
+    );
 }
 
 // FR-KESSEL-025 c5: a granting placeable answers what and where.
@@ -345,6 +401,7 @@ fn names_volume_codex(world: &World) {
 
 scenarios!(
     "tests",
-    tags = "@smoke or @criterion-FR-KESSEL-025-c5 or @criterion-FR-KESSEL-025-c10",
+    tags = "@smoke or @criterion-FR-KESSEL-025-c4 or @criterion-FR-KESSEL-025-c5 \
+            or @criterion-FR-KESSEL-025-c10",
     fixtures = [world: World]
 );
