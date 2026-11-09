@@ -387,5 +387,15 @@
   "meaning": "A map page's name ref, (string table << 32) | entry; it is the id the combat log prints for the area in AreaEntered when the page is the area's main page.",
   "evidence": "Hutta main page area_hutta_main_hutta_main = 137438988437 = log 'Hutta {137438988437}'; Tython map_overworld = 137438953533 = log 'Tython {137438953533}'. The spawn agent's mapAreasDataProto 0027bf7f gives the same ids for 82 of 83 log areas.",
   "confidence": "proved"
+ },
+ "4000001ced10e6a4": {
+  "meaning": "hydObject: the object a Hydra or conversation action acts on, stored as signed FNV-1a 64 of the UPPERCASED selector or variable name: INSTIGATOR, OBJECT SELF, PHASE OCCUPANTS, PHASE OWNER, EFFECT TARGET, INSTIGATOR GROUP, INSTIGATOR COMPANION, PET MASTER, TEAMA PLAYERS, TEAMB PLAYERS, or a script variable.",
+  "evidence": "All 9 distinct values on the 2,363 'Achievement Event' actions resolve: INSTIGATOR 1,528, PHASE OCCUPANTS 399, OBJECT SELF 266, EFFECT TARGET 157, PHASE OWNER 5, INSTIGATOR GROUP 3, TEAMA PLAYERS 2, TEAMB PLAYERS 2, PET MASTER 1. Over every Hydra action, counted together with hydQueueObject, hashing the scripts' own strings and client.gom names resolves 7,265 of 32,301 distinct values, 79% of uses. The rest are names not held as text. On an Achievement Event it names who is credited.",
+  "confidence": "proved"
+ },
+ "400000279756f193": {
+  "meaning": "hydQueueObject: a second object selector on a Hydra action, encoded the same way as hydObject (FNV-1a 64 of the uppercased selector name).",
+  "evidence": "Its values on Achievement Event actions are INSTIGATOR (296), EFFECT TARGET (130), OBJECT SELF (68), PHASE OWNER (8) and PHASE OCCUPANTS (1), all by the same hash as hydObject.",
+  "confidence": "proved"
  }
 }

@@ -195,6 +195,11 @@
   "evidence": "Name pairs show it on type 29: flashpoint.*.solo.* and solo_and_veteran.* (excluding master) have the flag with key 18=2, while flashpoint.*.master.* and hardmode have key 18=2 without it. Six *.weekly.combat.no_companion have the flag on type 15 with companion [0]. Parallels named cndNegate.",
   "meaning": "Negates an achievement condition: the achievement counts when the test is false."
  },
+ "4000004055f64de0": {
+  "confidence": "proved",
+  "evidence": "Every achEvents key on every achievement is a key here, and its list names that achievement. The 175 small-integer keys (1, 2, 3...) belong to stat counters such as PvP player kills, and nothing kessel reads raises them (open). 159 E000 keys match no name in the unfiltered extract; some are named only as raw ids in other singletons (crew, ships, decoration subcategories) or by quest category tags (40000044372ac59e).",
+  "meaning": "lgcAchievementEventsPrototype map: achievement event code -> the achievements that count it. 10,952 keys are E000 event codes (hash under achEvents). 175 are small integers."
+ },
  "4000004267d92710": {
   "confidence": "likely",
   "evidence": "291 uses, all on map notes with type BindPoint (7946402a), out of 431 such notes; values 1 to 248, 154 distinct, repeating across planets. Hydra's 'Discover Bindpoint' action (485 uses) carries a 64-bit value, not this number. Whether it is a per-planet discovery bit index is not shown.",
@@ -268,9 +273,9 @@
   "reason": "Always true on 1,743 quests. Most are companion conversations (612), and 619 of 698 qstReqPrivacy quests have it (phi 0.51); the rest are breadcrumbs, conquests and dailies. This contradicts the community name qstIsEventQuest. No named field explains the set; comparing how flagged and unflagged quests are offered in game would be needed."
  },
  "4000004bb8dc9943": {
-  "confidence": "likely",
-  "evidence": "Key 14 (149, on type 15) holds a companion id: each companion's achievements repeat one id (two for Jaesa, light and dark), and the six no_companion achievements hold [0] negated. Key 8 (23, on type 18) holds unresolved ids, e.g. conquests.location.sectionx.worldboss_nightmarish. Neither key's ids resolve as object GUIDs or match cndSummonedCompanionId.",
-  "meaning": "Integer-list parameters of an achievement condition: map from a parameter enum to a list of ids."
+  "confidence": "proved",
+  "evidence": "Key 8 (23 uses, all on type 18): all 23 ids are tags.tag_hash values of effect tags (unfiltered 7.x extract), each set by the abilities in ability_tags. Examples: 151C0E053876C9C6 = tag.abl.mtx.toy.incentive.party_jawa (abl.mtx.toy.incentive.party_jawa, whose name id 3044178330124544 is the ApplyEffect id the combat log prints, seen live 2026-10-27) on kill_jawas_with_jawa, kill_100_target_jawa and kill_500_with_jawa; 746F32EB9BB7354A = tag.abl.galactic_seasons.uprising_buff.side_effect.npc on kill_buffed_mobs (tested on the target); 9924BDAC6175CF06 = tag.abl.pvp.huttball.ach_effect. Key 14 (149, on type 15) holds a companion id: each companion's achievements repeat one id (two for Jaesa, light and dark), and the six no_companion achievements hold [0] negated. Key 14 is likely, not proved.",
+  "meaning": "Integer-list parameters of an achievement condition: map from a parameter enum to a list of ids. Key 8 = effect tag hashes (tags.tag_hash): the condition holds while the tested participant carries an effect with that tag. Key 14 = companion ids."
  },
  "4000004bb8dc9944": {
   "confidence": "proved",
@@ -289,13 +294,23 @@
  },
  "4000004bb8dc994b": {
   "confidence": "proved",
-  "evidence": "20 values on 4,019 conditions. Use shows: 3 class (metrics.level.*_consular, kill_10_marauders), 8 time limit (with bb8dc9948), 11 faction (key 6 holds two values, one Imperial and one Republic in fqn), 16 PvP stat threshold, 19 companion influence, 29 difficulty, 15 companion in use. Most frequent, 20 (2,393), has no parameters and is unresolved, as are the rarest (4, 9, 31).",
+  "evidence": "20 values on 4,019 conditions. Use shows: 3 class (metrics.level.*_consular, kill_10_marauders), 8 time limit (with bb8dc9948), 11 faction (key 6 holds two values, one Imperial and one Republic in fqn), 16 PvP stat threshold, 19 companion influence, 29 difficulty, 15 companion in use, 18 has-effect (an effect tag in bb8dc9943 key 8, or the ability itself in bb8dc9947 key 4; 7fbdaf73 = 2 tests the event's target, absent tests the player). Type 18 is proved by its 23 tag ids, all of which resolve to tags rows (for example tag.abl.mtx.toy.incentive.party_jawa on ach.location.tatooine.fun.kill_jawas_with_jawa). Most frequent, 20 (2,393), has no parameters and is unresolved, as are the rarest (4, 9, 31).",
   "meaning": "Achievement condition type: an enum selecting what the condition tests. The enum has no name in the client's dictionary, so types are known by use only."
+ },
+ "4000004be866db30": {
+  "confidence": "proved",
+  "evidence": "The client.gom record for field 4000004BE866DB30 names enum type 4000004BB8CB3424, whose record lists achVisibilityAlways, achVisibilityProgress, achVisibilityCompletion, achVisibilityConditional in that order. The codec's zero-based index is proved by a join: the 1,119 achievements with index 3 are exactly the 1,119 that carry achDiscoveryConditional, 0 mismatches (live 7.x). Live 7.x counts: 6,058 always, 166 progress, 177 completion, 1,119 conditional. Example: ach.dynamic_events.coruscant.black_sun_territory.black_sun_boss_chain.free_adlestaa = 2 (completion). Simulated Meatbag carries no value, so the data lists it as always visible. Which values the UI hides is for Sean to confirm in game (#367).",
+  "meaning": "Achievement visibility (achDiscovery, client enum achVisibilityEnum 4000004BB8CB3424). Decoded index: 1 progress (shown once progress starts), 2 completion (hidden until earned), 3 conditional (shown while the achDiscoveryConditional condition holds). Absent means 0, achVisibilityAlways."
  },
  "4000004c7fbdaf73": {
   "confidence": "proved",
   "evidence": "Enum value 2 on all 228. Type 3 class test: kill_10_marauders and other kill_10_* have it, metrics.level.*_consular do not. Type 11 faction: bestiary killed_imperial_forces_3 has it, pvp imperial_conscript_victory does not. Also 98+9 of 145 type 18 conditions, e.g. conquests.class abilities.",
   "meaning": "Which participant the achievement condition tests: 2 means the event's target; absent means the player. The name AchConditionEffectTagOwner is too narrow."
+ },
+ "4000004c8ce6ac37": {
+  "confidence": "proved",
+  "evidence": "Simulated Meatbag's key E00039BA78F53C4C = fold(fnv1a64('SIMULATED_MEATBAG')), the name its script raises. Of the 10,952 E000 keys in lgcAchievementEventsPrototype, 10,793 resolve in an unfiltered live 7.x extract: 4,755 to Npc fqns (that NPC killed), 2,452 to Achievement fqns (that achievement earned), 1,846 to Quest fqns, 304 to Item fqns, 265 to Codex fqns, 92 to Ability fqns, 16 to rdd fqns, 5 to companion fqns, and 1,058 to names raised by Hydra 'Achievement Event' actions (1,058 of the 1,219 names those actions raise). A chance match on 48 bits is about 1 in 10^10 per name. Checked end to end on Sean's combat logs (2026-10-31 to 11-09): 235 of the 836 distinct killed NPC ids resolve to a key (log id >> 32 = string id -> npc fqn -> code). Example: Fa'athra Gangster -> npc.location.hutta.mob.humanoid.faathra_gangster -> ach.location.hutta.bestiary.killed_faathra_thugs_01..03.",
+  "meaning": "Per-task event map (achEvents): key = an achievement event code. A code is the 48-bit fold of FNV-1a 64 over the UPPERCASED event name under prefix 0xE000: h = fnv1a64(upper(name)); code = 0xE000000000000000 | (h & 0x0000FFFFFFFF0000) | ((h ^ (h >> 48)) & 0xFFFF). The name is an object fqn (npc, ach, qst, itm, cdx, abl, rdd) or a name a Hydra 'Achievement Event' action raises."
  },
  "4000004e134fd908": {
   "reason": "Only two values, 3588848902734087 (0xCC00A00000107) and 3588848902734088, on 3,694 conversation nodes in exp.seasons and character.combat_style and 3 scrolling-text nodes. They resolve to no object, quest variable or string, and occur on player, NPC, text and silent nodes alike. Viewing a conversation with both values in game, or a client trace, would be needed."
@@ -351,6 +366,11 @@
  },
  "4000004f08946439": {
   "reason": "Always true on 24 steps, all the second step of their branch (2, 3 or 5 steps) on shared daily and weekly quests (qst.pvp.warzone.weekly_*, pvp.arena, daily_area.iokath.shared), all with qstStepIsShareable. The tasks are ordinary counters, and nothing else distinguishes the step. Sharing or abandoning one of these quests in game, compared with a similar unflagged one, would be needed."
+ },
+ "4000004f2af88f68": {
+  "confidence": "proved",
+  "evidence": "Present on exactly the 1,119 achievements whose achDiscovery index is 3 and on no others (0 mismatches). Mostly conquest objectives, shown only while their conquest runs.",
+  "meaning": "Condition that reveals an achievement whose achDiscovery is 3 (conditional). A reference to a Condition object."
  },
  "4000004f2fb0c04a": {
   "reason": "A single use, true, on cnd.ventures.basilisk_prototype.lanes_lab.can_claim_bb, type 46 HasCollectionItemUnlocked with cndCollectionItemMtxId. One sample has nothing to compare against. Finding a second use in a later build, or testing that claim in game, would be needed."
