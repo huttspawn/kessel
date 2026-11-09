@@ -1194,13 +1194,19 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             -- object of (quest_task_objects, created by quest), which using
             -- it advances. Pure presentation and expression steps are left out.
             CREATE VIEW IF NOT EXISTS placeable_triggers AS
-                WITH RECURSIVE reach(placeable_fqn, script_fqn, handler, path) AS (
-                    SELECT placeable_fqn, script_fqn, 'On Use', ',' || script_fqn || '|On Use,'
-                    FROM placeable_grants WHERE script_fqn IS NOT NULL
+                WITH RECURSIVE
+                -- The handlers a use fires: On Use, and On Party Gathered for
+                -- a use that waits for the group.
+                use_handlers(handler) AS (VALUES ('On Use'), ('On Party Gathered')),
+                reach(placeable_fqn, script_fqn, handler, path) AS (
+                    SELECT g.placeable_fqn, g.script_fqn, u.handler,
+                           ',' || g.script_fqn || '|' || u.handler || ','
+                    FROM placeable_grants g, use_handlers u WHERE g.script_fqn IS NOT NULL
                     UNION
-                    SELECT DISTINCT p.entity_fqn, s.script_fqn, 'On Use',
-                           ',' || s.script_fqn || '|On Use,'
-                    FROM placements p JOIN spawner_scripts s ON s.spawner_fqn = p.spawner_fqn
+                    SELECT DISTINCT p.entity_fqn, s.script_fqn, u.handler,
+                           ',' || s.script_fqn || '|' || u.handler || ','
+                    FROM placements p JOIN spawner_scripts s ON s.spawner_fqn = p.spawner_fqn,
+                         use_handlers u
                     WHERE p.entity_fqn IS NOT NULL
                     UNION
                     SELECT r.placeable_fqn, substr(a.value, 1, instr(a.value, ':') - 1),
@@ -1570,6 +1576,7 @@ mod tests {
                         ('hyd.lore', 'On Use', 1, 'Achievement Event', NULL, 'read_lore'),
                         ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other'),
                         ('hyd.spawned', 'On Use', 0, 'Use Ability', 'abl.heal', 'abl.heal'),
+                        ('hyd.spawned', 'On Party Gathered', 0, 'Teleport To', NULL, 'exit'),
                         ('hyd.lore', 'On Use', 2, 'Execute Hydra Script', NULL, 'hyd.called:Go'),
                         ('hyd.called', 'On Custom:Go', 0, 'Teleport To', NULL, 'dock'),
                         ('hyd.called', 'On Custom:Go', 1, 'Execute Hydra Script', NULL, 'hyd.lore:Back'),
@@ -1613,6 +1620,12 @@ mod tests {
         assert_eq!(
             rows,
             vec![
+                row(
+                    "plc.core",
+                    "on_use",
+                    "exit",
+                    "Teleport To (hyd.spawned On Party Gathered)"
+                ),
                 row(
                     "plc.core",
                     "on_use",
