@@ -604,6 +604,9 @@ const QUEST_REWARDS: u32 = 0xe146_d0c0;
 const BRANCH_REWARDS: u32 = 0xc788_046a;
 const REWARD_ITEM: u32 = 0xd9f3_5ee6;
 const REWARD_ALWAYS: u32 = 0xd9f3_5ee5;
+const REWARD_MIN_LEVEL: u32 = 0xb300_6cb8;
+const REWARD_MAX_LEVEL: u32 = 0xb300_6cb9;
+const REWARD_CLASSES: u32 = 0xd9f3_5ee9;
 // wevEventInfoPrototype_client: event id -> record (drops, the event's quest).
 const WORLD_EVENTS: u32 = 0x395e_03f8;
 const EVENT_DROPS: u32 = 0x1bdc_8ed4;
@@ -651,7 +654,9 @@ fn map_field(
 }
 
 /// Quest reward rows: `always` when d9f35ee5 is true, `choose-one` when it is
-/// absent; c788046a rows add ` branch <id>`.
+/// absent; c788046a rows add ` branch <id>`. Each row then names its level band
+/// and class allowlist (` band <min>-<max>`, ` class <a>,<b>`; no class is every
+/// class), so rows that differ only by band or class stay distinct.
 fn quest_reward_sources(
     proto: &crate::gom_reader::GomValue,
     guids: &HashMap<u64, String>,
@@ -670,11 +675,28 @@ fn quest_reward_sources(
                 Some(GomValue::Bool(true))
             );
             let kind = if always { "always" } else { "choose-one" };
+            let level = |id| row.embedded_field(id).and_then(GomValue::as_i64);
+            let band = match (level(REWARD_MIN_LEVEL), level(REWARD_MAX_LEVEL)) {
+                (Some(lo), Some(hi)) => format!(" band {lo}-{hi}"),
+                _ => String::new(),
+            };
+            // The class allowlist: class refs -> true; empty is every class.
+            let mut classes: Vec<String> = map_field(row, REWARD_CLASSES)
+                .iter()
+                .filter_map(|(c, _)| fqn(c))
+                .map(|c| c.rsplit('.').next().unwrap_or_default().to_string())
+                .collect();
+            classes.sort();
+            let class = if classes.is_empty() {
+                String::new()
+            } else {
+                format!(" class {}", classes.join(","))
+            };
             out.push((
                 item,
                 "quest_reward",
                 quest.to_string(),
-                format!("{kind}{branch}"),
+                format!("{kind}{branch}{band}{class}"),
             ));
         }
     };
@@ -1118,7 +1140,8 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
 
             -- One row per way an item is granted (FR-KESSEL-025 c8).
             -- source_kind: quest_reward (detail 'always' or 'choose-one',
-            -- plus ' branch <id>' for per-branch rows), world_event (the
+            -- plus ' branch <id>' for per-branch rows, then ' band <min>-<max>'
+            -- and ' class <a>,<b>' when the row names classes), world_event (the
             -- event's qst.dynamic_events quest), achievement_reward, script
             -- (a Give Items action; source_fqn is the conversation that calls
             -- it, or the script; detail '<script_fqn> <handler>'),
@@ -1307,6 +1330,8 @@ mod tests {
                 (5, "itm.armor_feet"),
                 (6, "abl.player.mount.grant_mount"),
                 (7, "npc.pet.gizka"),
+                (9, "class.pc.advanced.sorcerer"),
+                (10, "class.pc.advanced.juggernaut"),
             ]
             .into_iter()
             .map(|(g, f)| (g, f.to_string()))
@@ -1332,6 +1357,11 @@ mod tests {
                 let mut f = vec![(REWARD_ITEM, G::U64(item))];
                 if always {
                     f.push((REWARD_ALWAYS, G::Bool(true)));
+                } else {
+                    f.push((REWARD_MIN_LEVEL, G::I64(25)));
+                    f.push((REWARD_MAX_LEVEL, G::I64(28)));
+                    let class = |g| (G::U64(g), G::Bool(true));
+                    f.push((REWARD_CLASSES, G::Map(vec![class(9), class(10)])));
                 }
                 obj(f)
             };
@@ -1357,7 +1387,12 @@ mod tests {
                 quest_reward_sources(&proto, &guids()),
                 [
                     row("itm.always", "quest_reward", q, "always"),
-                    row("itm.choice", "quest_reward", q, "choose-one"),
+                    row(
+                        "itm.choice",
+                        "quest_reward",
+                        q,
+                        "choose-one band 25-28 class juggernaut,sorcerer"
+                    ),
                     row("itm.always", "quest_reward", q, "always branch 2"),
                 ]
             );
