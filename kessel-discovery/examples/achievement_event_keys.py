@@ -1,9 +1,14 @@
 """Resolve the non-E000 achievement event keys: find each as a value anywhere in the jsonl dumps
-(quest/hydra variable GUIDs and the like), reporting the field id and the enclosing object."""
+(quest/hydra variable GUIDs and the like), reporting the field id and the enclosing object.
+
+Usage: achievement_event_keys.py <lgcach.json> <dump.jsonl>...
+<lgcach.json> is the lgcAchievementEventsPrototype singleton decoded to JSON, e.g. with
+`cargo run --release -p kessel-discovery --example dump_singleton -- <spice.sqlite> lgcAchievementEventsPrototype`;
+its field 55f64de0 is the event-code map (list of {k, v})."""
 import json, sys, collections
 
 M = (1 << 64) - 1
-lg = json.load(open('../lgcach.json'))['55f64de0']
+lg = json.load(open(sys.argv[1]))['55f64de0']
 keys = {}
 for e in lg:
     k = e['k']
