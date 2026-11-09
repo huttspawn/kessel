@@ -367,5 +367,25 @@
   "confidence": "proved",
   "meaning": "itmSourceList: the item's source ids (one, sometimes 2 to 4), keys of itmSourceProto itmSources; gives the game's own Source label for the item.",
   "evidence": "10,290 items in the filtered extract carry it; all but 2 values resolve through itmSources to item_source.stb text, and the labels fit the items (Feast of Prosperity rewards -> 'Vendor: Feast of Prosperity'; itm.mount.speederbike.ikas_stingray -> 'Tier 1 Galactic Command Crate'; Shrine of Silence vanity armour -> 'Flashpoint: Shrine of Silence'). 390 distinct sources in use. A label is a category (vendor, flashpoint, pack), not the exact NPC or loot table."
+ },
+ "4000000a1d6b4924": {
+  "meaning": "The ability a placeable plays when used (abl.placeables.*). The combat log prints it as the player's cast, with id = that ability's string_id << 32.",
+  "evidence": "Joins on live logs: surviellance_device_2 -> abl.placeables.install.install_default (string_id 188896) = 'Installing... {811302142345216}' at Tython 06:28:45; flesh_raider_parent_corpse -> containers.open_low_medium (188919) = 'Opening {811400926593024}' 06:20:47; plc.codex.persons.hutta.faathra -> examine.examine_low_short (188899) = 'Examining... {811315027247104}'; plc.codex.species.hutt -> examine.examine_mid_default (188901) = 'Examining... {811323617181696}'. Each cast stands 1.3-4.0 log units from that placeable's placement.",
+  "confidence": "proved"
+ },
+ "4000000a2d7b8797": {
+  "meaning": "Codex entry the placeable grants when used.",
+  "evidence": "Resolves to a cdx object on every codex placeable decoded (plc.codex.persons.hutta.faathra -> cdx.persons.hutta.faathra, plc.codex.species.hutt -> cdx.species.hutt); logged Examining casts at those placements (Hutta, 2026-10-27 and 10-31) were codex unlocks in game. The log shows no codex line, so the grant itself is read from this field.",
+  "confidence": "proved"
+ },
+ "4000000a4fa14a25": {
+  "meaning": "Hydra script the placeable runs; its 'On Use' handler fires when the placeable is used (e.g. Play Conversation).",
+  "evidence": "plc.location.tython.bronze.flesh_eating_baby.flesh_raider_parent_corpse -> hyd...inst_fire_conversation, whose On Use handler is Play Conversation cnv...fleshraider_parent_corpse; Sean's log (Tython 2026-11-09) shows 'Opening' at 06:20:47 then In Conversation at 06:20:50, 1.3 log units from that placement.",
+  "confidence": "proved"
+ },
+ "40000000858fc65e": {
+  "meaning": "A map page's name ref, (string table << 32) | entry; it is the id the combat log prints for the area in AreaEntered when the page is the area's main page.",
+  "evidence": "Hutta main page area_hutta_main_hutta_main = 137438988437 = log 'Hutta {137438988437}'; Tython map_overworld = 137438953533 = log 'Tython {137438953533}'. The spawn agent's mapAreasDataProto 0027bf7f gives the same ids for 82 of 83 log areas.",
+  "confidence": "proved"
  }
 }
