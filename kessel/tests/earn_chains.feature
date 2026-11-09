@@ -1,4 +1,4 @@
-# Generated from legion requirement FR-KESSEL-025, revision 2026-11-09T15:07:07.824519143+00:00.
+# Generated from legion requirement FR-KESSEL-025, revision 2026-11-09T21:15:37.836994977+00:00.
 # Do not edit: regenerate with scripts/features.mjs.
 
 Feature: Every earnable thing is answered with how it is earned, where, and whether the log can see it
@@ -59,6 +59,7 @@ Feature: Every earnable thing is answered with how it is earned, where, and whet
     When kessel's agent asks what that use granted
     Then the answer names the placeable and its codex entry
   
+  @criterion-FR-KESSEL-025-c9 @local
   Scenario: A logged conversation names the codex it granted
     Given a build holding an NPC whose conversation grants a codex entry, placed in an area
     And a combat-log line where the player enters a conversation at a position beside that NPC in that area

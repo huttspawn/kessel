@@ -682,6 +682,29 @@ impl Database {
                         t.hook_name,
                     ])?;
                 }
+                let mut hook = tx.prepare_cached(
+                    "INSERT OR REPLACE INTO quest_task_hooks (quest_fqn, branch, step, task, hook_id) \
+                     VALUES (?1, ?2, ?3, ?4, ?5)",
+                )?;
+                let mut object = tx.prepare_cached(
+                    "INSERT OR IGNORE INTO quest_task_objects (quest_fqn, branch, step, task, object_fqn) \
+                     SELECT ?1, ?2, ?3, ?4, fqn FROM objects \
+                     WHERE guid = ?5 AND is_canonical = 1 LIMIT 1",
+                )?;
+                for t in chunk {
+                    if let Some(h) = t.hook_id {
+                        hook.execute(params![t.quest_fqn, t.branch, t.step, t.task, h])?;
+                    }
+                    for g in &t.objects {
+                        object.execute(params![
+                            t.quest_fqn,
+                            t.branch,
+                            t.step,
+                            t.task,
+                            format!("{g:016X}")
+                        ])?;
+                    }
+                }
             }
             tx.commit()?;
         }
@@ -2178,6 +2201,12 @@ pub(crate) struct QuestTask {
     pub map_notes: Vec<String>,
     pub hook_state: Option<i64>,
     pub hook_name: Option<String>,
+    /// The task's own hook id (field 64287098), which a conversation node's
+    /// quest action names to complete it.
+    pub hook_id: Option<i64>,
+    /// The guids of qstTaskInteractionObjects (3de42f90): what the task has
+    /// the player use.
+    pub objects: Vec<u64>,
 }
 
 // Quest field ids (low 32 bits; GOM fields in one object share the high 32).
@@ -2192,6 +2221,8 @@ const QST_HOOK_LIST: u32 = 0xad64_0052;
 const QST_HOOK_KEY: u32 = 0xb21e_56a4;
 const QST_HOOK_STATE: u32 = 0x6428_709b;
 const QST_HOOK_NAME: u32 = 0x2ade_c3c7;
+const QST_TASK_HOOK_ID: u32 = 0x6428_7098;
+const QST_TASK_INTERACTION_OBJECTS: u32 = 0x3de4_2f90;
 
 /// Walk a decoded quest's branches > steps > tasks into `QuestTask` rows.
 /// A task text id is `(string_id << 32) | slot`; when its high 32 bits differ
@@ -2261,6 +2292,16 @@ pub(crate) fn quest_tasks_from_fields(
                     .and_then(|r| hooks.iter().find(|(key, _, _)| *key == r));
                 let hook_state: Option<i64> = hook.and_then(|(_, state, _)| *state);
                 let hook_name: Option<String> = hook.and_then(|(_, _, name)| name.clone());
+                let hook_id: Option<i64> = task
+                    .embedded_field(QST_TASK_HOOK_ID)
+                    .and_then(GomValue::as_i64);
+                let objects: Vec<u64> = task
+                    .embedded_field(QST_TASK_INTERACTION_OBJECTS)
+                    .and_then(GomValue::as_map)
+                    .unwrap_or(&[])
+                    .iter()
+                    .filter_map(|(k, _)| k.as_i64().map(|g| g as u64))
+                    .collect();
                 tasks.push(QuestTask {
                     quest_fqn: quest_fqn.to_string(),
                     branch: bi as u32,
@@ -2271,6 +2312,8 @@ pub(crate) fn quest_tasks_from_fields(
                     map_notes,
                     hook_state,
                     hook_name,
+                    hook_id,
+                    objects,
                 });
             }
         }
@@ -2426,6 +2469,28 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 hook_name  TEXT,
                 PRIMARY KEY (quest_fqn, branch, step, task)
             );
+            -- Each quest task's own hook id (64287098). A conversation node's
+            -- quest action (conversation_node_actions kind 'quest') names it,
+            -- with the quest, to complete that task.
+            CREATE TABLE IF NOT EXISTS quest_task_hooks (
+                quest_fqn  TEXT NOT NULL,
+                branch     INTEGER NOT NULL,
+                step       INTEGER NOT NULL,
+                task       INTEGER NOT NULL,
+                hook_id    INTEGER NOT NULL,
+                PRIMARY KEY (quest_fqn, branch, step, task)
+            );
+            -- The objects a quest task has the player use
+            -- (qstTaskInteractionObjects, 3de42f90).
+            CREATE TABLE IF NOT EXISTS quest_task_objects (
+                quest_fqn  TEXT NOT NULL,
+                branch     INTEGER NOT NULL,
+                step       INTEGER NOT NULL,
+                task       INTEGER NOT NULL,
+                object_fqn TEXT NOT NULL,
+                PRIMARY KEY (quest_fqn, branch, step, task, object_fqn)
+            );
+            CREATE INDEX IF NOT EXISTS idx_quest_task_objects_object ON quest_task_objects(object_fqn);
             -- Unified mission catalog (#268): every named mission as one
             -- first-class, queryable row -- keyed by string_id (the stable
             -- identity that exists for all ~6761 missions, vs the ~1514
@@ -2619,11 +2684,19 @@ mod tests {
         let sid: i64 = 1_130_835;
         let text_id = |slot: u64| GomValue::U64(((sid as u64) << 32) | slot);
         let task_with_text = emb(vec![(0x4000_0000_2b8c_1db4, text_id(264))]);
-        // Hook ref with no matching hook-list entry; the task's own
-        // 0x...4164287098 value must be ignored.
+        // Hook ref with no matching hook-list entry: hook_state stays NULL,
+        // but the task's own hook id (0x...4164287098) and its interaction
+        // objects (0x...423de42f90) are read.
         let task_no_text = emb(vec![
             (0x4000_0034_d449_4960, GomValue::U64(7)),
             (0x4000_0041_6428_7098, GomValue::U64(99)),
+            (
+                0x4000_0042_3de4_2f90,
+                GomValue::Map(vec![(
+                    GomValue::U64(0xE000_6CF8_0B55_DED8),
+                    GomValue::Bool(true),
+                )]),
+            ),
         ]);
         let task_notes_hook = emb(vec![
             (0x4000_0000_2b8c_1db4, text_id(265)),
@@ -2674,6 +2747,10 @@ mod tests {
         assert_eq!(rows[1].text, None);
         assert_eq!(rows[1].hook_state, None, "ref 7 is not in the hook list");
         assert_eq!(rows[1].hook_name, None);
+        assert_eq!(rows[1].hook_id, Some(99));
+        assert_eq!(rows[1].objects, vec![0xE000_6CF8_0B55_DED8]);
+        assert_eq!(rows[0].hook_id, None);
+        assert!(rows[0].objects.is_empty());
         assert_eq!(rows[2].text_slot, Some(265));
         assert_eq!(rows[2].map_notes, vec!["mpn.ventures.hoth".to_string()]);
         assert_eq!(rows[2].hook_state, Some(-853_414_660_465_191_255));

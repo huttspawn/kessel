@@ -378,6 +378,8 @@ const MAP_AREA_LOG_ID: u32 = 0x0027_bf7f;
 // Spawn: entity list, each naming the template it places.
 const SPN_ENTRIES: u32 = 0xaa61_0ec0;
 const SPN_ENTRY_TEMPLATE: u32 = 0xb78d_6eec;
+// Spawn entry: the script the placed entity runs (RESEARCH 01a1c274).
+const SPN_ENTRY_SCRIPT: u32 = 0x4fa1_4a23;
 // Encounter: slot letter -> spawner FQN.
 const ENC_SLOTS: u32 = 0xd9a5_2ab9;
 // Placeable: plcAbilitySpecOnUse, plcCodexSpec, plcConvo, On Use script.
@@ -470,7 +472,9 @@ impl Database {
                 }
             }
 
-            let spawn_entities: HashMap<String, String> = decoded_objects(tx, "Spawn")?
+            let spawns = decoded_objects(tx, "Spawn")?;
+            insert_spawner_scripts(tx, &spawns)?;
+            let spawn_entities: HashMap<String, String> = spawns
                 .into_iter()
                 .filter_map(|(fqn, obj)| {
                     let first = obj.embedded_field(SPN_ENTRIES)?.as_list()?.first()?;
@@ -751,6 +755,44 @@ fn placeable_refs(obj: &crate::gom_reader::GomValue) -> PlaceableRefs {
         convo: obj.embedded_field(PLC_CONVO).and_then(gom_str),
         script: guid(PLC_SCRIPT),
     }
+}
+
+/// The script each spawner's first entry runs (`aa610ec0[0].4fa14a23`), the
+/// entry whose template `placements.entity_fqn` names.
+fn insert_spawner_scripts(
+    tx: &Transaction,
+    spawns: &[(String, crate::gom_reader::GomValue)],
+) -> Result<u64> {
+    tx.execute("DELETE FROM spawner_scripts", [])?;
+    let mut by_guid = tx.prepare(
+        "SELECT fqn FROM objects WHERE guid = ?1 AND kind = 'Hydra' AND is_canonical = 1 LIMIT 1",
+    )?;
+    let mut insert = tx.prepare(
+        "INSERT OR REPLACE INTO spawner_scripts (spawner_fqn, script_fqn) VALUES (?1, ?2)",
+    )?;
+    let mut written = 0;
+    for (fqn, obj) in spawns {
+        let script = obj
+            .embedded_field(SPN_ENTRIES)
+            .and_then(crate::gom_reader::GomValue::as_list)
+            .and_then(<[crate::gom_reader::GomValue]>::first)
+            .and_then(|e| e.embedded_field(SPN_ENTRY_SCRIPT))
+            .and_then(crate::gom_reader::GomValue::as_i64)
+            .filter(|g| *g != 0);
+        let Some(guid) = script else { continue };
+        let found: Option<String> = by_guid
+            .query_row([format!("{:016X}", guid as u64)], |r| r.get(0))
+            .map(Some)
+            .or_else(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                e => Err(e),
+            })?;
+        if let Some(script) = found {
+            insert.execute(params![fqn, script])?;
+            written += 1;
+        }
+    }
+    Ok(written)
 }
 
 fn insert_placeable_grants(tx: &Transaction) -> Result<u64> {
@@ -1054,6 +1096,12 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             -- What a placeable names: its use ability (and the id the log
             -- prints for it, string_id << 32), codex entry, conversation and
             -- On Use script.
+            -- The script a spawner's entry runs for the entity it places
+            -- (aa610ec0[0].4fa14a23).
+            CREATE TABLE IF NOT EXISTS spawner_scripts (
+                spawner_fqn TEXT PRIMARY KEY,
+                script_fqn  TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS placeable_grants (
                 placeable_fqn       TEXT PRIMARY KEY,
                 use_ability_fqn     TEXT,
@@ -1097,6 +1145,126 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 PRIMARY KEY (script_fqn, handler, ordinal)
             );
             CREATE INDEX IF NOT EXISTS idx_script_actions_target ON script_actions(target_fqn);
+            -- What a logged use cast or conversation can land on (FR-KESSEL-025
+            -- c9), in the log's frame and keyed by the ids the log prints.
+            -- Every placed placeable that plays a use ability, by the cast id
+            -- (use_ability_log_id) a use line prints.
+            CREATE VIEW IF NOT EXISTS log_use_targets AS
+                SELECT l.log_area_id, g.use_ability_log_id, g.placeable_fqn,
+                       p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z,
+                       g.codex_fqn, g.conversation_fqn, g.script_fqn
+                FROM placeable_grants g
+                JOIN placements p ON p.entity_fqn = g.placeable_fqn
+                JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id
+                WHERE g.use_ability_log_id IS NOT NULL;
+            -- Every placed NPC or placeable that owns a conversation
+            -- (conversation_owners, created by cnv). owner_log_id is the id a
+            -- TargetSet line prints for an NPC, string_id << 32; a placeable
+            -- has none. A placeable whose On Use script plays a conversation
+            -- owns that conversation too.
+            CREATE VIEW IF NOT EXISTS log_conversation_targets AS
+                SELECT l.log_area_id,
+                       CASE WHEN o.owner_kind = 'npc' THEN
+                           (SELECT ob.string_id << 32 FROM objects ob
+                            WHERE ob.fqn = o.owner_fqn AND ob.is_canonical = 1
+                              AND ob.string_id IS NOT NULL LIMIT 1)
+                       END AS owner_log_id,
+                       o.owner_fqn, o.owner_kind, o.conversation_fqn,
+                       p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z
+                FROM conversation_owners o
+                JOIN placements p ON p.entity_fqn = o.owner_fqn
+                JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id
+                UNION ALL
+                SELECT l.log_area_id, NULL, g.placeable_fqn, 'placeable', a.target_fqn,
+                       p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z
+                FROM placeable_grants g
+                JOIN script_actions a ON a.script_fqn = g.script_fqn
+                     AND a.handler = 'On Use' AND a.action = 'Play Conversation'
+                     AND a.target_fqn IS NOT NULL
+                JOIN placements p ON p.entity_fqn = g.placeable_fqn
+                JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id;
+            -- What a placeable is and what using it triggers (FR-KESSEL-025
+            -- c9): its codex entry (plcCodexSpec), its conversation
+            -- (plcConvo), every action of its On Use script (its own, or the
+            -- one its spawner's entry runs, spawner_scripts) that changes game
+            -- state or moves the player, following Execute Hydra Script
+            -- ('<script>:<event>' runs that script's 'On Custom:<event>');
+            -- the path holds script|handler pairs, so only a call back into
+            -- a handler already on the path is a cycle, and the quest tasks it is an interaction
+            -- object of (quest_task_objects, created by quest), which using
+            -- it advances. Pure presentation and expression steps are left out.
+            CREATE VIEW IF NOT EXISTS placeable_triggers AS
+                WITH RECURSIVE
+                -- The handlers a use fires: On Use, and On Party Gathered for
+                -- a use that waits for the group.
+                use_handlers(handler) AS (VALUES ('On Use'), ('On Party Gathered')),
+                reach(placeable_fqn, script_fqn, handler, path) AS (
+                    SELECT g.placeable_fqn, g.script_fqn, u.handler,
+                           ',' || g.script_fqn || '|' || u.handler || ','
+                    FROM placeable_grants g, use_handlers u WHERE g.script_fqn IS NOT NULL
+                    UNION
+                    SELECT DISTINCT p.entity_fqn, s.script_fqn, u.handler,
+                           ',' || s.script_fqn || '|' || u.handler || ','
+                    FROM placements p JOIN spawner_scripts s ON s.spawner_fqn = p.spawner_fqn,
+                         use_handlers u
+                    WHERE p.entity_fqn IS NOT NULL
+                    UNION
+                    SELECT r.placeable_fqn, substr(a.value, 1, instr(a.value, ':') - 1),
+                           'On Custom:' || substr(a.value, instr(a.value, ':') + 1),
+                           r.path || substr(a.value, 1, instr(a.value, ':') - 1)
+                             || '|On Custom:' || substr(a.value, instr(a.value, ':') + 1) || ','
+                    FROM reach r
+                    JOIN script_actions a ON a.script_fqn = r.script_fqn AND a.handler = r.handler
+                    WHERE a.action = 'Execute Hydra Script' AND instr(a.value, ':') > 0
+                      AND instr(r.path, ',' || substr(a.value, 1, instr(a.value, ':') - 1)
+                                || '|On Custom:' || substr(a.value, instr(a.value, ':') + 1) || ',') = 0
+                )
+                SELECT placeable_fqn, 'codex' AS kind, codex_fqn AS target_fqn,
+                       'plcCodexSpec' AS detail
+                FROM placeable_grants WHERE codex_fqn IS NOT NULL
+                UNION ALL
+                -- With no script anywhere, the use ability is what using it does.
+                SELECT placeable_fqn, 'use_ability', use_ability_fqn, 'plcAbilitySpecOnUse'
+                FROM placeable_grants
+                WHERE use_ability_fqn IS NOT NULL
+                  AND placeable_fqn NOT IN (SELECT placeable_fqn FROM reach)
+                UNION ALL
+                SELECT placeable_fqn, 'conversation', conversation_fqn, 'plcConvo'
+                FROM placeable_grants WHERE conversation_fqn IS NOT NULL
+                UNION ALL
+                SELECT DISTINCT r.placeable_fqn, 'on_use', COALESCE(a.target_fqn, a.value, ''),
+                       a.action || ' (' || a.script_fqn || ' ' || a.handler || ')'
+                FROM reach r
+                JOIN script_actions a ON a.script_fqn = r.script_fqn AND a.handler = r.handler
+                WHERE a.action NOT IN ('Execute Hydra Script', 'Play SFX', 'Play SFX From Camera',
+                                       'Play Animation', 'Wait', 'Broadcast String',
+                                       'Broadcast String From Player', 'Debug Broadcast String',
+                                       'Set Target', 'Set Facing', 'Play Appearance', 'Play VFX',
+                                       'Play Targeted VFX', 'Stop Character VFX',
+                                       'Play Camera Shake', 'Play Music', 'Play Ambient',
+                                       'Fade to Black', 'Fade from Black', 'Fade to Color',
+                                       'Fade from Color', 'Fade to Overlay',
+                                       'Fade from Overlay', 'Override Fade Timeout',
+                                       'Start Looping Sound', 'Stop Looping Sound',
+                                       'Set Callback Timer', '=', '+', '-')
+                UNION ALL
+                SELECT o.placeable_fqn, 'quest_task', o.quest_fqn,
+                       'task (' || o.branch || ',' || o.step || ',' || o.task || ') '''
+                         || COALESCE(t.text, '') || ''' hook ' || COALESCE(h.hook_id, '')
+                -- A task names the placeable itself or a spawner that places it.
+                FROM (SELECT object_fqn AS placeable_fqn, quest_fqn, branch, step, task
+                      FROM quest_task_objects
+                      UNION
+                      SELECT pl.entity_fqn, q.quest_fqn, q.branch, q.step, q.task
+                      FROM quest_task_objects q
+                      JOIN placements pl ON pl.spawner_fqn = q.object_fqn
+                      WHERE pl.entity_fqn IS NOT NULL) o
+                JOIN objects ob ON ob.fqn = o.placeable_fqn AND ob.kind = 'Placeable'
+                     AND ob.is_canonical = 1
+                LEFT JOIN quest_tasks t ON t.quest_fqn = o.quest_fqn AND t.branch = o.branch
+                     AND t.step = o.step AND t.task = o.task
+                LEFT JOIN quest_task_hooks h ON h.quest_fqn = o.quest_fqn AND h.branch = o.branch
+                     AND h.step = o.step AND h.task = o.task;
         "#,
     )?;
     Ok(())
@@ -1316,6 +1484,200 @@ mod tests {
                 .unwrap();
             assert_eq!(n, 0, "{table}");
         }
+    }
+
+    #[test]
+    fn log_target_views_key_placements_by_log_ids() {
+        let path = temp_db_path("log_target_views");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let conn = db.conn.lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO area_log_ids VALUES (137438953533, 7);
+             INSERT INTO placements (area_dir_id, room, instance_id, asset_path, entity_fqn,
+                                     log_x, log_y, log_z)
+                 VALUES (7, 'r', 1, 'a', 'plc.lore', 1.0, 2.0, 3.0),
+                        (7, 'r', 2, 'b', 'npc.bela', 4.0, 5.0, 6.0),
+                        (7, 'r', 3, 'c', 'plc.crate', 0.0, 0.0, 0.0),
+                        (7, 'r', 4, 'd', 'plc.cache', 8.0, 0.0, 0.0);
+             INSERT INTO placeable_grants VALUES
+                 ('plc.lore', 'abl.placeables.examine.x', 811315027247104, 'cdx.lore.x', NULL, NULL),
+                 ('plc.crate', NULL, NULL, 'cdx.crate', NULL, NULL),
+                 ('plc.cache', 'abl.placeables.open.x', 811400926593024, NULL, NULL, 'hyd.cache');
+             INSERT INTO script_actions (script_fqn, handler, ordinal, action, target_fqn, value) VALUES
+                 ('hyd.cache', 'On Use', 0, 'Play Conversation', 'cnv.cache', 'cnv.cache'),
+                 ('hyd.cache', 'On Enter', 0, 'Play Conversation', 'cnv.other', 'cnv.other');
+             INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, string_id, json)
+                 VALUES ('g', 's', 'h', 'G', 'npc.bela', 'Npc', 67878, '{}');
+             INSERT INTO conversation_owners VALUES
+                 ('npc.bela', 'npc', 'cnv.bela'), ('plc.lore', 'placeable', 'cnv.lore');",
+        )
+        .unwrap();
+        let uses: Vec<(i64, i64, String, i64, Option<String>)> = conn
+            .prepare(
+                "SELECT log_area_id, use_ability_log_id, placeable_fqn, instance_id, codex_fqn \
+                 FROM log_use_targets ORDER BY placeable_fqn",
+            )
+            .unwrap()
+            .query_map([], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            })
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        // The crate plays no use ability, so a use cast cannot land on it.
+        assert_eq!(
+            uses,
+            vec![
+                (137438953533, 811400926593024, "plc.cache".into(), 4, None),
+                (
+                    137438953533,
+                    811315027247104,
+                    "plc.lore".into(),
+                    1,
+                    Some("cdx.lore.x".into())
+                ),
+            ]
+        );
+        let owners: Vec<(Option<i64>, String, String, f64)> = conn
+            .prepare(
+                "SELECT owner_log_id, owner_fqn, conversation_fqn, log_x \
+                 FROM log_conversation_targets ORDER BY owner_fqn",
+            )
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            owners,
+            vec![
+                (Some(67878 << 32), "npc.bela".into(), "cnv.bela".into(), 4.0),
+                (None, "plc.cache".into(), "cnv.cache".into(), 8.0),
+                (None, "plc.lore".into(), "cnv.lore".into(), 1.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn placeable_triggers_union_codex_conversation_on_use_and_quest_tasks() {
+        let path = temp_db_path("placeable_triggers");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let conn = db.conn.lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO placeable_grants VALUES
+                 ('plc.lore', NULL, NULL, 'cdx.lore', 'cnv.lore', 'hyd.lore'),
+                 ('plc.map', 'abl.placeables.galaxy_map', 1, NULL, NULL, NULL),
+                 ('plc.core', 'abl.placeables.attack', 2, NULL, NULL, NULL);
+             INSERT INTO spawner_scripts VALUES ('spn.core', 'hyd.spawned');
+             INSERT INTO script_actions (script_fqn, handler, ordinal, action, target_fqn, value)
+                 VALUES ('hyd.lore', 'On Use', 0, 'Play SFX', NULL, 'Play_x'),
+                        ('hyd.lore', 'On Use', 1, 'Achievement Event', NULL, 'read_lore'),
+                        ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other'),
+                        ('hyd.spawned', 'On Use', 0, 'Use Ability', 'abl.heal', 'abl.heal'),
+                        ('hyd.spawned', 'On Party Gathered', 0, 'Teleport To', NULL, 'exit'),
+                        ('hyd.lore', 'On Use', 2, 'Execute Hydra Script', NULL, 'hyd.called:Go'),
+                        ('hyd.called', 'On Custom:Go', 0, 'Teleport To', NULL, 'dock'),
+                        ('hyd.called', 'On Custom:Go', 1, 'Execute Hydra Script', NULL, 'hyd.lore:Back'),
+                        ('hyd.lore', 'On Custom:Back', 0, 'Give Items', 'itm.back', 'itm.back'),
+                        ('hyd.lore', 'On Custom:Back', 1, 'Execute Hydra Script', NULL, 'hyd.loop:x'),
+                        ('hyd.loop', 'On Custom:x', 0, 'Execute Hydra Script', NULL, 'hyd.loop:y'),
+                        ('hyd.loop', 'On Custom:y', 0, 'Set Active', NULL, 'true'),
+                        ('hyd.loop', 'On Custom:y', 1, 'Execute Hydra Script', NULL, 'hyd.loop:x');
+             INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, json)
+                 VALUES ('g', 's', 'h', 'G', 'plc.device', 'Placeable', '{}'),
+                        ('g2', 's2', 'h2', 'G2', 'plc.core', 'Placeable', '{}');
+             INSERT INTO placements (area_dir_id, room, instance_id, asset_path, spawner_fqn, entity_fqn)
+                 VALUES (7, 'r', 1, 'a', 'spn.device', 'plc.device'),
+                        (7, 'r', 2, 'b', 'spn.core', 'plc.core');
+             INSERT INTO quest_tasks (quest_fqn, branch, step, task, text)
+                 VALUES ('qst.q', 0, 5, 1, 'Plant a Device');
+             INSERT INTO quest_task_hooks VALUES ('qst.q', 0, 5, 1, 77);
+             INSERT INTO quest_task_objects VALUES
+                 ('qst.q', 0, 5, 1, 'plc.device'), ('qst.q', 0, 5, 1, 'spn.device'),
+                 ('qst.q', 0, 5, 1, 'spn.core');",
+        )
+        .unwrap();
+        let rows: Vec<(String, String, String, String)> = conn
+            .prepare("SELECT * FROM placeable_triggers ORDER BY placeable_fqn, kind, detail")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        let row = |p: &str, k: &str, t: &str, d: &str| (p.into(), k.into(), t.into(), d.into());
+        // plc.core runs its spawner entry's script (spn.core -> hyd.spawned),
+        // so its use ability is not listed; plc.map has no script anywhere,
+        // so its use ability is what it does.
+        // Play SFX and the On Enter handler trigger nothing a use counts. The
+        // On Use script's Execute Hydra Script reaches hyd.called's
+        // 'On Custom:Go' (Teleport To), whose call back into another handler
+        // of hyd.lore ('On Custom:Back', Give Items) is followed; hyd.loop's
+        // x -> y -> x loop is stopped by the guard, with y's Set Active once. A
+        // task naming only the spawner (spn.core) reaches the placeable it
+        // places; plc.device, named both ways, appears once.
+        assert_eq!(
+            rows,
+            vec![
+                row(
+                    "plc.core",
+                    "on_use",
+                    "exit",
+                    "Teleport To (hyd.spawned On Party Gathered)"
+                ),
+                row(
+                    "plc.core",
+                    "on_use",
+                    "abl.heal",
+                    "Use Ability (hyd.spawned On Use)"
+                ),
+                row(
+                    "plc.core",
+                    "quest_task",
+                    "qst.q",
+                    "task (0,5,1) 'Plant a Device' hook 77"
+                ),
+                row(
+                    "plc.device",
+                    "quest_task",
+                    "qst.q",
+                    "task (0,5,1) 'Plant a Device' hook 77"
+                ),
+                row("plc.lore", "codex", "cdx.lore", "plcCodexSpec"),
+                row("plc.lore", "conversation", "cnv.lore", "plcConvo"),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "read_lore",
+                    "Achievement Event (hyd.lore On Use)"
+                ),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "itm.back",
+                    "Give Items (hyd.lore On Custom:Back)"
+                ),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "true",
+                    "Set Active (hyd.loop On Custom:y)"
+                ),
+                row(
+                    "plc.lore",
+                    "on_use",
+                    "dock",
+                    "Teleport To (hyd.called On Custom:Go)"
+                ),
+                row(
+                    "plc.map",
+                    "use_ability",
+                    "abl.placeables.galaxy_map",
+                    "plcAbilitySpecOnUse"
+                ),
+            ]
+        );
     }
 
     #[test]
