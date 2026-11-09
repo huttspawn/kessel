@@ -2,7 +2,7 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks and FR-KESSEL-025 c4, c5 and c10. The `@local`
+//! code: the `@smoke` checks and FR-KESSEL-025 c4, c5, c9 and c10. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -26,6 +26,14 @@ struct World {
     /// The log area id and the log-frame positions the scenario's log lines print.
     log_area_id: i64,
     positions: Vec<[f64; 3]>,
+    /// Granting use or conversation targets: log area id, the id the log
+    /// prints (cast id or TargetSet id), fqn, log-frame position.
+    targets: Vec<(i64, i64, String, [f64; 3])>,
+    /// The logged cast id of a use line.
+    cast_id: i64,
+    /// The NPC the player's TargetSet named just before a conversation: its
+    /// log id and logged position.
+    target_set: Option<(i64, [f64; 3])>,
     /// The answer: one line per fact found.
     answer: Vec<String>,
 }
@@ -399,9 +407,374 @@ fn names_volume_codex(world: &World) {
     );
 }
 
+// FR-KESSEL-025 c9: a logged object use or conversation names what it granted.
+
+/// Within reach of a logged position: 10 log units (1 m).
+const REACH: f64 = 10.0;
+/// The ability every logged conversation shows, and its In Conversation effect.
+const CONVERSATION: &str = "{806968520343552}";
+const IN_CONVERSATION: &str = "{806968520343876}";
+
+fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
+    (0..3).map(|i| (a[i] - b[i]).powi(2)).sum::<f64>().sqrt()
+}
+
+/// Seconds since midnight of a `HH:MM:SS.mmm` stamp.
+fn stamp(s: &str) -> f64 {
+    s.split(':')
+        .map(|x| x.parse::<f64>().expect("timestamp"))
+        .fold(0.0, |t, x| t * 60.0 + x)
+}
+
+/// One player line of a combat log that c9 reads.
+enum LogLine {
+    /// The player casts an ability with nothing targeted: cast id, position.
+    Cast(i64, [f64; 3]),
+    /// The player enters a conversation, at a position.
+    Conversation([f64; 3]),
+    /// The player targets an NPC: its log id and position.
+    TargetSet(i64, [f64; 3]),
+}
+
+/// A c9 line: file, line number, log area id, time, player, the line.
+type Logged = (String, usize, i64, f64, String, LogLine);
+
+/// Every c9 line of every combat log.
+fn log_lines() -> Vec<Logged> {
+    let area_re = regex::Regex::new(r"AreaEntered \{\d+\}: [^{]*\{(\d+)\}").expect("regex");
+    let player =
+        r"^\[([\d:.]+)\] \[@([^#|\]/]+)#\d+\|\(([-\d.]+),([-\d.]+),([-\d.]+),[-\d.]+\)\|[^\]]*\] ";
+    let cast_re = regex::Regex::new(&format!(
+        r"{player}\[=\] \[[^\]]*\{{(\d+)\}}\] \[Event \{{\d+\}}: AbilityActivate "
+    ))
+    .expect("regex");
+    let target_re = regex::Regex::new(&format!(
+        r"{player}\[[^@\[\]|][^\[\]|]*? \{{(\d+)\}}:\d+\|\(([-\d.]+),([-\d.]+),([-\d.]+),[-\d.]+\)\|[^\]]*\] \[\] \[Event \{{\d+\}}: TargetSet "
+    ))
+    .expect("regex");
+    let player_re = regex::Regex::new(player).expect("regex");
+    let pos = |m: &regex::Captures, at: usize| {
+        [at, at + 1, at + 2].map(|i| m[i].parse::<f64>().expect("position"))
+    };
+    let mut out = Vec::new();
+    for file in combat_logs() {
+        let bytes = std::fs::read(&file).unwrap_or_else(|e| panic!("read {}: {e}", file.display()));
+        let text = String::from_utf8_lossy(&bytes);
+        let name = file.display().to_string();
+        let mut area = None;
+        for (n, line) in text.lines().enumerate() {
+            if let Some(m) = area_re.captures(line) {
+                area = m[1].parse().ok();
+            }
+            let Some(a) = area else { continue };
+            let (m, kind) = if let Some(m) = cast_re.captures(line) {
+                let kind = LogLine::Cast(m[6].parse().expect("cast id"), pos(&m, 3));
+                (m, kind)
+            } else if let Some(m) = target_re.captures(line) {
+                let kind = LogLine::TargetSet(m[6].parse().expect("npc id"), pos(&m, 7));
+                (m, kind)
+            } else if line.contains(CONVERSATION) && line.contains(IN_CONVERSATION) {
+                let Some(m) = player_re.captures(line) else {
+                    continue;
+                };
+                let kind = LogLine::Conversation(pos(&m, 3));
+                (m, kind)
+            } else {
+                continue;
+            };
+            out.push((name.clone(), n + 1, a, stamp(&m[1]), m[2].to_string(), kind));
+        }
+    }
+    out
+}
+
+/// A granting target: log area id, the id the log prints, fqn, position.
+type Target = (i64, i64, String, [f64; 3]);
+
+fn targets(conn: &Connection, sql: &str) -> Vec<Target> {
+    let mut stmt = conn.prepare(sql).expect("targets query");
+    stmt.query_map([], |r| {
+        Ok((
+            r.get(0)?,
+            r.get(1)?,
+            r.get(2)?,
+            [r.get(3)?, r.get(4)?, r.get(5)?],
+        ))
+    })
+    .expect("target rows")
+    .map(|r| r.expect("target row"))
+    .collect()
+}
+
+/// The codex entries a placeable or conversation grants: its own codex
+/// entry, its On Use script's Grant Codex actions and its conversation's
+/// codex sources.
+fn codex_grants(
+    conn: &Connection,
+    codex: Option<String>,
+    convo: Option<&str>,
+    script: Option<&str>,
+) -> Vec<String> {
+    let mut answer: Vec<String> = codex
+        .into_iter()
+        .map(|c| format!("grants codex {c}"))
+        .collect();
+    let mut via = |sql: &str, key: &str| {
+        let mut stmt = conn.prepare(sql).expect("grant query");
+        let rows = stmt
+            .query_map([key], |r| {
+                Ok(format!(
+                    "grants codex {} via {key} {}",
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?
+                ))
+            })
+            .expect("grant rows");
+        answer.extend(rows.map(|r| r.expect("grant row")));
+    };
+    if let Some(s) = script {
+        via(
+            "SELECT target_fqn, handler FROM script_actions \
+             WHERE script_fqn = ?1 AND action = 'Grant Codex' AND target_fqn IS NOT NULL",
+            s,
+        );
+    }
+    if let Some(c) = convo {
+        via(
+            "SELECT codex_fqn, via FROM codex_sources \
+             WHERE source_kind = 'conversation' AND source_fqn = ?1",
+            c,
+        );
+    }
+    answer
+}
+
+#[given("a build holding a lore placeable that grants a codex entry, placed in an area")]
+fn lore_placeable_placed(world: &mut World) {
+    // Lore objects ('Examining...') that name a codex entry, placed where a
+    // log area can name them.
+    let found = targets(
+        spice(world),
+        "SELECT t.log_area_id, t.use_ability_log_id, t.placeable_fqn, t.log_x, t.log_y, t.log_z \
+         FROM log_use_targets t JOIN placeable_grants g ON g.placeable_fqn = t.placeable_fqn \
+         WHERE g.use_ability_fqn LIKE 'abl.placeables.examine.%' AND t.codex_fqn IS NOT NULL \
+           AND t.log_x IS NOT NULL",
+    );
+    assert!(
+        !found.is_empty(),
+        "no placed lore placeable naming a codex entry"
+    );
+    world.targets = found;
+}
+
+#[given(
+    "a combat-log line where the player casts 'Examining...' at a position beside that placeable in that area"
+)]
+fn examining_line(world: &mut World) {
+    for (file, n, area, _, _, line) in log_lines() {
+        let LogLine::Cast(cast, p) = line else {
+            continue;
+        };
+        if let Some((_, _, fqn, _)) = world
+            .targets
+            .iter()
+            .find(|(a, id, _, q)| *a == area && id >> 32 == cast >> 32 && dist(*q, p) <= REACH)
+        {
+            println!("c9 use: {file} line {n} area {area} cast {cast} at {p:?} beside {fqn}");
+            world.subject = fqn.clone();
+            (world.log_area_id, world.cast_id, world.positions) = (area, cast, vec![p]);
+            return;
+        }
+    }
+    panic!("no logged 'Examining...' cast beside a codex-granting lore placeable");
+}
+
+#[when("kessel's agent asks what that use granted")]
+fn ask_use(world: &mut World) {
+    type Use = (String, Option<String>, Option<String>, Option<String>, f64);
+    let (area, cast, p) = (world.log_area_id, world.cast_id, world.positions[0]);
+    let conn = spice(world);
+    let mut stmt = conn
+        .prepare(
+            "SELECT placeable_fqn, codex_fqn, conversation_fqn, script_fqn, log_x, log_y, log_z \
+             FROM log_use_targets WHERE log_area_id = ?1 AND use_ability_log_id >> 32 = ?2 >> 32 \
+               AND log_x IS NOT NULL",
+        )
+        .expect("use target query");
+    let nearest: Option<Use> = stmt
+        .query_map(rusqlite::params![area, cast], |r| {
+            let q = [r.get(4)?, r.get(5)?, r.get(6)?];
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, dist(p, q)))
+        })
+        .expect("use target rows")
+        .map(|r| r.expect("use target row"))
+        .filter(|u| u.4 <= REACH)
+        .min_by(|a, b| a.4.total_cmp(&b.4));
+    drop(stmt);
+    world.answer = match nearest {
+        Some((fqn, codex, convo, script, d)) => {
+            let mut answer = vec![format!("placeable {fqn} at {d:.2}")];
+            answer.extend(codex_grants(
+                conn,
+                codex,
+                convo.as_deref(),
+                script.as_deref(),
+            ));
+            answer
+        }
+        None => vec!["nothing that grants stands within reach".to_string()],
+    };
+    println!("c9 use answer: {:?}", world.answer);
+}
+
+#[then("the answer names the placeable and its codex entry")]
+fn names_placeable_codex(world: &World) {
+    let placeable = format!("placeable {} ", world.subject);
+    assert!(
+        world.answer.iter().any(|a| a.starts_with(&placeable))
+            && world
+                .answer
+                .iter()
+                .any(|a| a.starts_with("grants codex cdx.")),
+        "the use beside {} granted no codex entry: {:?}",
+        world.subject,
+        world.answer
+    );
+}
+
+#[given("a build holding an NPC whose conversation grants a codex entry, placed in an area")]
+fn codex_npc_placed(world: &mut World) {
+    let found = targets(
+        spice(world),
+        "SELECT DISTINCT t.log_area_id, t.owner_log_id, t.owner_fqn, t.log_x, t.log_y, t.log_z \
+         FROM log_conversation_targets t \
+         JOIN codex_sources s ON s.source_kind = 'conversation' \
+           AND s.source_fqn = t.conversation_fqn \
+         WHERE t.owner_kind = 'npc' AND t.owner_log_id IS NOT NULL AND t.log_x IS NOT NULL",
+    );
+    assert!(
+        !found.is_empty(),
+        "no placed NPC whose conversation grants a codex entry"
+    );
+    world.targets = found;
+}
+
+/// A logged conversation: file, line number, log area id, the player's
+/// position, and the NPC (log id, position) the player's TargetSet named
+/// within 1 s before.
+type Conversation = (String, usize, i64, [f64; 3], Option<(i64, [f64; 3])>);
+
+fn conversations() -> Vec<Conversation> {
+    let mut last: Option<(String, f64, i64, [f64; 3])> = None;
+    let mut out = Vec::new();
+    for (file, n, area, t, player, line) in log_lines() {
+        match line {
+            LogLine::TargetSet(id, q) => last = Some((player, t, id, q)),
+            LogLine::Conversation(p) => {
+                let fresh = last
+                    .as_ref()
+                    .filter(|(who, at, _, _)| *who == player && (0.0..=1.0).contains(&(t - at)))
+                    .map(|(_, _, id, q)| (*id, *q));
+                out.push((file, n, area, p, fresh));
+            }
+            LogLine::Cast(..) => {}
+        }
+    }
+    out
+}
+
+#[given(
+    "a combat-log line where the player enters a conversation at a position beside that NPC in that area"
+)]
+fn conversation_line(world: &mut World) {
+    for (file, n, area, p, target) in conversations() {
+        let Some((id, q)) = target else { continue };
+        if let Some((_, _, fqn, _)) = world
+            .targets
+            .iter()
+            .find(|(a, owner, _, s)| *a == area && owner >> 32 == id >> 32 && dist(*s, q) <= REACH)
+        {
+            println!(
+                "c9 conversation: {file} line {n} area {area} at {p:?}, target {id} beside {fqn}"
+            );
+            world.subject = fqn.clone();
+            (world.log_area_id, world.positions, world.target_set) = (area, vec![p], target);
+            return;
+        }
+    }
+    panic!("no logged conversation with an NPC whose conversation grants a codex entry");
+}
+
+#[when("kessel's agent asks what that conversation granted")]
+fn ask_conversation(world: &mut World) {
+    type Owner = (Option<i64>, String, String, String, [f64; 3]);
+    let (area, p, target) = (world.log_area_id, world.positions[0], world.target_set);
+    let conn = spice(world);
+    let mut stmt = conn
+        .prepare(
+            "SELECT owner_log_id, owner_kind, owner_fqn, conversation_fqn, log_x, log_y, log_z \
+             FROM log_conversation_targets WHERE log_area_id = ?1 AND log_x IS NOT NULL",
+        )
+        .expect("conversation target query");
+    let rows: Vec<Owner> = stmt
+        .query_map([area], |r| {
+            Ok((
+                r.get(0)?,
+                r.get(1)?,
+                r.get(2)?,
+                r.get(3)?,
+                [r.get(4)?, r.get(5)?, r.get(6)?],
+            ))
+        })
+        .expect("conversation target rows")
+        .map(|r| r.expect("conversation target row"))
+        .collect();
+    drop(stmt);
+    // The NPC the TargetSet named, at its placement nearest where the log
+    // shows it; else whatever owns a conversation nearest the player.
+    let found = match target {
+        Some((id, q)) => rows
+            .iter()
+            .filter(|r| r.0.is_some_and(|o| o >> 32 == id >> 32))
+            .map(|r| (r, dist(q, r.4)))
+            .min_by(|a, b| a.1.total_cmp(&b.1)),
+        None => rows
+            .iter()
+            .map(|r| (r, dist(p, r.4)))
+            .filter(|(_, d)| *d <= REACH)
+            .min_by(|a, b| a.1.total_cmp(&b.1)),
+    };
+    world.answer = match found {
+        Some(((_, kind, owner, convo, _), d)) => {
+            let mut answer = vec![format!("{kind} {owner} conversation {convo} at {d:.2}")];
+            answer.extend(codex_grants(conn, None, Some(convo), None));
+            answer
+        }
+        None => vec!["nothing that grants stands within reach".to_string()],
+    };
+    println!("c9 conversation answer: {:?}", world.answer);
+}
+
+#[then("the answer names the NPC, its conversation and the codex entry")]
+fn names_npc_conversation_codex(world: &World) {
+    let npc = format!("npc {} conversation cnv.", world.subject);
+    assert!(
+        world.answer.iter().any(|a| a.starts_with(&npc))
+            && world
+                .answer
+                .iter()
+                .any(|a| a.starts_with("grants codex cdx.")),
+        "the conversation with {} granted no codex entry: {:?}",
+        world.subject,
+        world.answer
+    );
+}
+
+// The generated feature tags only the first of c9's two scenarios; the
+// conversation scenario carries no tag, so `not @local` selects it.
 scenarios!(
     "tests",
     tags = "@smoke or @criterion-FR-KESSEL-025-c4 or @criterion-FR-KESSEL-025-c5 \
-            or @criterion-FR-KESSEL-025-c10",
+            or @criterion-FR-KESSEL-025-c9 or @criterion-FR-KESSEL-025-c10 or not @local",
     fixtures = [world: World]
 );

@@ -1046,6 +1046,34 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 PRIMARY KEY (script_fqn, handler, ordinal)
             );
             CREATE INDEX IF NOT EXISTS idx_script_actions_target ON script_actions(target_fqn);
+            -- What a logged use cast or conversation can land on (FR-KESSEL-025
+            -- c9), in the log's frame and keyed by the ids the log prints.
+            -- Every placed placeable that plays a use ability, by the cast id
+            -- (use_ability_log_id) a use line prints.
+            CREATE VIEW IF NOT EXISTS log_use_targets AS
+                SELECT l.log_area_id, g.use_ability_log_id, g.placeable_fqn,
+                       p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z,
+                       g.codex_fqn, g.conversation_fqn, g.script_fqn
+                FROM placeable_grants g
+                JOIN placements p ON p.entity_fqn = g.placeable_fqn
+                JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id
+                WHERE g.use_ability_log_id IS NOT NULL;
+            -- Every placed NPC or placeable that owns a conversation
+            -- (conversation_owners, created by cnv). owner_log_id is the id a
+            -- TargetSet line prints for an NPC, string_id << 32; a placeable
+            -- has none.
+            CREATE VIEW IF NOT EXISTS log_conversation_targets AS
+                SELECT l.log_area_id,
+                       CASE WHEN o.owner_kind = 'npc' THEN
+                           (SELECT ob.string_id << 32 FROM objects ob
+                            WHERE ob.fqn = o.owner_fqn AND ob.is_canonical = 1
+                              AND ob.string_id IS NOT NULL LIMIT 1)
+                       END AS owner_log_id,
+                       o.owner_fqn, o.owner_kind, o.conversation_fqn,
+                       p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z
+                FROM conversation_owners o
+                JOIN placements p ON p.entity_fqn = o.owner_fqn
+                JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id;
         "#,
     )?;
     Ok(())
@@ -1248,6 +1276,70 @@ mod tests {
                 .unwrap();
             assert_eq!(n, 0, "{table}");
         }
+    }
+
+    #[test]
+    fn log_target_views_key_placements_by_log_ids() {
+        let path = temp_db_path("log_target_views");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let conn = db.conn.lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO area_log_ids VALUES (137438953533, 7);
+             INSERT INTO placements (area_dir_id, room, instance_id, asset_path, entity_fqn,
+                                     log_x, log_y, log_z)
+                 VALUES (7, 'r', 1, 'a', 'plc.lore', 1.0, 2.0, 3.0),
+                        (7, 'r', 2, 'b', 'npc.bela', 4.0, 5.0, 6.0),
+                        (7, 'r', 3, 'c', 'plc.crate', 0.0, 0.0, 0.0);
+             INSERT INTO placeable_grants VALUES
+                 ('plc.lore', 'abl.placeables.examine.x', 811315027247104, 'cdx.lore.x', NULL, NULL),
+                 ('plc.crate', NULL, NULL, 'cdx.crate', NULL, NULL);
+             INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, string_id, json)
+                 VALUES ('g', 's', 'h', 'G', 'npc.bela', 'Npc', 67878, '{}');
+             INSERT INTO conversation_owners VALUES
+                 ('npc.bela', 'npc', 'cnv.bela'), ('plc.lore', 'placeable', 'cnv.lore');",
+        )
+        .unwrap();
+        let uses: Vec<(i64, i64, String, i64, String)> = conn
+            .prepare(
+                "SELECT log_area_id, use_ability_log_id, placeable_fqn, instance_id, codex_fqn \
+                 FROM log_use_targets",
+            )
+            .unwrap()
+            .query_map([], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            })
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        // The crate plays no use ability, so a use cast cannot land on it.
+        assert_eq!(
+            uses,
+            vec![(
+                137438953533,
+                811315027247104,
+                "plc.lore".into(),
+                1,
+                "cdx.lore.x".into()
+            )]
+        );
+        let owners: Vec<(Option<i64>, String, String, f64)> = conn
+            .prepare(
+                "SELECT owner_log_id, owner_fqn, conversation_fqn, log_x \
+                 FROM log_conversation_targets ORDER BY owner_fqn",
+            )
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            owners,
+            vec![
+                (Some(67878 << 32), "npc.bela".into(), "cnv.bela".into(), 4.0),
+                (None, "plc.lore".into(), "cnv.lore".into(), 1.0),
+            ]
+        );
     }
 
     #[test]
