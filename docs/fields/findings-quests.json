@@ -1,4 +1,9 @@
 {
+ "400000002b8c1cef": {
+  "confidence": "proved",
+  "evidence": "1 on Executive Order 228 and 25 on Droid Repossession; TORCommunity mission mQAz54S (Executive Order 228) and TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) show RequiredLevel 1 and 25.",
+  "meaning": "qstReqMinLevel: lowest character level that can take the quest."
+ },
  "400000003aef5105": {
   "confidence": "likely",
   "evidence": "Value of the map 4000000a731cd8be; parallels named qstStepClientOnlySpawnerStateDisabled; 19,429 uses, never in one entry with 5b20eaaa. Follows enable for the same spawner in 3,672 of 4,416 cases.",
@@ -13,6 +18,16 @@
   "confidence": "likely",
   "evidence": "On 33 tasks, all with progress variable named *_fc_* (e.g. _fc_b1_s0_t0), and no other task has such a name; 32 also have named qstTaskForceConversationAssociatedObject (5d551476). 'fc' as force conversation comes from that sibling. Runtime effect not observed.",
   "meaning": "Marks a task as an auto-generated force-conversation task."
+ },
+ "40000000ad6e051c": {
+  "confidence": "proved",
+  "evidence": "34 on qst...jedi_consular.executive_order_228 and on qst.location.alderaan.world.imperial.droid_repossession; TORCommunity mission mQAz54S (Executive Order 228) and TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) both show XpLevel 34, and their credits equal the level-34 entries of the credit curves (see 4000000b8c27905a).",
+  "meaning": "qstXpLevel: the quest's level for XP and credit rewards; indexes the curves in qstExperiencePerLevel and qstRewardsPerLevelData."
+ },
+ "40000000b0e9baf2": {
+  "confidence": "likely",
+  "evidence": "Value 3 on Droid Repossession, which TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) calls qstDifficultyNormal; the XP multiplier at index 3 is exactly 1.0 and the credit scale rows in the same name order give Normal = 1. Only value 3 is checked against a published name; the other indices follow the order of qstrewardscreditsdifficultyscale.",
+  "meaning": "qstDifficulty, 0-based: 0 NoExp, 1 ChainStep, 2 Easy, 3 Normal, 4 Hard, 5 VeryHard, 6 SeasonOne, 7 SeasonTwo, 8 LotS. Selects the XP multiplier (qstExperienceMultiplierPrototype) and the credit scale (qstrewardscreditsdifficultyscale, whose own index for the same names is 1-based)."
  },
  "40000001c65955ed": {
   "reason": "Always true on 12 branches (7 location, 4 test, 1 dynamic event), e.g. waylaid_double_negative branch 3, contract_negotiations 2 to 4. Unlike qstBranchIsAlternateEnding, it shows no link to a named field. Playing one of these branches through would be needed."
@@ -88,6 +103,11 @@
   "confidence": "proved",
   "evidence": "151 branches, using exactly the 5 values of qstRewardsCredits (8c27905a), each a key in singleton qstrewardscreditsData's per-level curves. It differs from the quest's own tier in many quests. The singleton qstrewardscreditsdifficultyscale has a branchscale column (Normal 0.5 against questscale 1); that this field uses it is inferred and needs an in-game reward check. 70 of the 120 branches in quests carrying a quest-level tier differ from it.",
   "meaning": "Credit reward tier of a quest branch: a key into qstrewardscreditsData, like the quest-level qstRewardsCredits."
+ },
+ "4000000b8c27905a": {
+  "confidence": "proved",
+  "evidence": "Executive Order 228 holds 589686270506543030, the value TORCommunity mission mQAz54S (Executive Order 228) names CreditRewardType; that curve at level 34 is 2970, the page's CreditsRewarded. Droid Repossession holds 777615897300770849; TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) shows 4455 credits = 1.5 x 2970, and that curve runs 1.5x the first (level 25: 2185 vs 1455).",
+  "meaning": "qstRewardsCredits: which credit curve the quest pays from, a key of qstrewardscreditsData field 4000000b8c279054. Credits = curve[qstXpLevel], then scaled by difficulty."
  },
  "4000000cd6b80e69": {
   "confidence": "likely",
@@ -320,6 +340,11 @@
   "confidence": "likely",
   "evidence": "27 values resolve to a PermanentBool named glb_repeat_* or repeat, e.g. qst.exp.seasons.02.ep_09 glb_repeat_season_2_ch_9 (the 27 are exactly the quests with 431424d192). The other 3,822 are the quest's id prefix with slot 0, which no variable definition holds. Whether the engine reads the placeholder at all is not shown.",
   "meaning": "The quest variable marking a repeat run of the quest. Only 27 quests point at a defined variable; for 3,822 others it is an empty placeholder."
+ },
+ "4000004ec8023d79": {
+  "confidence": "proved",
+  "evidence": "600 on Executive Order 228, 1800 on Droid Repossession; TORCommunity mission mQAz54S (Executive Order 228) and TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) show CommandXP 600 and 1800.",
+  "meaning": "qstCommandPointValue: Command (Galactic Command) XP granted on completion."
  },
  "4000004ec86c22f2": {
   "reason": "Always true on 512 quests: conquests, fpaccess, dailies, activities and dynamic events, 89% repeatable. All 212 quests with no qstCommandPointValue have it, and flagged quests with a value mostly have large ones (16,000 to 60,000 against the usual 600). That points at command-XP handling, but no value is explained. Comparing Command XP on flagged and unflagged completions would settle it."
