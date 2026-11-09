@@ -75,7 +75,7 @@
  },
  "4000000b15ac2498": {
   "meaning": "A hashed timer preset on Spawns; the role is unproven and one default covers nearly all.",
-  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not.",
+  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not. Residue pass 2026-11-09: 0xe23ddc377cb394ab is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side.",
   "confidence": "likely"
  },
  "40000005da8c9272": {
@@ -146,7 +146,7 @@
  },
  "4000000b15ac249b": {
   "meaning": "A second encounter-level timer as a hashed preset name; the role is unproven (the hint says survive).",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only.",
+  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only. Residue pass 2026-11-09: 0x270299ed9a3cea3e is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side.",
   "confidence": "likely"
  },
  "4000000b1f264a1b": {
@@ -282,7 +282,7 @@
   "confidence": "likely"
  },
  "400000456baa24ee": {
-  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it."
+  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it. Residue pass 2026-11-09: 9.17M candidates (token pairs from every Npc, Encounter, Spawn, Quest and Hydra FQN, tier and role words with numbers) give no FNV-1a 64 match."
  },
  "40000044a9a1e720": {
   "reason": "True on 172 of 174 MountPackage records, no pattern to the 2 without. A constant cannot be read."
