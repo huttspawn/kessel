@@ -67,13 +67,13 @@ fn spice(world: &mut World) -> &Connection {
 
 #[given("a build holding a lore codex entry granted by using a placeable")]
 fn lore_codex(world: &mut World) {
-    // A lore object: a placeable whose use ability examines lore and that
-    // names a codex entry. Read from placeable_grants, not codex_sources, so
+    // A lore object: a placeable played through an abl.placeables.examine.*
+    // ability ('Examining...') that names a cdx.lore.* entry. Read from placeable_grants, not codex_sources, so
     // the Then can fail.
     let (placeable, codex): (String, String) = spice(world)
         .query_row(
             "SELECT placeable_fqn, codex_fqn FROM placeable_grants \
-             WHERE codex_fqn IS NOT NULL AND use_ability_fqn LIKE 'abl.placeables.%lore%' \
+             WHERE codex_fqn LIKE 'cdx.lore.%' AND use_ability_fqn LIKE 'abl.placeables.examine.%' \
              ORDER BY placeable_fqn LIMIT 1",
             [],
             |r| Ok((r.get(0)?, r.get(1)?)),
