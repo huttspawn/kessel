@@ -435,22 +435,26 @@ fn codex_volume(world: &mut World) {
     world.volumes = volumes;
 }
 
-/// The combat-log files `KESSEL_COMBAT_LOG` names (a file or a directory of
-/// `.txt` logs), or skip the scenario when it is unset.
+/// The combat-log files `KESSEL_COMBAT_LOG` names (files or directories of
+/// `.txt` logs, separated as in `PATH`), or skip the scenario when it is unset.
 fn combat_logs() -> Vec<std::path::PathBuf> {
-    let Ok(path) = std::env::var("KESSEL_COMBAT_LOG") else {
+    let Some(paths) = std::env::var_os("KESSEL_COMBAT_LOG") else {
         rstest_bdd::skip!("@local: set KESSEL_COMBAT_LOG to a combat log or a directory of them");
     };
-    let path = std::path::PathBuf::from(path);
-    if !path.is_dir() {
-        return vec![path];
+    let mut files = Vec::new();
+    for path in std::env::split_paths(&paths) {
+        if !path.is_dir() {
+            files.push(path);
+            continue;
+        }
+        let mut found: Vec<_> = std::fs::read_dir(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
+            .filter_map(|e| Some(e.ok()?.path()))
+            .filter(|p| p.extension().is_some_and(|x| x == "txt"))
+            .collect();
+        found.sort();
+        files.extend(found);
     }
-    let mut files: Vec<_> = std::fs::read_dir(&path)
-        .unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
-        .filter_map(|e| Some(e.ok()?.path()))
-        .filter(|p| p.extension().is_some_and(|x| x == "txt"))
-        .collect();
-    files.sort();
     files
 }
 
@@ -1424,6 +1428,13 @@ fn c9_use_casts_answer_what_the_placeable_triggers() {
             "[21:12:55.889]",
             "placeable plc.location.hutta.class.spy.the_new_truth.security_camera ",
             "triggers quest_task qst.location.hutta.bonus.storm_the_grounds_of_fa_athra_s_palace (task (0,1,0) 'Disable Fa'athra Security Cameras'",
+        ),
+        // A task that names only the core's spawner.
+        (
+            "combat_2026-05-02_01_10_39_857937.txt",
+            "[02:14:37.690]",
+            "placeable plc.location.flashpoint.shared.directive_7.event.zadd_core.mentor_processing_core_2 ",
+            "triggers quest_task qst.location.flashpoint.shared.directive_7.directive_7 (task (0,11,0) 'Defeat Mentor'",
         ),
     ];
     let lines = log_lines();

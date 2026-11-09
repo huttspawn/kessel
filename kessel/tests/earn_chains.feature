@@ -1,4 +1,4 @@
-# Generated from legion requirement FR-KESSEL-025, revision 2026-11-09T20:47:42.586253023+00:00.
+# Generated from legion requirement FR-KESSEL-025, revision 2026-11-09T21:15:37.836994977+00:00.
 # Do not edit: regenerate with scripts/features.mjs.
 
 Feature: Every earnable thing is answered with how it is earned, where, and whether the log can see it

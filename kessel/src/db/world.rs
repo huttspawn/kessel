@@ -1158,11 +1158,18 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                                    'Play Ambush Conversation', 'Set Quest State',
                                    'Set Quest Granted')
                 UNION ALL
-                SELECT o.object_fqn, 'quest_task', o.quest_fqn,
+                SELECT o.placeable_fqn, 'quest_task', o.quest_fqn,
                        'task (' || o.branch || ',' || o.step || ',' || o.task || ') '''
                          || COALESCE(t.text, '') || ''' hook ' || COALESCE(h.hook_id, '')
-                FROM quest_task_objects o
-                JOIN objects ob ON ob.fqn = o.object_fqn AND ob.kind = 'Placeable'
+                -- A task names the placeable itself or a spawner that places it.
+                FROM (SELECT object_fqn AS placeable_fqn, quest_fqn, branch, step, task
+                      FROM quest_task_objects
+                      UNION
+                      SELECT pl.entity_fqn, q.quest_fqn, q.branch, q.step, q.task
+                      FROM quest_task_objects q
+                      JOIN placements pl ON pl.spawner_fqn = q.object_fqn
+                      WHERE pl.entity_fqn IS NOT NULL) o
+                JOIN objects ob ON ob.fqn = o.placeable_fqn AND ob.kind = 'Placeable'
                      AND ob.is_canonical = 1
                 LEFT JOIN quest_tasks t ON t.quest_fqn = o.quest_fqn AND t.branch = o.branch
                      AND t.step = o.step AND t.task = o.task
@@ -1476,12 +1483,17 @@ mod tests {
                         ('hyd.lore', 'On Use', 1, 'Achievement Event', NULL, 'read_lore'),
                         ('hyd.lore', 'On Enter', 0, 'Grant Codex', 'cdx.other', 'cdx.other');
              INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, json)
-                 VALUES ('g', 's', 'h', 'G', 'plc.device', 'Placeable', '{}');
+                 VALUES ('g', 's', 'h', 'G', 'plc.device', 'Placeable', '{}'),
+                        ('g2', 's2', 'h2', 'G2', 'plc.core', 'Placeable', '{}');
+             INSERT INTO placements (area_dir_id, room, instance_id, asset_path, spawner_fqn, entity_fqn)
+                 VALUES (7, 'r', 1, 'a', 'spn.device', 'plc.device'),
+                        (7, 'r', 2, 'b', 'spn.core', 'plc.core');
              INSERT INTO quest_tasks (quest_fqn, branch, step, task, text)
                  VALUES ('qst.q', 0, 5, 1, 'Plant a Device');
              INSERT INTO quest_task_hooks VALUES ('qst.q', 0, 5, 1, 77);
              INSERT INTO quest_task_objects VALUES
-                 ('qst.q', 0, 5, 1, 'plc.device'), ('qst.q', 0, 5, 1, 'spn.device');",
+                 ('qst.q', 0, 5, 1, 'plc.device'), ('qst.q', 0, 5, 1, 'spn.device'),
+                 ('qst.q', 0, 5, 1, 'spn.core');",
         )
         .unwrap();
         let rows: Vec<(String, String, String, String)> = conn
@@ -1492,11 +1504,18 @@ mod tests {
             .collect::<rusqlite::Result<_>>()
             .unwrap();
         let row = |p: &str, k: &str, t: &str, d: &str| (p.into(), k.into(), t.into(), d.into());
-        // Play SFX and the On Enter handler trigger nothing a use counts; the
-        // spawner row is not a placeable.
+        // Play SFX and the On Enter handler trigger nothing a use counts. A
+        // task naming only the spawner (spn.core) reaches the placeable it
+        // places; plc.device, named both ways, appears once.
         assert_eq!(
             rows,
             vec![
+                row(
+                    "plc.core",
+                    "quest_task",
+                    "qst.q",
+                    "task (0,5,1) 'Plant a Device' hook 77"
+                ),
                 row(
                     "plc.device",
                     "quest_task",
