@@ -2,7 +2,7 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks and FR-KESSEL-025 c1, c2, c3, c4, c5, c7, c9 and c10. The `@local`
+//! code: the `@smoke` checks and FR-KESSEL-025 c1 to c7, c9 and c10. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -236,6 +236,63 @@ fn gives_place(world: &World) {
             .any(|a| a.starts_with("stands in area ")),
         "{} has no placement: {:?}",
         world.subject,
+        world.answer
+    );
+}
+
+// FR-KESSEL-025 c6: a title answers its grant path.
+
+#[given("a build holding a title granted by a script")]
+fn script_title(world: &mut World) {
+    // A hydra 'Grant Title' action, read from script_actions, not title_grants,
+    // so the Then can fail. Its value is a player title id.
+    let (script, id): (String, String) = spice(world)
+        .query_row(
+            "SELECT script_fqn, value FROM script_actions WHERE action = 'Grant Title' \
+             ORDER BY value = '114' DESC, script_fqn LIMIT 1",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("a script with a Grant Title action");
+    world.granter = script;
+    world.subject = id;
+}
+
+#[when("kessel's agent asks for that title")]
+fn ask_title(world: &mut World) {
+    let id: i64 = world.subject.parse().expect("a title id");
+    let mut stmt = spice(world)
+        .prepare(
+            "SELECT title_text, source_kind, source_fqn, via FROM title_grants \
+             WHERE title_kind = 'player' AND title_id = ?1",
+        )
+        .expect("title grants query");
+    let answer = stmt
+        .query_map([id], |r| {
+            Ok(format!(
+                "{} {} {} ({})",
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, Option<String>>(0)?.unwrap_or_default()
+            ))
+        })
+        .expect("title grant rows")
+        .map(|r| r.expect("title grant row"))
+        .collect();
+    drop(stmt);
+    println!("c6 title {id}: {answer:?}");
+    world.answer = answer;
+}
+
+#[then("the answer names the script that grants it")]
+fn names_granting_script(world: &World) {
+    let script = format!("script {} ", world.granter);
+    assert!(
+        world.answer.iter().any(|a| a.starts_with(&script)),
+        "title {} answered no grant naming {}: {:?}",
+        world.subject,
+        world.granter,
         world.answer
     );
 }
@@ -1189,7 +1246,8 @@ scenarios!(
     "tests",
     tags = "@smoke or @criterion-FR-KESSEL-025-c1 or @criterion-FR-KESSEL-025-c2 \
             or @criterion-FR-KESSEL-025-c3 or @criterion-FR-KESSEL-025-c4 \
-            or @criterion-FR-KESSEL-025-c5 or @criterion-FR-KESSEL-025-c7 \
-            or @criterion-FR-KESSEL-025-c9 or @criterion-FR-KESSEL-025-c10",
+            or @criterion-FR-KESSEL-025-c5 or @criterion-FR-KESSEL-025-c6 \
+            or @criterion-FR-KESSEL-025-c7 or @criterion-FR-KESSEL-025-c9 \
+            or @criterion-FR-KESSEL-025-c10",
     fixtures = [world: World]
 );
