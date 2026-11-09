@@ -1717,5 +1717,10 @@
   "confidence": "proved",
   "meaning": "lgcSeasonWeeklyObjectives: a season's objectives week by week, a list whose element i holds the objective achievements active in season week i+1 (Galactic Seasons and PvP Seasons).",
   "evidence": "Galactic Season 9, element 12 lists the 11 objectives swtor.com published for Season 9 Week 13 (2025-11-11 to 11-17, article 20251110): March Across the Galaxy, Clashing in the Stars, We're Not Out of This Yet, Liabilities of Nar Shaddaa, Dynamic Encounters: Illuminating Ilum, Sparks of War, Seat of the Empire Daily Sweep, both Flashpoint Frenzy: Czerka objectives, Taking Flights and Veteran Operations: The Ravagers; 11 of 11, nothing extra. Seasons 2-8 and 10 hold 20 weeks, 9 and 11 hold 26, Season 1 one list (its 12 Weekly PO priority objectives); each PvP season holds one list of 6. lgcGalacticSeasonDailyObjectives (416dd381) holds the daily list, Influencing the Galaxy in Season 9 (live 7.x)."
+ },
+ "4000004974cafaa0": {
+  "meaning": "String ref (id1 only, table lgc/unlocks.stb id2 656577): title of a legacy unlock. For datacron unlocks it names the planet and the stat (Mastery, Endurance, Presence; old Willpower/Strength/Aim/Cunning datacrons now read Mastery).",
+  "evidence": "249 rows. qst.location.tython.data_holocron.tyt_willpower_i (9ca4acd0) -> 740 'Tython Purple Mastery Datacron'; hot_cunningiii -> 709 'Hoth Orange Mastery Datacron'; tar2_willpoweriii -> 734 'Taris (Imperial) Purple Mastery Datacron'. 89 datacron rows (icon datacron_*), all with requirement 759 'Discover the location of the datacron to unlock.' and none with an effect text (74cafaa2) or an amount field.",
+  "confidence": "proved"
  }
 }

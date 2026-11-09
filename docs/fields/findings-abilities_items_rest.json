@@ -407,5 +407,45 @@
   "meaning": "itmGiftAffectionRank: the gift's rank minus one (rank1 absent = 0, rank3 = 2, rank5 = 4).",
   "evidence": "itm.companion.gift.technology.artifact_rank3_v1 = 2, underworld_good.prototype_rank5_v1 = 4, *_rank1_* omit it.",
   "confidence": "proved"
+ },
+ "4000000d7af8a259": {
+  "meaning": "effNameStringId on an effect variant: the effect's own name string (id2 << 32 | id1, table str.abl). It is the id a combat log prints for ApplyEffect and RemoveEffect of that effect. Always equal to the StringId of the effect's effInitializer_SetName.",
+  "evidence": "13,297 effect variants carry it; 0 differ from their SetName StringId. Joined to 251 of Sean's combat logs: Party Jawa 3044178330124544 = abl.mtx.toy.incentive.party_jawa effect E000D3AD1EF04930; Damage Overcharge 3346741596258563 = abl.spvp.powerup.damage effect E000C5CE50AF9753 (GSF power-up, 45 s); Energy Shield 814218425139459 = abl.bounty_hunter.energy_shield E0002DEA8DF4A265 (12 s, 46 of 109 logged windows end at 12 s). Effects without it log under the owning ability's name (see 40000013a787ee87). With both rules 2,863 of 2,864 distinct logged effect ids and 216,961 of 216,967 ApplyEffect lines resolve (Damage/Heal event ids 836045448945500/501 excluded). Tool: kessel-discovery/examples/effect_catalog.py, log_effect_ids.py.",
+  "confidence": "proved"
+ },
+ "4000000d7af8a25a": {
+  "meaning": "effDescriptionStringId on an effect variant: the effect's tooltip text string (str.abl), equal to its effInitializer_SetDescription StringId.",
+  "evidence": "Party Jawa effect: 3044178330124545 = 'Partying with a Jawa.' (str.abl.257.708778), the SetDescription string of the same effect. Static Barrier effect 2: 3411286364782850 'Absorbs damage.'",
+  "confidence": "proved"
+ },
+ "400000002efdc39f": {
+  "meaning": "effNumber: the effect's number inside its ability (1..34). effAction_CallEffect's EffectNumber parameter names the effect it calls by this number, within the same ability.",
+  "evidence": "abl.sith_inquisitor.static_barrier: effect 1 (cast_instant appearance) calls EffectNumber 3, 6, 2; effect 2 is the 30 s AbsorbDamage on the target (static_barrier.buff appearance), 3 Deionized, 6 Sustaining Darkness, 5 Blinded (Force); every CallEffect EffectNumber in that ability lands on a variant with that effNumber. Across all abilities 39,292 of 39,419 CallEffect actions without an AbilitySpec name an effNumber that exists on a variant of the same FQN. Variants of slot type 29 (tag holders) have none.",
+  "confidence": "proved"
+ },
+ "400000002f5d7053": {
+  "meaning": "effDuration on an effect variant, milliseconds: how long the effect lasts when nothing removes it early. Copy of effInitializer_SetDuration's Duration.",
+  "evidence": "For 2,182 logged effect ids whose visible catalog effects agree on one duration, 1,787 have at least one ApplyEffect..RemoveEffect window within 0.6 s of it in Sean's logs (others are consumed, dispelled or end on death). Saber Ward (sith_warrior) 12,000: 70 of 74 windows; Deflection 12,000: 59 of 60; Static Barrier 30,000: 67 of 259 (the rest absorbed out); Overcharge Saber 15,000: 68 of 72 across its three name ids.",
+  "confidence": "proved"
+ },
+ "4000000a1d6b491c": {
+  "meaning": "effAbilitySpec on an effect variant: the canonical ability row that owns the effect (the inverse of the canonical row's ablEffectIDs 1d6b4918).",
+  "evidence": "All 108,717 effect variants carry it and it resolves to the canonical row of the same FQN (Party Jawa E000D3AD1EF04930 -> E00084AF762F935A).",
+  "confidence": "proved"
+ },
+ "40000013a787ee87": {
+  "meaning": "locTextRetrieverMap: the object's text slots, a map from slot key to {5ce87488 string id, 5ce87489 table}. Keys are either the string id itself or FNV-1a 64 of an upper-case slot name: on abilities 'NAME' and 'DESCRIPTION' (string keys 0 and 1) and alternate tooltip slots 'NAME1'..'NAMEn' / 'DESCRIPTION1'..'DESCRIPTIONn' that disciplines and talents switch to.",
+  "evidence": "fnv1a64('NAME') = 15685385242400905286 -> key 0, fnv1a64('DESCRIPTION') = 2806211896052149513 -> key 1 on every ability checked; abl.sith_inquisitor.overcharge_saber: NAME1/2/3 -> keys 328/322/320 ('Overcharge Saber'), DESCRIPTION1/2/3 name Dark Charge, Surging Charge and Lightning Charge. An effect without its own name logs under the active slot: Overcharge Saber ids 975430022594880 (NAME3), ...882 (NAME2), ...560 (NAME) all run 15 s, the duration of effect 1 (E000A830DF1890FB): 48/51, 15/16, 5/5 windows. Adding the slots resolved Overcharge Saber, Recklessness, Force Potency, Guard and Force Cloak ids that matched nothing else.",
+  "confidence": "proved"
+ },
+ "40000040f1040f75": {
+  "meaning": "effConditions of a sub-effect: a map from function id (effFunctionId) to a condition entry whose effConditionName e251d1cd is an effCondition value, with effConditionFailureStringId 34607a88. The sub-effect's postfix list 8cbfea50 combines them.",
+  "evidence": "124,671 condition entries, every e251d1cd value resolves in effCondition (81 distinct; top IfCalledByEffect 33,389, HasEffect 21,223, IsAlive 16,414). The effParam Name string of each entry repeats the enum member (Static Barrier: IfCalledByEffect, HasAbility, HasEffect).",
+  "confidence": "proved"
+ },
+ "4000004c8cbfea50": {
+  "meaning": "effPostfixElements of a sub-effect: the condition expression in postfix order. Each element is (e71e2f92 type, e71f8f23 id): with no type the id is a function id of an effConditions entry; type 1 is an operator whose id indexes effLogicOp.",
+  "evidence": "Static Barrier effect 2: [cond 3411286364782854, cond 3411286364782856, (1, 2)] where both ids are keys of the same sub-effect's effConditions (HasAbility, HasEffect); single-condition sub-effects list one id. Operator semantics beyond 'combines the two before it' not checked against behaviour.",
+  "confidence": "likely"
  }
 }
