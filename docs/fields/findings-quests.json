@@ -480,8 +480,8 @@
  },
  "40000034bc126754": {
   "confidence": "proved",
-  "evidence": "Over 622,641 gated nodes in 10,752 conversations, 622,277 evaluate to one value with 8/9/11/12 binary and 10 unary; 887,391 of 905,411 variable tokens equal a qstVariableFqnId, e.g. 10549456612798496869..876 = qst.utility.class is_jedi_knight .. is_spy (the class gates on 470,350 '== 1' tests).",
-  "meaning": "A conversation node's compiled gate in the same postfix language as qstReqExpression, plus literals 0 and 1 and comparisons: 11 = variable == literal (var, literal, 11), 12 = variable == variable (int var vs const var); 3-7 are integer comparisons (5 seen as count >= tier constant; exact op per code unproved). The wrapper [1, 1, ..., 8, 8] ANDs two TRUE constants; [1, 1, 8] is an ungated node."
+  "evidence": "Over 622,641 gated nodes in 10,752 conversations, 622,277 evaluate to one value with 8/9/11/12 binary and 10 unary; 887,391 of 905,411 variable tokens equal a qstVariableFqnId, e.g. 10549456612798496869..876 = qst.utility.class is_jedi_knight .. is_spy (the class gates on 470,350 '== 1' tests). Conversation decode (RESEARCH 01a1c272): 622,641 nodes; 193,408 are [1,1,8] (true AND true). The commonest forms read 1 1 <is_jedi_knight> 1 11 <is_jedi_wizard> 9 <is_trooper> 9 ... 8 8: class flags ORed (9) after an equality test (11), ANDed (8) into the leading true. 12 compares int variables to const ids (glb_broonmark_status 12 const_broonmark_recruited). 3,235 of the 5,278 variables conversation actions set are tested by some conversation condition. Op 3 and 10 seen rarely; their meaning is not settled.",
+  "meaning": "A conversation node's compiled gate in the same postfix language as qstReqExpression, plus literals 0 and 1 and comparisons: 11 = variable == literal (var, literal, 11), 12 = variable == variable (int var vs const var); 3-7 are integer comparisons (5 seen as count >= tier constant; exact op per code unproved). The wrapper [1, 1, ..., 8, 8] ANDs two TRUE constants; [1, 1, 8] is an ungated node. (cnvConditionCompiled; the same code as cnvActionExpressionCompiled.)"
  },
  "4000001ce4ee1382": {
   "confidence": "proved",
