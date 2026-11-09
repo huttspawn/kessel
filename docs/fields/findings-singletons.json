@@ -1493,9 +1493,9 @@
   "meaning": "String ref: venture objective-completed message."
  },
  "400003d31d0c0e20": {
-  "confidence": "proved",
-  "evidence": "wevEventInfoPrototype_client; all 17 distinct values are gmLzAreaId, mapAreasDataAreaId and sysArea 9d6eff98.",
-  "meaning": "World-event's areas: list of area ids."
+  "meaning": "World-event's areas: list of area ids.",
+  "evidence": "wevEventInfoPrototype_client; all 17 distinct values are gmLzAreaId, mapAreasDataAreaId and sysArea 9d6eff98. 2026-11-09: all 341 ids across 552 events are /resources/world/areas/<id>/ directories holding an area.dat, and mapAreasDataProto keys; 338 events name one area, 213 none, 1 three. Ilum events name 4611686039258170278.",
+  "confidence": "proved"
  },
  "400003d320920091": {
   "confidence": "likely",
@@ -1530,5 +1530,10 @@
  },
  "400003d42d04d770": {
   "reason": "Race enum (12, same as chrBgDataCharacterRace) -> 10,72,46,68,40,71,70,69,81,96,104,112. Values look like ids or indexes, but no table with those ids was found. Species table comparisons or a client lookup would settle it."
+ },
+ "400000080027bf7f": {
+  "meaning": "The area's display-name id, which is also the area id the combat log prints on AreaEntered; with mapAreasDataAreaId (0027bf77) it maps a log area to its /resources/world/areas/<id>/ directory.",
+  "evidence": "mapAreasDataProto, 240 entries. 82 of 83 distinct AreaEntered area ids in the 2026 combat logs (~/swtor/logs and the live CombatLogs folder) equal a 0027bf7f value; the miss is Space (945872057663605, GSF). Ilum 137438955315 -> 4611686039258170278, Hutta 137438988437 -> 4611686019802841877, Tatooine 137438987025 -> 4611686018427650020. 21 log ids name several directories (instanced copies), so a log area can need position to pick one. Spawner positions read from those directories match logged NPC positions (kessel-discovery/examples/spn_assets.rs).",
+  "confidence": "proved"
  }
 }

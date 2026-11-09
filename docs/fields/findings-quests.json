@@ -345,5 +345,10 @@
  },
  "400003d3834751e1": {
   "reason": "Integer always 1, on 117 of 133 qst.dynamic_events.dantooine quests and nowhere else, all with qstRequiredWorldEventId. Most biome and zone_progress quests have it; missions and world_boss quests do not. No other Dantooine field or value explains it, and with one value there is nothing to join. A future build with other values or a Dantooine play test would be needed."
+ },
+ "40000045816cd2a0": {
+  "meaning": "The trigger volume that starts a Dynamic Encounter quest: a hydra trig_* script placed in the area's rooms.",
+  "evidence": "204 Quests, almost all qst.dynamic_events.*; every value resolves to a hyd.* object named trig_event_volume (33), trig_event_region (78, plus 14 variants), trig_quest_trig_<event> (61) or another trig_* volume. Ilum: 13 of 20 DE quests name their trig_event_volume, whose only handler is On Enter -> Passes Conditional(cnd...is_volume_on_quest) -> Play Transmission(<event>_intro); the quest's hydra hooks (4fa14a1f + cdeb4375: spawn_boss, despawn_boss, end) drive inst_advance_mission's Set Active on the event's encounters. The volume is placed by FQN in the same room as the event's encounters (ensuring_victory_2: h1_rayshielded_republic_base). The reference is proved; 'entering it starts the event' is read from the scripts, not seen in a log.",
+  "confidence": "likely"
  }
 }
