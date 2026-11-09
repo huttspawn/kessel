@@ -313,6 +313,23 @@ pub fn hashlittle2(key: &[u8], initval: u32, initval2: u32) -> (u32, u32) {
     (r.1, r.2)
 }
 
+/// FNV-1a 64 over the bytes of `s`. Hydra selector ids (hydObject,
+/// hydQueueObject) are this hash of the selector name, read as signed.
+pub(crate) fn fnv1a64(s: &str) -> u64 {
+    s.bytes().fold(0xcbf2_9ce4_8422_2325, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+    })
+}
+
+/// The achievement event code a name raises (FR-KESSEL-025): the 48-bit fold
+/// of FNV-1a 64 over the uppercased name, under the 0xE000 prefix. The name is
+/// an object fqn (npc, ach, qst, itm, cdx, abl) or a name a Hydra
+/// `Achievement Event` action raises.
+pub(crate) fn achievement_event_code(name: &str) -> u64 {
+    let h = fnv1a64(&name.to_uppercase());
+    0xE000_0000_0000_0000 | (h & 0x0000_FFFF_FFFF_0000) | ((h ^ (h >> 48)) & 0xFFFF)
+}
+
 /// Compute SWTOR's 64-bit MYP archive filename hash for a path.
 ///
 /// `swtor_filename_hash(path) == (SH << 32) | PH` where `(PH, SH) =
@@ -327,6 +344,16 @@ pub fn swtor_filename_hash(path: &str) -> u64 {
 #[cfg(test)]
 mod hashlittle2_tests {
     use super::*;
+
+    #[test]
+    fn achievement_event_code_folds_fnv1a_of_the_uppercased_name() {
+        assert_eq!(
+            achievement_event_code("simulated_meatbag"),
+            0xE000_39BA_78F5_3C4C
+        );
+        // Selector ids are the signed hash of the selector name.
+        assert_eq!(fnv1a64("INSTIGATOR") as i64, -7_570_262_538_488_060_923);
+    }
 
     /// Verified against `~/swtor/data/hashes_filename.txt` real entries.
     /// Format from the dictionary: `PH#SH#path#CRC`.
