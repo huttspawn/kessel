@@ -197,7 +197,7 @@ fn extract_fqn_from_path(path: &str) -> String {
 /// hash of its path, so no dictionary is needed. Root tables hold the primary
 /// object kinds; the gui tables hold category labels the root tables lack
 /// (conquest themes, Galactic Command reward tracks, achievement categories
-/// and ventures). Conversation tables (`/str/cnv/`) are not listed: they are
+/// and ventures); the pc tables hold player and legacy title text. Conversation tables (`/str/cnv/`) are not listed: they are
 /// derived from the `cnv.*` objects in `populate_conversation_strings`.
 const KNOWN_STB_PATHS: &[&str] = &[
     "/resources/en-us/str/abl.stb",
@@ -210,6 +210,8 @@ const KNOWN_STB_PATHS: &[&str] = &[
     "/resources/en-us/str/gui/planetaryconquest.stb",
     "/resources/en-us/str/gui/galacticcommand.stb",
     "/resources/en-us/str/gui/achievementcategories.stb",
+    "/resources/en-us/str/pc/title.stb",
+    "/resources/en-us/str/pc/legacytitle.stb",
 ];
 
 /// Archive filename hash -> path for every known STB table. The hash is
@@ -285,6 +287,16 @@ mod tests {
                 "/resources/en-us/str/gui/achievementcategories.stb",
                 0x2B44_73F6,
                 0x98B3_EA51,
+            ),
+            (
+                "/resources/en-us/str/pc/title.stb",
+                0x3E55_0C96,
+                0xB6B2_B127,
+            ),
+            (
+                "/resources/en-us/str/pc/legacytitle.stb",
+                0xDA28_7E12,
+                0xB7A1_BE36,
             ),
         ];
         let derived = known_stb_hashes();
