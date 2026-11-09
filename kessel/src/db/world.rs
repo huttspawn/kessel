@@ -639,7 +639,10 @@ impl ArchiveFiles {
 }
 
 /// Decode a singleton by FQN; `None` when absent or undecodable.
-fn load_singleton(tx: &Transaction, fqn: &str) -> Result<Option<crate::gom_reader::GomValue>> {
+pub(super) fn load_singleton(
+    tx: &Transaction,
+    fqn: &str,
+) -> Result<Option<crate::gom_reader::GomValue>> {
     let row: Option<(String, String)> = tx
         .query_row(
             "SELECT header_hex, payload_b64 FROM singletons WHERE fqn = ?1",
@@ -674,7 +677,10 @@ pub(super) fn decoded_objects(
         .collect())
 }
 
-fn decode_framed(header_hex: &str, payload_b64: &str) -> Option<crate::gom_reader::GomValue> {
+pub(super) fn decode_framed(
+    header_hex: &str,
+    payload_b64: &str,
+) -> Option<crate::gom_reader::GomValue> {
     use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
     let header = hex::decode(header_hex).ok()?;
     let payload = BASE64.decode(payload_b64).ok()?;
