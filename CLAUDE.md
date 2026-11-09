@@ -31,6 +31,15 @@ cargo fmt --check
 cargo build --release -p kessel-discovery --bin <name>  # one-off recon tool
 ```
 
+## Acceptance scenarios
+
+- Acceptance criteria are Gherkin scenarios, one per criterion, tagged `@criterion-<id>`. The runner is rstest-bdd (`rstest-bdd` and `rstest-bdd-macros` 0.6, with `rstest`, as workspace dev-dependencies).
+- Scenarios are generated from the legion requirement and never hand-edited. Every `.feature` file starts with a comment saying so; to change one, change the requirement and regenerate.
+- Scenarios live in a crate's `tests/`, mirroring `src/`: behaviour whose entry point is `src/a/b.rs` gets `tests/a/b.feature`, beside any `tests/a/b.rs`.
+- Step code lives in the crate's `tests/bdd.rs`, which ends with `scenarios!("tests", fixtures = [world: World])` and runs every `.feature` under that crate's `tests/`. A crate that gets its first `.feature` needs its own `tests/bdd.rs` and the three dev-dependencies (`workspace = true`).
+- `cargo test` runs them, in CI too. A scenario with no matching step code fails and the failure names the scenario. Cargo does not watch `.feature` files: after adding one, touch `tests/bdd.rs`.
+- The `@smoke` scenario (`kessel/tests/hash.feature`) proves the wiring against the documented icon id hash.
+
 ## Run extraction
 
 ```bash

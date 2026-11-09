@@ -43,6 +43,12 @@ rayon = "1.8"
 image = { version = "0.25", features = ["webp"] }
 image_dds = { version = "0.4", default-features = false, features = ["ddsfile", "image", "decode", "strum"] }
 
+# Acceptance-scenario runner (dev-dependencies only). rstest-bdd expands each
+# scenario into an `#[rstest::rstest]` test, so rstest comes with it.
+rstest = "0.26"
+rstest-bdd = "0.6"
+rstest-bdd-macros = "0.6"
+
 [profile.release]
 lto = true
 codegen-units = 1
