@@ -385,8 +385,9 @@ impl Database {
     /// from mapAreasDataProto; `placeable_grants` and `script_actions` from
     /// the Placeable and Hydra objects; `placements` and `trigger_volumes`
     /// from every area.dat and room .dat under `/resources/world/areas`.
-    /// Area directories come from mapAreasDataProto and, when supplied, the
-    /// hash dictionary's area.dat paths.
+    /// Area directories come from mapAreasDataProto and the map-page objects
+    /// `world.areas.<id>.mapdata`; a supplied hash dictionary adds its
+    /// area.dat paths.
     pub fn populate_world_areas(
         &self,
         tor_dir: &std::path::Path,
@@ -405,8 +406,10 @@ impl Database {
                 "INSERT OR REPLACE INTO area_log_ids (log_area_id, area_dir_id) VALUES (?1, ?2)",
             )?;
             for (log_id, dir) in &pairs {
-                insert.execute(params![log_id, *dir as i64])?;
-                counts.area_log_ids += 1;
+                if let Some(log_id) = log_id {
+                    insert.execute(params![log_id, *dir as i64])?;
+                    counts.area_log_ids += 1;
+                }
             }
             drop(insert);
 
@@ -414,6 +417,18 @@ impl Database {
             counts.script_actions = insert_script_actions(tx)?;
 
             let mut dirs: BTreeSet<u64> = pairs.iter().map(|(_, dir)| *dir).collect();
+            let mut mapdata =
+                tx.prepare("SELECT fqn FROM objects WHERE fqn LIKE 'world.areas.%.mapdata'")?;
+            for fqn in mapdata.query_map([], |r| r.get::<_, String>(0))? {
+                if let Some(dir) = fqn?
+                    .strip_prefix("world.areas.")
+                    .and_then(|s| s.strip_suffix(".mapdata"))
+                    .and_then(|d| d.parse().ok())
+                {
+                    dirs.insert(dir);
+                }
+            }
+            drop(mapdata);
             for (_, path) in hashes.paths_matching("/resources/world/areas/") {
                 if let Some(dir) = path
                     .strip_prefix("/resources/world/areas/")
@@ -470,7 +485,8 @@ impl Database {
                 };
                 counts.areas_parsed += 1;
                 let mut insts = Vec::new();
-                for room in &area.rooms {
+                // Archive paths are lowercase; area.dat writes room names in mixed case.
+                for room in area.rooms.iter().map(|r| r.to_lowercase()) {
                     let Some(data) = files.read(&format!("{prefix}/{room}.dat")) else {
                         continue;
                     };
@@ -478,7 +494,7 @@ impl Database {
                         continue;
                     };
                     counts.rooms_read += 1;
-                    insts.extend(room_insts.into_iter().map(|i| (room.as_str(), i)));
+                    insts.extend(room_insts.into_iter().map(|i| (room.clone(), i)));
                 }
                 let by_id: HashMap<u64, &crate::area::Instance> =
                     insts.iter().map(|(_, i)| (i.id, i)).collect();
@@ -650,8 +666,9 @@ fn gom_str(v: &crate::gom_reader::GomValue) -> Option<String> {
     }
 }
 
-/// (log area id, area directory id) for every mapAreasDataProto entry.
-fn area_log_pairs(proto: &crate::gom_reader::GomValue) -> Vec<(i64, u64)> {
+/// (log area id, area directory id) for every mapAreasDataProto entry; an
+/// entry with no log area id still names its directory.
+fn area_log_pairs(proto: &crate::gom_reader::GomValue) -> Vec<(Option<i64>, u64)> {
     let Some(areas) = proto.embedded_field(MAP_AREAS).and_then(|m| m.as_map()) else {
         return Vec::new();
     };
@@ -659,7 +676,9 @@ fn area_log_pairs(proto: &crate::gom_reader::GomValue) -> Vec<(i64, u64)> {
         .iter()
         .filter_map(|(_, area)| {
             let dir = area.embedded_field(MAP_AREA_DIR)?.as_i64()?;
-            let log_id = area.embedded_field(MAP_AREA_LOG_ID)?.as_i64()?;
+            let log_id = area
+                .embedded_field(MAP_AREA_LOG_ID)
+                .and_then(crate::gom_reader::GomValue::as_i64);
             Some((log_id, dir as u64))
         })
         .collect()
@@ -1087,8 +1106,9 @@ mod tests {
         assert_eq!(
             area_log_pairs(&proto),
             [
-                (137_438_987_025, 4_611_686_019_802_841_877),
-                (137_438_987_025, 4_611_686_019_802_841_878)
+                (Some(137_438_987_025), 4_611_686_019_802_841_877),
+                (Some(137_438_987_025), 4_611_686_019_802_841_878),
+                (None, 9)
             ]
         );
     }
