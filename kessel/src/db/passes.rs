@@ -411,6 +411,24 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
         w.area_log_ids,
     );
 
+    // Conversation owners and node actions, then every codex entry's sources
+    // (FR-KESSEL-025 c4). Both read the world tables written just above.
+    let g = timed!("conversation_grants", db.populate_conversation_grants())?;
+    println!(
+        "  Conversation grants: {} owners, {} node actions; {} script calls running {:?}; \
+         {} of {} action hook ids and {} of {} entry hook ids name no task of their quest",
+        g.owners,
+        g.node_actions,
+        g.script_calls,
+        g.script_call_actions,
+        g.action_hooks_no_task,
+        g.action_hooks,
+        g.entry_hooks_no_task,
+        g.entry_hooks,
+    );
+    let codex_sources = timed!("codex_sources", db.populate_codex_sources())?;
+    println!("  Codex sources: {codex_sources}");
+
     // Quest_chain via NPC giver overlap. Must run AFTER both
     // populate_quest_clusters (cluster filter) and populate_conversation_refs
     // (the conv_quest_refs / conv_npcs join surface).

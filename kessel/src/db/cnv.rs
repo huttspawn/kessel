@@ -605,6 +605,268 @@ impl Database {
     }
 }
 
+// Conversation grants (FR-KESSEL-025 c4; RESEARCH 01a1c0ce-441f). An NPC's
+// cnvConversationName names its conversation. Root nodes gate on quest state
+// (grants, ends, progress, and per quest the hook ids they enter on); a deeper
+// node's cnvActionQuest plus cnvActionHookId completes the task whose
+// qstHookId matches; a node's script calls run a Hydra script's
+// 'On Custom:<event>' handler, where codex, title and item grants live.
+const NPC_CONVERSATION: u32 = 0x24c9_7989;
+const NODE_QUEST_GATES: [u32; 3] = [0xc458_52d0, 0xc458_52d1, 0xc458_52d2];
+const NODE_QUEST_HOOK_IDS: u32 = 0x6428_709a;
+const NODE_ACTION_QUEST: u32 = 0xb21f_4106;
+const NODE_ACTION_HOOK: u32 = 0x0336_685a;
+const NODE_SCRIPT_CALLS: u32 = 0x2bd6_139d;
+const NODE_SCRIPT_CALL_HYDRA: u32 = 0x2bd6_1399;
+const NODE_SCRIPT_CALL_EVENT: u32 = 0x2bd6_139a;
+// Quest branches > steps > tasks, and a task's qstHookId.
+const QST_BRANCHES: u32 = 0x05a2_a6d3;
+const QST_STEPS: u32 = 0x05a2_a6d1;
+const QST_TASKS: u32 = 0x05a2_a6d0;
+const QST_TASK_HOOK_ID: u32 = 0x6428_7098;
+
+/// What one conversation node does, before its GUIDs are resolved.
+#[derive(Debug, PartialEq)]
+struct NodeAction {
+    kind: &'static str,
+    quest: Option<u64>,
+    hook: Option<i64>,
+    script: Option<u64>,
+    handler: Option<String>,
+}
+
+fn guid(v: &crate::gom_reader::GomValue) -> Option<u64> {
+    v.as_i64().map(|g| g as u64)
+}
+
+/// A node's quest gates (one per quest and entry hook id, or one per quest
+/// with no hook id), its quest action, and its script calls, in that order.
+fn node_actions(node: &crate::gom_reader::GomValue) -> Vec<NodeAction> {
+    use crate::gom_reader::GomValue;
+    let map = |id: u32| {
+        node.embedded_field(id)
+            .and_then(GomValue::as_map)
+            .unwrap_or(&[])
+    };
+    let mut out = Vec::new();
+    let mut quests: Vec<u64> = Vec::new();
+    for field in NODE_QUEST_GATES.into_iter().chain([NODE_QUEST_HOOK_IDS]) {
+        for q in map(field).iter().filter_map(|(k, _)| guid(k)) {
+            if !quests.contains(&q) {
+                quests.push(q);
+            }
+        }
+    }
+    for q in quests {
+        let hooks: Vec<i64> = map(NODE_QUEST_HOOK_IDS)
+            .iter()
+            .filter(|(k, _)| guid(k) == Some(q))
+            .flat_map(|(_, v)| v.as_list().unwrap_or(&[]))
+            .filter_map(GomValue::as_i64)
+            .collect();
+        let gate = |hook| NodeAction {
+            kind: "gate",
+            quest: Some(q),
+            hook,
+            script: None,
+            handler: None,
+        };
+        if hooks.is_empty() {
+            out.push(gate(None));
+        }
+        out.extend(hooks.into_iter().map(|h| gate(Some(h))));
+    }
+    if let Some(q) = node.embedded_field(NODE_ACTION_QUEST).and_then(guid) {
+        out.push(NodeAction {
+            kind: "quest",
+            quest: Some(q),
+            hook: node
+                .embedded_field(NODE_ACTION_HOOK)
+                .and_then(GomValue::as_i64),
+            script: None,
+            handler: None,
+        });
+    }
+    let calls = node
+        .embedded_field(NODE_SCRIPT_CALLS)
+        .and_then(GomValue::as_list)
+        .unwrap_or(&[]);
+    for call in calls {
+        let Some(script) = call.embedded_field(NODE_SCRIPT_CALL_HYDRA).and_then(guid) else {
+            continue;
+        };
+        let event = call
+            .embedded_field(NODE_SCRIPT_CALL_EVENT)
+            .and_then(super::world::gom_str)
+            .unwrap_or_default();
+        out.push(NodeAction {
+            kind: "script",
+            quest: None,
+            hook: None,
+            script: Some(script),
+            handler: Some(format!("On Custom:{event}")),
+        });
+    }
+    out
+}
+
+/// Every task's qstHookId in a decoded quest.
+fn task_hook_ids(quest: &crate::gom_reader::GomValue) -> Vec<i64> {
+    use crate::gom_reader::GomValue;
+    let list = |v: &GomValue, id: u32| -> Vec<GomValue> {
+        v.embedded_field(id)
+            .and_then(GomValue::as_list)
+            .map(<[GomValue]>::to_vec)
+            .unwrap_or_default()
+    };
+    list(quest, QST_BRANCHES)
+        .iter()
+        .flat_map(|b| list(b, QST_STEPS))
+        .flat_map(|s| list(&s, QST_TASKS))
+        .filter_map(|t| t.embedded_field(QST_TASK_HOOK_ID)?.as_i64())
+        .collect()
+}
+
+/// What `populate_conversation_grants` wrote, and how its joins landed.
+#[derive(Debug, Default)]
+pub struct ConversationGrantCounts {
+    pub owners: u64,
+    pub node_actions: u64,
+    /// Node script calls, and the script actions they run, by action name.
+    pub script_calls: u64,
+    pub script_call_actions: Vec<(String, u64)>,
+    /// Quest-action and entry hook ids, and those naming no task of their quest.
+    pub action_hooks: u64,
+    pub action_hooks_no_task: u64,
+    pub entry_hooks: u64,
+    pub entry_hooks_no_task: u64,
+}
+
+impl Database {
+    /// Populate `conversation_owners` (NPC cnvConversationName, and the
+    /// placeables in `placeable_grants`) and `conversation_node_actions`
+    /// (FR-KESSEL-025 c4). Run after `populate_world_areas`, whose
+    /// `placeable_grants` and `script_actions` this reads.
+    pub fn populate_conversation_grants(&self) -> Result<ConversationGrantCounts> {
+        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+        use std::collections::{HashMap, HashSet};
+
+        self.with_tx(|tx| {
+            let mut counts = ConversationGrantCounts::default();
+            tx.execute_batch(
+                "DELETE FROM conversation_owners; DELETE FROM conversation_node_actions;",
+            )?;
+            let mut owner = tx.prepare(
+                "INSERT OR IGNORE INTO conversation_owners (owner_fqn, owner_kind, conversation_fqn) \
+                 VALUES (?1, 'npc', ?2)",
+            )?;
+            for (npc, obj) in super::world::decoded_objects(tx, "Npc")? {
+                if let Some(cnv) = obj
+                    .embedded_field(NPC_CONVERSATION)
+                    .and_then(super::world::gom_str)
+                {
+                    owner.execute(params![npc, cnv])?;
+                }
+            }
+            drop(owner);
+            tx.execute(
+                "INSERT OR IGNORE INTO conversation_owners (owner_fqn, owner_kind, conversation_fqn) \
+                 SELECT placeable_fqn, 'placeable', conversation_fqn FROM placeable_grants \
+                 WHERE conversation_fqn IS NOT NULL",
+                [],
+            )?;
+            counts.owners = tx.query_row("SELECT COUNT(*) FROM conversation_owners", [], |r| {
+                r.get(0)
+            })?;
+
+            let mut fqns: HashMap<u64, String> = HashMap::new();
+            {
+                let mut stmt = tx.prepare(
+                    "SELECT guid, fqn FROM objects \
+                     WHERE kind IN ('Quest', 'Hydra') AND is_canonical = 1",
+                )?;
+                let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get(1)?)))?;
+                for row in rows {
+                    let (g, fqn) = row?;
+                    if let Ok(g) = u64::from_str_radix(&g, 16) {
+                        fqns.insert(g, fqn);
+                    }
+                }
+            }
+            let task_hooks: HashSet<(String, i64)> = super::world::decoded_objects(tx, "Quest")?
+                .into_iter()
+                .flat_map(|(fqn, obj)| {
+                    task_hook_ids(&obj)
+                        .into_iter()
+                        .map(move |h| (fqn.clone(), h))
+                })
+                .collect();
+
+            let conversations: Vec<(String, String)> = {
+                let mut stmt = tx.prepare(
+                    "SELECT fqn, json_extract(json, '$.payload_b64') FROM objects \
+                     WHERE kind = 'Conversation' AND is_canonical = 1 \
+                     AND json_extract(json, '$.payload_b64') IS NOT NULL",
+                )?;
+                let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+                rows.collect::<rusqlite::Result<_>>()?
+            };
+            let mut insert = tx.prepare(
+                "INSERT OR REPLACE INTO conversation_node_actions \
+                   (conversation_fqn, node_id, kind, ordinal, quest_fqn, task_hook_id, script_fqn, handler) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            )?;
+            for (cnv, b64) in &conversations {
+                let Some(root) = BASE64
+                    .decode(b64)
+                    .ok()
+                    .and_then(|p| crate::schema::conversation_graph::read_root(&p))
+                else {
+                    continue;
+                };
+                for (node_id, node) in crate::schema::conversation_graph::dialog_nodes(&root) {
+                    for (ordinal, a) in node_actions(node).into_iter().enumerate() {
+                        let quest = a.quest.and_then(|q| fqns.get(&q));
+                        if let Some(hook) = a.hook {
+                            let named = quest.is_some_and(|q| task_hooks.contains(&(q.clone(), hook)));
+                            if a.kind == "quest" {
+                                counts.action_hooks += 1;
+                                counts.action_hooks_no_task += u64::from(!named);
+                            } else {
+                                counts.entry_hooks += 1;
+                                counts.entry_hooks_no_task += u64::from(!named);
+                            }
+                        }
+                        counts.script_calls += u64::from(a.kind == "script");
+                        insert.execute(params![
+                            cnv,
+                            node_id,
+                            a.kind,
+                            ordinal as i64,
+                            quest,
+                            a.hook,
+                            a.script.and_then(|s| fqns.get(&s)),
+                            a.handler,
+                        ])?;
+                        counts.node_actions += 1;
+                    }
+                }
+            }
+            drop(insert);
+
+            let mut stmt = tx.prepare(
+                "SELECT a.action, COUNT(*) FROM conversation_node_actions n \
+                 JOIN script_actions a ON a.script_fqn = n.script_fqn AND a.handler = n.handler \
+                 WHERE n.kind = 'script' GROUP BY a.action ORDER BY COUNT(*) DESC",
+            )?;
+            counts.script_call_actions = stmt
+                .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?;
+            Ok(counts)
+        })
+    }
+}
+
 /// Derive the en-us dialogue STB archive path for a `cnv.*` conversation FQN.
 ///
 /// Inverse of `stb::extract_fqn_from_path`: a conversation FQN
@@ -745,6 +1007,34 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 speaker_role    TEXT NOT NULL DEFAULT 'player',
                 PRIMARY KEY (cnv_fqn, seq)
             );
+            -- Who opens a conversation (FR-KESSEL-025 c4): an NPC through
+            -- cnvConversationName (24c97989) or a placeable through plcConvo
+            -- (f0827b5d).
+            CREATE TABLE IF NOT EXISTS conversation_owners (
+                owner_fqn        TEXT NOT NULL,
+                owner_kind       TEXT NOT NULL,
+                conversation_fqn TEXT NOT NULL,
+                PRIMARY KEY (owner_fqn, conversation_fqn)
+            );
+            CREATE INDEX IF NOT EXISTS idx_cnv_owners_cnv ON conversation_owners(conversation_fqn);
+            -- What a conversation node does: 'gate' (a root node's quest
+            -- grant/progress/end, with each entry hook id), 'quest'
+            -- (cnvActionQuest plus cnvActionHookId, completing the task whose
+            -- qstHookId matches) or 'script' (a script call, run as the
+            -- script's 'On Custom:<event>' handler in script_actions).
+            CREATE TABLE IF NOT EXISTS conversation_node_actions (
+                conversation_fqn TEXT NOT NULL,
+                node_id          INTEGER NOT NULL,
+                kind             TEXT NOT NULL,
+                ordinal          INTEGER NOT NULL,
+                quest_fqn        TEXT,
+                task_hook_id     INTEGER,
+                script_fqn       TEXT,
+                handler          TEXT,
+                PRIMARY KEY (conversation_fqn, node_id, kind, ordinal)
+            );
+            CREATE INDEX IF NOT EXISTS idx_cnv_node_actions_script
+                ON conversation_node_actions(script_fqn, handler);
             CREATE INDEX IF NOT EXISTS idx_cnv_dialogue_line ON conversation_dialogue(line_id);
             CREATE INDEX IF NOT EXISTS idx_cnv_dialogue_speaker ON conversation_dialogue(speaker_npc_fqn);
         "#,
@@ -845,6 +1135,145 @@ mod tests {
                 .unwrap();
             assert_eq!(n, 1, "missing {ty} {name}");
         }
+    }
+
+    #[test]
+    fn task_hook_ids_read_every_task_of_every_step() {
+        use crate::gom_reader::GomValue as G;
+        let task = |h: i64| G::Embedded(vec![(u64::from(QST_TASK_HOOK_ID), G::I64(h))]);
+        let step = |tasks: Vec<G>| G::Embedded(vec![(u64::from(QST_TASKS), G::List(tasks))]);
+        let quest = G::Embedded(vec![(
+            u64::from(QST_BRANCHES),
+            G::List(vec![G::Embedded(vec![(
+                u64::from(QST_STEPS),
+                G::List(vec![step(vec![task(11)]), step(vec![task(12), task(13)])]),
+            )])]),
+        )]);
+        assert_eq!(task_hook_ids(&quest), [11, 12, 13]);
+    }
+
+    #[test]
+    fn conversation_grants_read_owners_gates_quest_actions_and_script_calls() -> Result<()> {
+        use crate::gom_reader::GomValue as G;
+        use crate::schema::conversation_graph::testing::encode;
+        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+        const QUEST: u64 = 0xE000_0000_0000_0001;
+        const HYDRA: u64 = 0xE000_0000_0000_0002;
+        let f = u64::from;
+        let root_node = G::Embedded(vec![
+            (f(0x24c9_78e5), G::U64(1)),
+            (
+                f(NODE_QUEST_HOOK_IDS),
+                G::Map(vec![(G::U64(QUEST), G::List(vec![G::U64(41), G::U64(42)]))]),
+            ),
+            (
+                f(NODE_QUEST_GATES[0]),
+                G::Map(vec![(G::U64(QUEST), G::Bool(true))]),
+            ),
+        ]);
+        let deeper = G::Embedded(vec![
+            (f(NODE_ACTION_HOOK), G::U64(43)),
+            (f(0x24c9_78e5), G::U64(2)),
+            (
+                f(NODE_SCRIPT_CALLS),
+                G::List(vec![G::Embedded(vec![
+                    (f(NODE_SCRIPT_CALL_HYDRA), G::U64(HYDRA)),
+                    (f(NODE_SCRIPT_CALL_EVENT), G::Str("Found Willpower".into())),
+                ])]),
+            ),
+            (f(NODE_ACTION_QUEST), G::U64(QUEST)),
+        ]);
+        let root = G::Embedded(vec![(
+            f(0x6683_c66d),
+            G::Map(vec![(G::U64(1), root_node), (G::U64(2), deeper)]),
+        )]);
+        let mut payload = vec![0xFF; 33];
+        encode(&root, &mut payload);
+        let json = serde_json::json!({ "payload_b64": BASE64.encode(&payload) }).to_string();
+
+        let path = temp_db_path("cnv_grants");
+        let db = Database::with_grammar(&path, None)?;
+        db.init_schema()?;
+        db.with_tx(|tx| {
+            for (guid, fqn, kind, json) in [
+                (0x99, "cnv.c", "Conversation", json.as_str()),
+                (QUEST, "qst.q", "Quest", "{}"),
+                (HYDRA, "hyd.qm", "Hydra", "{}"),
+            ] {
+                let guid = format!("{guid:016X}");
+                tx.execute(
+                    "INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, json) \
+                     VALUES (?1, ?1, '', ?1, ?2, ?3, ?4)",
+                    params![guid, fqn, kind, json],
+                )?;
+            }
+            tx.execute_batch(
+                "INSERT INTO placeable_grants (placeable_fqn, conversation_fqn) VALUES ('plc.p', 'cnv.c');
+                 INSERT INTO script_actions (script_fqn, handler, ordinal, action, target_fqn) VALUES
+                   ('hyd.qm', 'On Custom:Found Willpower', 0, 'Grant Codex', 'cdx.d');",
+            )?;
+            Ok(())
+        })?;
+        let counts = db.populate_conversation_grants()?;
+        assert_eq!(counts.owners, 1);
+        assert_eq!(counts.script_calls, 1);
+        assert_eq!(counts.script_call_actions, [("Grant Codex".to_string(), 1)]);
+        // The quest has no decodable tasks, so no hook id names one.
+        assert_eq!((counts.action_hooks, counts.action_hooks_no_task), (1, 1));
+        assert_eq!((counts.entry_hooks, counts.entry_hooks_no_task), (2, 2));
+
+        let conn = db.conn.lock().unwrap();
+        let owner: (String, String) = conn.query_row(
+            "SELECT owner_fqn, owner_kind FROM conversation_owners WHERE conversation_fqn = 'cnv.c'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?;
+        assert_eq!(owner, ("plc.p".to_string(), "placeable".to_string()));
+        let mut stmt = conn.prepare(
+            "SELECT node_id, kind, ordinal, quest_fqn, task_hook_id, script_fqn, handler \
+             FROM conversation_node_actions ORDER BY node_id, ordinal",
+        )?;
+        type Row = (
+            i64,
+            String,
+            i64,
+            Option<String>,
+            Option<i64>,
+            Option<String>,
+            Option<String>,
+        );
+        let rows: Vec<Row> = stmt
+            .query_map([], |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                ))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let q = || Some("qst.q".to_string());
+        assert_eq!(
+            rows,
+            [
+                (1, "gate".into(), 0, q(), Some(41), None, None),
+                (1, "gate".into(), 1, q(), Some(42), None, None),
+                (2, "quest".into(), 0, q(), Some(43), None, None),
+                (
+                    2,
+                    "script".into(),
+                    1,
+                    None,
+                    None,
+                    Some("hyd.qm".into()),
+                    Some("On Custom:Found Willpower".into())
+                ),
+            ]
+        );
+        Ok(())
     }
 
     #[test]

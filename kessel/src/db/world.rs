@@ -651,7 +651,7 @@ fn load_singleton(tx: &Transaction, fqn: &str) -> Result<Option<crate::gom_reade
 }
 
 /// Every canonical object of `kind`, decoded; undecodable payloads are skipped.
-fn decoded_objects(
+pub(super) fn decoded_objects(
     tx: &Transaction,
     kind: &str,
 ) -> Result<Vec<(String, crate::gom_reader::GomValue)>> {
@@ -683,7 +683,7 @@ fn decode_framed(header_hex: &str, payload_b64: &str) -> Option<crate::gom_reade
         .map(|(v, _)| v)
 }
 
-fn gom_str(v: &crate::gom_reader::GomValue) -> Option<String> {
+pub(super) fn gom_str(v: &crate::gom_reader::GomValue) -> Option<String> {
     match v {
         crate::gom_reader::GomValue::Str(s) => Some(s.clone()),
         _ => None,
