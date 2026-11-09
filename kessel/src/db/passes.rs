@@ -428,6 +428,10 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     );
     let codex_sources = timed!("codex_sources", db.populate_codex_sources())?;
     println!("  Codex sources: {codex_sources}");
+    // Every item's sources and unlocks (FR-KESSEL-025 c8), after the
+    // achievement rewards and conversation grants it reads.
+    let (item_sources, item_unlocks) = timed!("item_sources", db.populate_item_sources())?;
+    println!("  Item sources: {item_sources}; item unlocks: {item_unlocks}");
     // How each title is granted (FR-KESSEL-025 c6): reads script_actions and
     // codex_sources.
     let title_grants = timed!("title_grants", db.populate_title_grants())?;

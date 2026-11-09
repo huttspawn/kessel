@@ -25,10 +25,10 @@ const LEGACY_TITLES: u32 = 0xa875_fc60;
 const LEGACY_ID: u32 = 0xa875_fc5f;
 const LEGACY_TEXT: u32 = 0xa875_fc5a;
 // Item: what it teaches (5 player title, 9 legacy title) and the title id.
-const ITEM_TEACHES: u32 = 0xdc16_d5e1;
-const ITEM_TEACHES_VALUE: u32 = 0xdc16_d5e3;
+pub(super) const ITEM_TEACHES: u32 = 0xdc16_d5e1;
+pub(super) const ITEM_TEACHES_VALUE: u32 = 0xdc16_d5e3;
 // Achievement reward row, and achRewardsTable_Prototype's legacy title.
-const ACH_REWARD: u32 = 0xdeaa_a365;
+pub(super) const ACH_REWARD: u32 = 0xdeaa_a365;
 const REWARD_TABLE: u32 = 0x0f72_cd27;
 const REWARD_LEGACY_TITLE: u32 = 0x352b_c8a0;
 // repGroupInfosPrototype: per group, each side's fqn and legacy title per rank.
@@ -155,7 +155,7 @@ fn reward_titles(rewards: Option<&GomValue>) -> std::collections::HashMap<i64, i
 }
 
 /// The title an item teaches: dc16d5e1 5 is a player title, 9 a legacy title.
-fn item_title(item: &GomValue) -> Option<(&'static str, i64)> {
+pub(super) fn item_title(item: &GomValue) -> Option<(&'static str, i64)> {
     let kind = match field_num(item, ITEM_TEACHES)? {
         5 => "player",
         9 => "legacy",

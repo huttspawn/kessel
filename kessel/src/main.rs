@@ -836,6 +836,11 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
     // Skip internal items
     if prefix == "itm" && parts.len() >= 2 {
         let second = parts[1];
+        // `itm.loot.*` is kept (FR-KESSEL-025 c8): quest-reward lockboxes and
+        // tokens. The public test server's tokens stay out.
+        if second == "loot" && fqn.contains(".public_test_") {
+            return false;
+        }
         // `itm.ach.title.*` is kept (FR-KESSEL-025 c6): an achievement's
         // reward item that teaches a title is that title's grant path.
         if second == "ach" && parts.get(2) == Some(&"title") {
@@ -844,7 +849,6 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
         if matches!(
             second,
             "npc"
-                | "loot"
                 | "has_item"
                 | "slot_is_lowest"
                 | "slot_is_rating"
@@ -1029,6 +1033,23 @@ mod tests {
             false
         ));
         assert!(!should_extract_object("abl.foo.bar/7/0", true));
+    }
+
+    #[test]
+    fn should_extract_object_keeps_loot_items_but_not_public_test_tokens() {
+        assert!(should_extract_object(
+            "itm.loot.lockbox.flashpoint.rta_prototype_basic",
+            false
+        ));
+        assert!(should_extract_object(
+            "itm.loot.token.iokath.shards_lockbox_quadruple",
+            false
+        ));
+        assert!(!should_extract_object(
+            "itm.loot.token.public_test_title_act_i",
+            false
+        ));
+        assert!(!should_extract_object("itm.loot.test.thing", false));
     }
 
     #[test]
