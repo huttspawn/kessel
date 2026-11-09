@@ -1061,7 +1061,8 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             -- Every placed NPC or placeable that owns a conversation
             -- (conversation_owners, created by cnv). owner_log_id is the id a
             -- TargetSet line prints for an NPC, string_id << 32; a placeable
-            -- has none.
+            -- has none. A placeable whose On Use script plays a conversation
+            -- owns that conversation too.
             CREATE VIEW IF NOT EXISTS log_conversation_targets AS
                 SELECT l.log_area_id,
                        CASE WHEN o.owner_kind = 'npc' THEN
@@ -1073,6 +1074,15 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                        p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z
                 FROM conversation_owners o
                 JOIN placements p ON p.entity_fqn = o.owner_fqn
+                JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id
+                UNION ALL
+                SELECT l.log_area_id, NULL, g.placeable_fqn, 'placeable', a.target_fqn,
+                       p.area_dir_id, p.instance_id, p.log_x, p.log_y, p.log_z
+                FROM placeable_grants g
+                JOIN script_actions a ON a.script_fqn = g.script_fqn
+                     AND a.handler = 'On Use' AND a.action = 'Play Conversation'
+                     AND a.target_fqn IS NOT NULL
+                JOIN placements p ON p.entity_fqn = g.placeable_fqn
                 JOIN area_log_ids l ON l.area_dir_id = p.area_dir_id;
         "#,
     )?;
@@ -1290,20 +1300,25 @@ mod tests {
                                      log_x, log_y, log_z)
                  VALUES (7, 'r', 1, 'a', 'plc.lore', 1.0, 2.0, 3.0),
                         (7, 'r', 2, 'b', 'npc.bela', 4.0, 5.0, 6.0),
-                        (7, 'r', 3, 'c', 'plc.crate', 0.0, 0.0, 0.0);
+                        (7, 'r', 3, 'c', 'plc.crate', 0.0, 0.0, 0.0),
+                        (7, 'r', 4, 'd', 'plc.cache', 8.0, 0.0, 0.0);
              INSERT INTO placeable_grants VALUES
                  ('plc.lore', 'abl.placeables.examine.x', 811315027247104, 'cdx.lore.x', NULL, NULL),
-                 ('plc.crate', NULL, NULL, 'cdx.crate', NULL, NULL);
+                 ('plc.crate', NULL, NULL, 'cdx.crate', NULL, NULL),
+                 ('plc.cache', 'abl.placeables.open.x', 811400926593024, NULL, NULL, 'hyd.cache');
+             INSERT INTO script_actions VALUES
+                 ('hyd.cache', 'On Use', 0, 'Play Conversation', 'cnv.cache', 'cnv.cache'),
+                 ('hyd.cache', 'On Enter', 0, 'Play Conversation', 'cnv.other', 'cnv.other');
              INSERT INTO objects (game_id, stable_id, payload_hash, guid, fqn, kind, string_id, json)
                  VALUES ('g', 's', 'h', 'G', 'npc.bela', 'Npc', 67878, '{}');
              INSERT INTO conversation_owners VALUES
                  ('npc.bela', 'npc', 'cnv.bela'), ('plc.lore', 'placeable', 'cnv.lore');",
         )
         .unwrap();
-        let uses: Vec<(i64, i64, String, i64, String)> = conn
+        let uses: Vec<(i64, i64, String, i64, Option<String>)> = conn
             .prepare(
                 "SELECT log_area_id, use_ability_log_id, placeable_fqn, instance_id, codex_fqn \
-                 FROM log_use_targets",
+                 FROM log_use_targets ORDER BY placeable_fqn",
             )
             .unwrap()
             .query_map([], |r| {
@@ -1315,13 +1330,16 @@ mod tests {
         // The crate plays no use ability, so a use cast cannot land on it.
         assert_eq!(
             uses,
-            vec![(
-                137438953533,
-                811315027247104,
-                "plc.lore".into(),
-                1,
-                "cdx.lore.x".into()
-            )]
+            vec![
+                (137438953533, 811400926593024, "plc.cache".into(), 4, None),
+                (
+                    137438953533,
+                    811315027247104,
+                    "plc.lore".into(),
+                    1,
+                    Some("cdx.lore.x".into())
+                ),
+            ]
         );
         let owners: Vec<(Option<i64>, String, String, f64)> = conn
             .prepare(
@@ -1337,6 +1355,7 @@ mod tests {
             owners,
             vec![
                 (Some(67878 << 32), "npc.bela".into(), "cnv.bela".into(), 4.0),
+                (None, "plc.cache".into(), "cnv.cache".into(), 8.0),
                 (None, "plc.lore".into(), "cnv.lore".into(), 1.0),
             ]
         );

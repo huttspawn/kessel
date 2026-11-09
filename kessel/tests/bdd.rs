@@ -34,6 +34,9 @@ struct World {
     /// The NPC the player's TargetSet named just before a conversation: its
     /// log id and logged position.
     target_set: Option<(i64, [f64; 3])>,
+    /// The player's casts at the spot of a conversation since the last one
+    /// began, latest first: cast id and position.
+    casts: Vec<(i64, [f64; 3])>,
     /// The answer: one line per fact found.
     answer: Vec<String>,
 }
@@ -412,8 +415,9 @@ fn names_volume_codex(world: &World) {
 /// Within reach of a logged position: 10 log units (1 m).
 const REACH: f64 = 10.0;
 /// The ability every logged conversation shows, and its In Conversation effect.
-const CONVERSATION: &str = "{806968520343552}";
-const IN_CONVERSATION: &str = "{806968520343876}";
+/// A conversation start: abl.state.conversation applying In Conversation.
+const CONVERSATION_START: &str =
+    "[Conversation {806968520343552}] [ApplyEffect {836045448945477}: In Conversation {806968520343876}]";
 
 fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
     (0..3).map(|i| (a[i] - b[i]).powi(2)).sum::<f64>().sqrt()
@@ -473,7 +477,7 @@ fn log_lines() -> Vec<Logged> {
             } else if let Some(m) = target_re.captures(line) {
                 let kind = LogLine::TargetSet(m[6].parse().expect("npc id"), pos(&m, 7));
                 (m, kind)
-            } else if line.contains(CONVERSATION) && line.contains(IN_CONVERSATION) {
+            } else if line.contains(CONVERSATION_START) {
                 let Some(m) = player_re.captures(line) else {
                     continue;
                 };
@@ -589,11 +593,12 @@ fn examining_line(world: &mut World) {
     panic!("no logged 'Examining...' cast beside a codex-granting lore placeable");
 }
 
-#[when("kessel's agent asks what that use granted")]
-fn ask_use(world: &mut World) {
-    type Use = (String, Option<String>, Option<String>, Option<String>, f64);
-    let (area, cast, p) = (world.log_area_id, world.cast_id, world.positions[0]);
-    let conn = spice(world);
+/// A resolved use: placeable, codex, conversation, script, distance.
+type Use = (String, Option<String>, Option<String>, Option<String>, f64);
+
+/// The `log_use_targets` row of the log area and cast id nearest the logged
+/// position, within reach.
+fn use_target(conn: &Connection, area: i64, cast: i64, p: [f64; 3]) -> Option<Use> {
     let mut stmt = conn
         .prepare(
             "SELECT placeable_fqn, codex_fqn, conversation_fqn, script_fqn, log_x, log_y, log_z \
@@ -610,8 +615,14 @@ fn ask_use(world: &mut World) {
         .map(|r| r.expect("use target row"))
         .filter(|u| u.4 <= REACH)
         .min_by(|a, b| a.4.total_cmp(&b.4));
-    drop(stmt);
-    world.answer = match nearest {
+    nearest
+}
+
+#[when("kessel's agent asks what that use granted")]
+fn ask_use(world: &mut World) {
+    let (area, cast, p) = (world.log_area_id, world.cast_id, world.positions[0]);
+    let conn = spice(world);
+    world.answer = match use_target(conn, area, cast, p) {
         Some((fqn, codex, convo, script, d)) => {
             let mut answer = vec![format!("placeable {fqn} at {d:.2}")];
             answer.extend(codex_grants(
@@ -659,25 +670,40 @@ fn codex_npc_placed(world: &mut World) {
     world.targets = found;
 }
 
-/// A logged conversation: file, line number, log area id, the player's
-/// position, and the NPC (log id, position) the player's TargetSet named
-/// within 1 s before.
-type Conversation = (String, usize, i64, [f64; 3], Option<(i64, [f64; 3])>);
+/// A logged conversation start: file, line number, log area id, the
+/// player's position, the NPC (log id, position) the player's TargetSet named
+/// within 1 s before, and the player's casts at that spot since the last
+/// conversation began, latest first.
+type Conversation = (
+    String,
+    usize,
+    i64,
+    [f64; 3],
+    Option<(i64, [f64; 3])>,
+    Vec<(i64, [f64; 3])>,
+);
 
 fn conversations() -> Vec<Conversation> {
     let mut last: Option<(String, f64, i64, [f64; 3])> = None;
+    let mut casts: Vec<(String, i64, [f64; 3])> = Vec::new();
     let mut out = Vec::new();
     for (file, n, area, t, player, line) in log_lines() {
         match line {
             LogLine::TargetSet(id, q) => last = Some((player, t, id, q)),
+            LogLine::Cast(id, q) => casts.push((player, id, q)),
             LogLine::Conversation(p) => {
                 let fresh = last
                     .as_ref()
                     .filter(|(who, at, _, _)| *who == player && (0.0..=1.0).contains(&(t - at)))
                     .map(|(_, _, id, q)| (*id, *q));
-                out.push((file, n, area, p, fresh));
+                let here = casts
+                    .drain(..)
+                    .rev()
+                    .filter(|(who, _, q)| *who == player && dist(*q, p) <= REACH)
+                    .map(|(_, id, q)| (id, q))
+                    .collect();
+                out.push((file, n, area, p, fresh, here));
             }
-            LogLine::Cast(..) => {}
         }
     }
     out
@@ -687,7 +713,7 @@ fn conversations() -> Vec<Conversation> {
     "a combat-log line where the player enters a conversation at a position beside that NPC in that area"
 )]
 fn conversation_line(world: &mut World) {
-    for (file, n, area, p, target) in conversations() {
+    for (file, n, area, p, target, casts) in conversations() {
         let Some((id, q)) = target else { continue };
         if let Some((_, _, fqn, _)) = world
             .targets
@@ -699,6 +725,7 @@ fn conversation_line(world: &mut World) {
             );
             world.subject = fqn.clone();
             (world.log_area_id, world.positions, world.target_set) = (area, vec![p], target);
+            world.casts = casts;
             return;
         }
     }
@@ -709,6 +736,7 @@ fn conversation_line(world: &mut World) {
 fn ask_conversation(world: &mut World) {
     type Owner = (Option<i64>, String, String, String, [f64; 3]);
     let (area, p, target) = (world.log_area_id, world.positions[0], world.target_set);
+    let casts = world.casts.clone();
     let conn = spice(world);
     let mut stmt = conn
         .prepare(
@@ -731,18 +759,28 @@ fn ask_conversation(world: &mut World) {
         .collect();
     drop(stmt);
     // The NPC the TargetSet named, at its placement nearest where the log
-    // shows it; else whatever owns a conversation nearest the player.
+    // shows it; else the placeable a use cast at this spot landed on, when it
+    // owns a conversation; else whatever owns a conversation nearest the player.
+    let nearest = |at: [f64; 3], keep: &dyn Fn(&Owner) -> bool, reach: f64| {
+        rows.iter()
+            .filter(|r| keep(r))
+            .map(|r| (r, dist(at, r.4)))
+            .filter(|(_, d)| *d <= reach)
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+    };
+    let used = || {
+        casts.iter().find_map(|(cast, q)| {
+            let (fqn, ..) = use_target(conn, area, *cast, *q)?;
+            nearest(*q, &|r| r.2 == fqn, REACH)
+        })
+    };
     let found = match target {
-        Some((id, q)) => rows
-            .iter()
-            .filter(|r| r.0.is_some_and(|o| o >> 32 == id >> 32))
-            .map(|r| (r, dist(q, r.4)))
-            .min_by(|a, b| a.1.total_cmp(&b.1)),
-        None => rows
-            .iter()
-            .map(|r| (r, dist(p, r.4)))
-            .filter(|(_, d)| *d <= REACH)
-            .min_by(|a, b| a.1.total_cmp(&b.1)),
+        Some((id, q)) => nearest(
+            q,
+            &|r| r.0.is_some_and(|o| o >> 32 == id >> 32),
+            f64::INFINITY,
+        ),
+        None => used().or_else(|| nearest(p, &|_| true, REACH)),
     };
     world.answer = match found {
         Some(((_, kind, owner, convo, _), d)) => {
