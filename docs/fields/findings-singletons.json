@@ -239,7 +239,7 @@
   "evidence": "577 of 577 references resolve in pc/title.stb (605 entries), read from the archive by hashed path. Not a gui table. Several rows share one text (e.g. two \"Padawan <<1>>\" rows for Knight and Consular), so the low 32 bits are a string id, not the title id. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  },
  "40000018ae425255": {
-  "reason": "True on 27 rows, all prefix-form titles (text starts before <<1>>): the launch class and social prefixes (Darth, Sergeant .. Major, Padawan, Lord, Friendly, Chatterbox, Warzone Hero, Flygirl). 130 other prefix-form titles do not carry it, so it is not \"is a prefix\". The hashed name titleDetailLegacyPrefix suggests a prefix the legacy name can take; nothing in the data separates that from \"launch-era title\". Settling it needs the client UI code or a live check of which titles show beside a legacy name."
+  "reason": "True on 27 rows, all prefix-form titles (text starts before <<1>>): the launch class and social prefixes (Darth, Sergeant .. Major, Padawan, Lord, Friendly, Chatterbox, Warzone Hero, Flygirl). 130 other prefix-form titles do not carry it, so it is not \"is a prefix\". The hashed name titleDetailLegacyPrefix suggests a prefix the legacy name can take; nothing in the data separates that from \"launch-era title\". Settling it needs the client UI code or a live check of which titles show beside a legacy name. Residue pass 2026-11-09: no further client data separates the readings; the field changes title display, a UI rule that the client binary or a live look at a legacy-named character settles. Not in client data."
  },
  "40000018ae425258": {
   "confidence": "likely",
@@ -693,10 +693,14 @@
   "reason": "Single value 20 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
  "400000419fe7b284": {
-  "reason": "2029376342327410 on 2 Khem Val bark entries. As a string ref it lands in qst.stb (id2 472501, id1 114), which does not fit a bark condition. Hint says required global var; no variable table contains it. Playing with Khem Val crew in GSF would show when each line fires."
+  "confidence": "proved",
+  "meaning": "Global quest variable a GSF crew bark requires: the qstVariableGUID (2c1fe390) of a variable in a class-story global variable list.",
+  "evidence": "The value 2029376342327410 on both Khem Val bark entries equals qstVariableGUID 400000002c1fe390 of one variable in qst.global.class.sith_sorcerer.si_global_variables (its qstVariableFqnId 16349617509922701426); 1 of 1 distinct value joins, and Khem Val is the Sith Inquisitor's companion. The earlier string-ref reading (qst.stb 472501/114) was the same number read as a string id. Residue pass 2026-11-09."
  },
  "400000419fe7b287": {
-  "reason": "1 on one of the 2 Khem Val entries (the cnv...khem_zash version). Likely paired with 9fe7b284 as a required value, unconfirmed."
+  "confidence": "likely",
+  "meaning": "Value the bark's required global variable (9fe7b284) must hold; 1 = set.",
+  "evidence": "1 on one of the 2 Khem Val entries, beside 9fe7b284 which is proved to name an SI global quest variable; a boolean variable tested for 1 fits. Which variable state each line needs is not read further."
  },
  "40000041a0f9bec0": {
   "confidence": "proved",
@@ -1048,13 +1052,13 @@
   "reason": "Single value 8 in utlTweakableInfoPrototype. Adjacent ids do not show a purpose; single constant only."
  },
  "40000044dcbfd721": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, base of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it."
+  "reason": "418 floats rising from 1 to 2150/4945/7310, base of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
  },
  "40000044dcbfd722": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, 2.3x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it."
+  "reason": "418 floats rising from 1 to 2150/4945/7310, 2.3x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
  },
  "40000044dcbfd723": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, 3.4x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it."
+  "reason": "418 floats rising from 1 to 2150/4945/7310, 3.4x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
  },
  "400000455d382d30": {
   "confidence": "proved",
