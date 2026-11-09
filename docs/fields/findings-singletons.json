@@ -239,7 +239,7 @@
   "evidence": "577 of 577 references resolve in pc/title.stb (605 entries), read from the archive by hashed path. Not a gui table. Several rows share one text (e.g. two \"Padawan <<1>>\" rows for Knight and Consular), so the low 32 bits are a string id, not the title id. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  },
  "40000018ae425255": {
-  "reason": "True on 27 rows, all prefix-form titles (text starts before <<1>>): the launch class and social prefixes (Darth, Sergeant .. Major, Padawan, Lord, Friendly, Chatterbox, Warzone Hero, Flygirl). 130 other prefix-form titles do not carry it, so it is not \"is a prefix\". The hashed name titleDetailLegacyPrefix suggests a prefix the legacy name can take; nothing in the data separates that from \"launch-era title\". Settling it needs the client UI code or a live check of which titles show beside a legacy name."
+  "reason": "True on 27 rows, all prefix-form titles (text starts before <<1>>): the launch class and social prefixes (Darth, Sergeant .. Major, Padawan, Lord, Friendly, Chatterbox, Warzone Hero, Flygirl). 130 other prefix-form titles do not carry it, so it is not \"is a prefix\". The hashed name titleDetailLegacyPrefix suggests a prefix the legacy name can take; nothing in the data separates that from \"launch-era title\". Settling it needs the client UI code or a live check of which titles show beside a legacy name. Residue pass 2026-11-09: no further client data separates the readings; the field changes title display, a UI rule that the client binary or a live look at a legacy-named character settles. Not in client data."
  },
  "40000018ae425258": {
   "confidence": "likely",
@@ -394,7 +394,7 @@
   "reason": "Integer 1-250 on 447 of 448 macrobinocular targets (2 x144, 1 x56, 5 x55). Reads as a priority or rank but no sibling or target property orders by it; hint says mouse selection. Scanning overlapping targets in game would test it."
  },
  "40000040b6a43670": {
-  "reason": "A distinct 64-bit id per row on 9 rows: abl.quick_travel, xp.undebuff, valor.undebuff, ability_cooldown.fleet_pass, the prf.skill trio, rep.bonus_gain_rate, epic_story_xp_boost. All of these are gameplay boosts, so an effect or stat binding is plausible, but the ids match no object, stable id, string, field value in any singleton, or object payload. A client-side lookup table for the ids, or a script that reads them, would settle it."
+  "reason": "Not in the client. A 64-bit FNV-1a name hash on 9 boost rows, the same kind as 40000040c28dfca0 (see there). No client string, object FQN, STB text or permission-name variant hashes to any of the 9 values; it is not another row's chrPaidPermissionId. The named thing is server-side."
  },
  "40000040b6a43671": {
   "confidence": "proved",
@@ -402,7 +402,7 @@
   "meaning": "Index list of the paid permissions that carry c28dfca0 or b6a43670."
  },
  "40000040c28dfca0": {
-  "reason": "A distinct 64-bit id per row on 12 rows: prf.criticals, prf.research, xp.undebuff(_2 to _5), valor.undebuff, prf.skill orange/yellow/green.increase_chance, rep.bonus_gain_rate. All of these are gameplay boosts, so an effect or stat binding is plausible, but the ids match no object, stable id, string, field value in any singleton, or object payload. A client-side lookup table for the ids, or a script that reads them, would settle it."
+  "reason": "Not in the client. A 64-bit name hash on 12 boost rows (prf.criticals, prf.research, xp.undebuff and _2 to _5, valor.undebuff, the three prf.skill increase_chance rows, rep.bonus_gain_rate). The values are FNV-1a 64 hashes, like chrPaidPermissionId: for xp.undebuff_2 to _5, multiplying each by the inverse of the FNV prime leaves values that differ only in the low byte, by exactly '2' xor '3' = 1, '2' xor '4' = 6, '2' xor '5' = 7, so the four names differ only in a last character 2, 3, 4, 5. No client string, object FQN, STB text or permission name (with common prefixes and suffixes) hashes to any of them (8.5 million candidates), so the named thing (likely a server stat or tweakable) is server-side."
  },
  "40000040c3935eb2": {
   "confidence": "proved",
@@ -693,10 +693,14 @@
   "reason": "Single value 20 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
  "400000419fe7b284": {
-  "reason": "2029376342327410 on 2 Khem Val bark entries. As a string ref it lands in qst.stb (id2 472501, id1 114), which does not fit a bark condition. Hint says required global var; no variable table contains it. Playing with Khem Val crew in GSF would show when each line fires."
+  "confidence": "proved",
+  "meaning": "Global quest variable a GSF crew bark requires: the qstVariableGUID (2c1fe390) of a variable in a class-story global variable list.",
+  "evidence": "The value 2029376342327410 on both Khem Val bark entries equals qstVariableGUID 400000002c1fe390 of one variable in qst.global.class.sith_sorcerer.si_global_variables (its qstVariableFqnId 16349617509922701426); 1 of 1 distinct value joins, and Khem Val is the Sith Inquisitor's companion. The earlier string-ref reading (qst.stb 472501/114) was the same number read as a string id. Residue pass 2026-11-09."
  },
  "400000419fe7b287": {
-  "reason": "1 on one of the 2 Khem Val entries (the cnv...khem_zash version). Likely paired with 9fe7b284 as a required value, unconfirmed."
+  "confidence": "likely",
+  "meaning": "Value the bark's required global variable (9fe7b284) must hold; 1 = set.",
+  "evidence": "1 on one of the 2 Khem Val entries, beside 9fe7b284 which is proved to name an SI global quest variable; a boolean variable tested for 1 fits. Which variable state each line needs is not read further."
  },
  "40000041a0f9bec0": {
   "confidence": "proved",
@@ -1048,13 +1052,13 @@
   "reason": "Single value 8 in utlTweakableInfoPrototype. Adjacent ids do not show a purpose; single constant only."
  },
  "40000044dcbfd721": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, base of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it."
+  "reason": "418 floats rising from 1 to 2150/4945/7310, base of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
  },
  "40000044dcbfd722": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, 2.3x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it."
+  "reason": "418 floats rising from 1 to 2150/4945/7310, 2.3x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
  },
  "40000044dcbfd723": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, 3.4x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it."
+  "reason": "418 floats rising from 1 to 2150/4945/7310, 3.4x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
  },
  "400000455d382d30": {
   "confidence": "proved",
@@ -1622,6 +1626,101 @@
  "400000080027bf7f": {
   "meaning": "The area's display-name id, which is also the area id the combat log prints on AreaEntered; with mapAreasDataAreaId (0027bf77) it maps a log area to its /resources/world/areas/<id>/ directory.",
   "evidence": "mapAreasDataProto, 240 entries. 82 of 83 distinct AreaEntered area ids in the 2026 combat logs (~/swtor/logs and the live CombatLogs folder) equal a 0027bf7f value; the miss is Space (945872057663605, GSF). Ilum 137438955315 -> 4611686039258170278, Hutta 137438988437 -> 4611686019802841877, Tatooine 137438987025 -> 4611686018427650020. 21 log ids name several directories (instanced copies), so a log area can need position to pick one. Spawner positions read from those directories match logged NPC positions (kessel-discovery/examples/spn_assets.rs).",
+  "confidence": "proved"
+ },
+ "4000004270f28f35": {
+  "confidence": "proved",
+  "evidence": "75 rows; 75/75 string ids resolve in str/gui/conversationreactions.stb. 'approves'/'greatly approves' = 200, 'disapproves'/'greatly disapproves' = 50 (influence does not fall in 7.x), story reactions 500-10,000.",
+  "meaning": "cnvNpcReactionMap (cnvReactionsDataPrototype): reaction key -> {cnvReactionStringId, cnvReactionInfluence, cnvReactionDisplayChange}; the influence a companion reaction grants."
+ },
+ "4000004270f28f32": {
+  "confidence": "proved",
+  "evidence": "46 rows carry it: 50, 200, 250, 500, 800, 1,000, 2,500, 3,000, 10,000; -1 once.",
+  "meaning": "cnvReactionInfluence: influence points the reaction grants (absent = 0)."
+ },
+ "4000004270f28f31": {
+  "confidence": "proved",
+  "evidence": "75 of 75 resolve, e.g. 832245/300 '<<1>> will remember that.'",
+  "meaning": "cnvReactionStringId: string id of the reaction message in str/gui/conversationreactions.stb (id2 832245)."
+ },
+ "4000004e4ffc3a18": {
+  "confidence": "likely",
+  "evidence": "16 rows, all with influence 250-3,000 ('Your actions have strengthened <<1>>'s military operations.').",
+  "meaning": "cnvReactionDisplayChange: the reaction shows its influence change; set on the Alliance and large story rows."
+ },
+ "4000000849010a7f": {
+  "confidence": "proved",
+  "evidence": "189 companions. Mako: Technology 5, Underworld Good 4, Weapon/Luxury/Cultural Artifact/Trophy 3, rest 1; romanced map Courting 5. Jedipedia nco/mako lists Technology Love ++++, Underworld Good Favorite +++; Swtorista lists the same likes and romanced Courting love.",
+  "meaning": "chrCompanionInfo_gift_interest_unromanced_map: companion -> gift type (itmGiftType) -> interest (chrCompanionGiftInterest): 5 love, 4 favorite, 3 like, 1 neutral."
+ },
+ "4000000849010a80": {
+  "confidence": "proved",
+  "evidence": "Mako: Courting 5 (Swtorista: Courting gives Love once romanced).",
+  "meaning": "chrCompanionInfo_gift_interest_romanced_map: the gift interests that change once the companion is romanced, same coding."
+ },
+ "4000000854bd7f1a": {
+  "confidence": "likely",
+  "evidence": "Keys are chrCompanionGiftInterest values used in the companion maps; how the multiplier enters the gift formula is not proved.",
+  "meaning": "itmGiftCategoryInterestMap: influence multiplier per gift interest: neutral (1) 0, like (3) 4, favorite (4) 9, love (5) 16."
+ },
+ "4000000854bd7f19": {
+  "confidence": "likely",
+  "evidence": "7 rows keyed by quality enum; the gift item ranks in fqn (standard, premium, prototype, artifact, legendary) are the likely keys.",
+  "meaning": "itmGiftQualityMap: influence multiplier per gift quality: 0.5, 1, 8, 16, 32, 80, 81."
+ },
+ "4000000854bd7f1b": {
+  "confidence": "likely",
+  "evidence": "19 rows keyed -9..9.",
+  "meaning": "itmGiftDeltaRankMap: influence multiplier by gift rank minus companion rank: 0 -> 1.0, +1 1.2, +2 1.4, +3 and up 1.6, -1 0.8, -2 0.6, -3 0.4, -4 0.2, -5 and below 0.1."
+ },
+ "400000428b61fc20": {
+  "confidence": "proved",
+  "evidence": "51 values = (n+1)^2*100 for n = 1..50 exactly; matches the community rank^2*100 influence curve.",
+  "meaning": "chrAllianceContactInfluenceLevels: influence needed for each companion influence rank: rank r -> r+1 costs (r+1)^2 x 100 (400, 900, ... 260,100 for 50 ranks)."
+ },
+ "40000008623c15ef": {
+  "confidence": "likely",
+  "evidence": "9 rows keyed by chrCompanionAffectionRank; not used by 7.x influence ranks.",
+  "meaning": "chrCompanionAffectionValueToRankMap: the pre-4.0 affection value at each affection rank (-1,000, 3,600, 10,000, 22,500, 40,000, 90,000, 160,000, 250,000, 360,000)."
+ },
+ "4000004c320bb353": {
+  "confidence": "likely",
+  "evidence": "5 brackets in itmGiftReactionsData; string table not resolved.",
+  "meaning": "itmGiftReactionBracketList: gift reaction bark by computed gift value: -9,999..-1, 0, 1..70, 71..140, 141..9,999, each with an itmGiftReactionStringId."
+ },
+ "400000438f33cf59": {
+  "confidence": "proved",
+  "meaning": "cnqConquestInfoAchievementMap: the objectives a conquest event offers, objective achievement -> cnqConquestAchievementTypeEnum (400000438F33CF58): 1 Unrepeatable (once in the conquest week), 2 Repeatable (no limit), 3 DailyRepeatable (once a day). Every event also lists all 455 Galactic Seasons and 36 PvP Seasons objectives.",
+  "evidence": "The client.gom enum record lists cnqConquestAchievementType_Invalid, Unrepeatable, Repeatable, DailyRepeatable in that order. The index agrees with each objective's achRepeatInterval on all 4,732 pairs where both are set (Repeatable = Infinitely 374, DailyRepeatable = Daily 4,018, Unrepeatable = Weekly 340 or absent 8,245), and no objective changes type between events (887 objectives in 17 events). 17 of 21 events list 754 to 801 objectives: 263 to 310 ach.conquests.* plus the same 491 seasons objectives; RecruitmentInitiative, HuntersRace, TimeofPeace and PowerOfTheForce list none. Death Mark lists 282 ach.conquests objectives, the count read live on 2026-10-19 (live 7.x)."
+ },
+ "400000438c7dafe8": {
+  "confidence": "proved",
+  "meaning": "cnqPlanetInfoSize: a planet's conquest size in an event (client enum cnqPlanetSizeEnum: 1 Small, 2 Medium, 3 Large), which sets the guild yield tier.",
+  "evidence": "The client.gom enum record lists cnqPlanetSize_Invalid, Small, Medium, Large in that order; values 1, 2, 3 only (38, 43, 37 uses). Death Mark's four planets: Tatooine 3, Nar Shaddaa 2, Quesh 1, Ruhnuk 2 (live 7.x)."
+ },
+ "400000409da4d445": {
+  "confidence": "proved",
+  "meaning": "chrPaidPermissionId: a paid permission's id, the FNV-1a 64 hash of its name (c3f22098) uppercased.",
+  "evidence": "FNV-1a 64 (offset 0xcbf29ce484222325, prime 0x100000001b3) over the uppercased chrPaidPermission name equals the id on 3,012 of 3,012 rows that carry both. Example: PAID_PERMISSION.XP.UNDEBUFF -> 0xaca84a3ff957a84e (live 7.x)."
+ },
+ "400000455eb2bf40": {
+  "confidence": "proved",
+  "meaning": "lgcVentureAchievementIdToVentureDataMap: venture achievement -> [venture id, stage number, achievement group id]; a stage meta achievement maps to [venture id, stage] only.",
+  "evidence": "151 of 151 entries: element 0 equals lgcVenturesId 13223273410354801201; element 1 equals the lgcVentureStageNumber whose stage lists the achievement (and the set_N in its FQN); element 2 equals the lgcVentureAchievementGroupSId of the group that lists it. The 11 two-element entries are the 11 stage meta achievements (live 7.x)."
+ },
+ "400003d305be5393": {
+  "confidence": "likely",
+  "meaning": "Venture stage meta achievement -> the venture story mission it opens.",
+  "evidence": "Two entries in lgcVentures_Prototype: set_6_meta -> qst.ventures.basilisk_prototype.story.mission_2 and set_10_meta -> qst.ventures.basilisk_prototype.story.mission_3. Both keys are lgcVentureStageMetaAchievementId values. That completing the stage opens the mission is read from the names; two rows cannot prove the direction (live 7.x)."
+ },
+ "40000044f1c8f8e4": {
+  "confidence": "proved",
+  "meaning": "lgcSeasonWeeklyObjectives: a season's objectives week by week, a list whose element i holds the objective achievements active in season week i+1 (Galactic Seasons and PvP Seasons).",
+  "evidence": "Galactic Season 9, element 12 lists the 11 objectives swtor.com published for Season 9 Week 13 (2025-11-11 to 11-17, article 20251110): March Across the Galaxy, Clashing in the Stars, We're Not Out of This Yet, Liabilities of Nar Shaddaa, Dynamic Encounters: Illuminating Ilum, Sparks of War, Seat of the Empire Daily Sweep, both Flashpoint Frenzy: Czerka objectives, Taking Flights and Veteran Operations: The Ravagers; 11 of 11, nothing extra. Seasons 2-8 and 10 hold 20 weeks, 9 and 11 hold 26, Season 1 one list (its 12 Weekly PO priority objectives); each PvP season holds one list of 6. lgcGalacticSeasonDailyObjectives (416dd381) holds the daily list, Influencing the Galaxy in Season 9 (live 7.x)."
+ },
+ "4000004974cafaa0": {
+  "meaning": "String ref (id1 only, table lgc/unlocks.stb id2 656577): title of a legacy unlock. For datacron unlocks it names the planet and the stat (Mastery, Endurance, Presence; old Willpower/Strength/Aim/Cunning datacrons now read Mastery).",
+  "evidence": "249 rows. qst.location.tython.data_holocron.tyt_willpower_i (9ca4acd0) -> 740 'Tython Purple Mastery Datacron'; hot_cunningiii -> 709 'Hoth Orange Mastery Datacron'; tar2_willpoweriii -> 734 'Taris (Imperial) Purple Mastery Datacron'. 89 datacron rows (icon datacron_*), all with requirement 759 'Discover the location of the datacron to unlock.' and none with an effect text (74cafaa2) or an amount field.",
   "confidence": "proved"
  }
 }

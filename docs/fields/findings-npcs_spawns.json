@@ -75,7 +75,7 @@
  },
  "4000000b15ac2498": {
   "meaning": "A hashed timer preset on Spawns; the role is unproven and one default covers nearly all.",
-  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not.",
+  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not. Residue pass 2026-11-09: 0xe23ddc377cb394ab is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side.",
   "confidence": "likely"
  },
  "40000005da8c9272": {
@@ -146,7 +146,7 @@
  },
  "4000000b15ac249b": {
   "meaning": "A second encounter-level timer as a hashed preset name; the role is unproven (the hint says survive).",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only.",
+  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only. Residue pass 2026-11-09: 0x270299ed9a3cea3e is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side.",
   "confidence": "likely"
  },
  "4000000b1f264a1b": {
@@ -282,7 +282,7 @@
   "confidence": "likely"
  },
  "400000456baa24ee": {
-  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it."
+  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it. Residue pass 2026-11-09: 9.17M candidates (token pairs from every Npc, Encounter, Spawn, Quest and Hydra FQN, tier and role words with numbers) give no FNV-1a 64 match."
  },
  "40000044a9a1e720": {
   "reason": "True on 172 of 174 MountPackage records, no pattern to the 2 without. A constant cannot be read."
@@ -550,6 +550,36 @@
  "4000000a731cd8ba": {
   "meaning": "GUID of the same template that the entry's FQN field (b78d6eec) names.",
   "evidence": "On every entry decoded (totem_1, codex hutt/faathra, datacron_willpower_tython, surviellance_device_2, flesh_raider_parent_corpse) it resolves to the object b78d6eec names.",
+  "confidence": "proved"
+ },
+ "4000000a4fa14a23": {
+  "meaning": "The Hydra script that runs on the entity this spawner entry spawns (its On Use, On Spawn and other handlers). For a placeable it is the script a use fires when the placeable template itself names none.",
+  "evidence": "6,508 entries, 6,216 resolve to Hydra objects. spn.generic.flashpoint.healing_station_emergency names hyd.generic.flashpoint.inst_healing_station, whose On Use is Use Ability abl.flashpoint.healing_station; on Sean's log 2026-05-01 00:15:58.973 the 'Using {3361954370420736}' cast on that placeable is followed in the same millisecond by 'Rejuvenating Kolto {3287587011690496}', string id 765451 = abl.flashpoint.healing_station. Across Sean's logs it gives a script to 310 of the 678 use casts whose placeable_triggers row set was empty.",
+  "confidence": "proved"
+ },
+ "4000000de986726f": {
+  "meaning": "What kind of map note the template is, which decides what shows it: 1 bind point, 2 checkpoint, 3 dev/unused marker, 5 map link to another page or area, 6 phase (instance) entrance, 7 quest objective marker (shown while a quest step lists it), 9 taxi, 10 and 11 unplaced legacy markers, 12 warzone and return markers, 13 elevator (Wonkavator) link, 14 PvP base, 15 conquest/operation marker. No client enum names are attached.",
+  "evidence": "Crossed with mpnIconAsset on all 15,953 templates: 1 = BindPoint 431/432; 2 = CheckPoint 670/671; 5 = DefaultMapLink 3,241/3,251 with mpnMapLink set on 3,205; 6 = instance_* names, 1,626 DefaultIcon; 7 = QuestCircle 6,565/6,713 and 5,732 of them listed by a quest step's map notes (no other value has more than 12); 9 = Taxi 380/408 with mpnMetadataFullFQN naming tax.* on 376; 13 = Wonkavator 1,222/1,222 with mpnMetadataID set on 1,199; 14 = PvpRepublicLarge/PvpEmpireLarge. Meanings of 3, 10, 11, 12 and 15 are read from names only.",
+  "confidence": "likely"
+ },
+ "4000000424ed04cd": {
+  "meaning": "phsImplicitlyPhasedAreaID: the area directory (/resources/world/areas/<id>/) the phase loads. Several area directories that share one combat-log area id are phase copies named here (strongholds, flashpoint and story phases, GSF match variants).",
+  "evidence": "160 of 197 values are area directory ids exactly. It names 5 of the 18 area directories no map page reaches (phs.pvp_denova, phs.space_combat_m09_clone, phs.spc_pvp_001, phs.character_second_tech_combat_style, phs.character_second_force_combat_style), and in 20 of the 21 log area ids that map to several directories every extra directory is named here (e.g. Tatooine 4611686351475197004 = phs.stronghold.tatooine).",
+  "confidence": "proved"
+ },
+ "4000000424ed04cc": {
+  "meaning": "phsExitAreaID: the area directory a player returns to when leaving the phase (the overworld the phase sits in).",
+  "evidence": "121 of 126 values are area directory ids exactly, e.g. phs.stronghold.tatooine exits to 4611686018427650020 (Tatooine) and phs.flagship.imperial_capital_ship to 4611686142106770000 (Imperial Fleet). The map note phsExitMapNoteID names lies in this area in 117 of 120 cases.",
+  "confidence": "proved"
+ },
+ "400000037f9e4ac0": {
+  "meaning": "phsExitMapNoteID: the id of the placed map note (key in an area's mapnotes.not) that marks the phase entrance on the map, usually an mpn instance_* template.",
+  "evidence": "1,463 of 2,063 values are note ids in the 267 mapnotes.not files; e.g. phs.tat_knight_shock_drum_facility -> note of mpn.location.tatooine.class.jedi_knight.the_shock_drum.instance_shock_drum_facility in Tatooine; the note sits in the phsExitAreaID area in 117 of 120 phases that set both. The other 600 point at notes not shipped.",
+  "confidence": "proved"
+ },
+ "40000007fd8241fb": {
+  "meaning": "phsRepublicExitMapNoteID: the Republic-side counterpart of phsExitMapNoteID, a note id in mapnotes.not.",
+  "evidence": "73 of 76 values are mapnotes.not note ids; the note sits in phsRepublicExitAreaID's area in 50 of 51.",
   "confidence": "proved"
  }
 }

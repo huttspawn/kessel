@@ -197,7 +197,7 @@
  },
  "4000004055f64de0": {
   "confidence": "proved",
-  "evidence": "Every achEvents key on every achievement is a key here, and its list names that achievement. The 175 small-integer keys (1, 2, 3...) belong to stat counters such as PvP player kills, and nothing kessel reads raises them (open). 159 E000 keys match no name in the unfiltered extract; some are named only as raw ids in other singletons (crew, ships, decoration subcategories) or by quest category tags (40000044372ac59e).",
+  "evidence": "Every achEvents key on every achievement is a key here, and its list names that achievement. Of the 175 non-E000 keys: 48 are quest variable GUIDs (qstVariableGUID 2c1fe390), the companion-tracker affection variables (khem_val_affection -> ach.companion.inquisitor.khem_val.affection_maxed) and three Mek-Sha heroic variables; 34 are area ids (mapLinkAreaId e4557d03 values on that planet's quests) counted by explore_all_areas and strongholds.conquer achievements; 31 have the variable-GUID shape (operation prefix << 32 | 0x101..) but are held by no extracted object (operation nightmare survival and kill counters); 62 are small integers, engine stat counters read from their consumers' names only (likely): 1 PvP player kills, 3 NPC kills, 4 credits, 5 character level, 8 legacy level, 10 valor, 11 dark, 12 light, 15-28 crew skill levels, 33-35 stronghold prestige/completion/guests, 37 renown, 39 any quest, 40-60 conquest system counters, 61 set bonus, 63 login days, 64 season level, 68 conquest points, 72-79 PvP medals/objectives/wins, 80 stronghold visits, 82 starfighter played. 158 E000 keys fold from no FQN, string, script value, client.gom name, gui path or STB text in the unfiltered extract (4.5M candidates), nor from names built from their consumers' fqns; they are names held server-side (GSF ship mastery, per-warzone PvP stats, login calendars, stronghold decoration categories, conquest event wins). Corrected 2026-11-09 (RESEARCH 01a1c27b-e018 rev 2): 158 codes fold from no client string; 4 more fold from names held only as text; E00071420A9EABF9 is not a key of the map.",
   "meaning": "lgcAchievementEventsPrototype map: achievement event code -> the achievements that count it. 10,952 keys are E000 event codes (hash under achEvents). 175 are small integers."
  },
  "4000004267d92710": {
@@ -313,7 +313,9 @@
   "meaning": "Per-task event map (achEvents): key = an achievement event code. A code is the 48-bit fold of FNV-1a 64 over the UPPERCASED event name under prefix 0xE000: h = fnv1a64(upper(name)); code = 0xE000000000000000 | (h & 0x0000FFFFFFFF0000) | ((h ^ (h >> 48)) & 0xFFFF). The name is an object fqn (npc, ach, qst, itm, cdx, abl, rdd) or a name a Hydra 'Achievement Event' action raises."
  },
  "4000004e134fd908": {
-  "reason": "Only two values, 3588848902734087 (0xCC00A00000107) and 3588848902734088, on 3,694 conversation nodes in exp.seasons and character.combat_style and 3 scrolling-text nodes. They resolve to no object, quest variable or string, and occur on player, NPC, text and silent nodes alike. Viewing a conversation with both values in game, or a client trace, would be needed."
+  "confidence": "proved",
+  "evidence": "3,694 values, all high 32 = 835594: 3,326 are 263 (exp.seasons chapters), 368 are 264. The earlier 'resolves to no string' was because the gui table is not in the strings table; dump_stb reads it.",
+  "meaning": "String id of the leave-conversation warning: str/gui/conversationforceescapedialog.stb (id2 835594) 263 'If you leave this conversation, you will exit the chapter...' or 264 '...exit the area and be sent to the fleet'."
  },
  "4000004e2bd6139a": {
   "confidence": "proved",
@@ -428,17 +430,142 @@
  },
  "4000004164287098": {
   "confidence": "proved",
-  "evidence": "On quest tasks (branch 05a2a6d3 > step 05a2a6d1 > task 05a2a6d0). Conversation hook ids match one in the quest the node names for 17,708 of 21,471 cnvNodeQuestHookIds and 14,145 of 17,735 cnvActionHookId in the filtered build. qst.location.hutta.class.spy.claim_your_new_identity: b0.s0.t0 = 8572565631771144812, b0.s1.t0 = 4652755957192867296, b0.s5.t0 = -3973526218951927179. Values repeat across quests and neighbouring values differ by the 64-bit FNV prime (4652757056704495507 - 4652755957192867296 = 1099511628211), so they are hashes of short shared names and key a task only together with the quest.",
-  "meaning": "A quest task's hook id: the id a conversation node names to gate on or complete this task. Unique within a quest, not across quests."
+  "evidence": "Signed FNV-1a 64 of the UPPERCASED hook name. 40 of the 47 distinct values resolve, covering 38,160 of 39,935 hooked tasks in an unfiltered live 7.x extract: ON START 9,405 (step 0 of 9,384 quests), ON END 4,751 (last steps), PROGRESS 1 .. PROGRESS 31 5,547 (numbered middle hooks, unique within 1,813 of 1,825 quests, not the step index), ON HYDRA 6,897, ON DEATH 4,951, ON USE 3,859, ON LOOT 1,589, ON QUEST COMPLETE 672, ON SURRENDER 468, ON START ABANDONED 3. The PROGRESS family is proved by inversion too: PROGRESS 1x and 2x values step back to the hash of PROGRESS 1 and PROGRESS 2. ON HYDRA tasks carry the Hydra-set variable in d4494960 (6,888 of 6,897); other kinds almost never do. 7 values (1,775 tasks) are unnamed after dictionary, two-word phrase and meet-in-the-middle search of 10 characters after 'ON ' and no prefix: -1634134112749681032 (1,104), 1706658247751495150 (399), -5283608993302370519 (203), -7865182985898956429 (33), 4316997476358898420 (20), 7816445178570861550 (14), 3493220692102698360 (2). Tools: kessel-discovery/examples/cnv_hook_dump.rs, fnv_mitm.rs.",
+  "meaning": "qstHookId: the kind of event that completes a quest task, as signed FNV-1a 64 of its uppercased name (ON START, ON END, PROGRESS n, ON HYDRA, ON DEATH, ON USE, ON LOOT, ON QUEST COMPLETE, ON SURRENDER). Shared across quests by design: it keys a task only together with its quest."
  },
  "400000416428709a": {
   "confidence": "proved",
-  "evidence": "Map from Quest to a list of hook ids, on 13,105 nodes, all root children. 17,708 of 21,471 hook ids equal the qstHookId (4000004164287098) of a task of the keyed quest. Step 0 goes with cnvNodeQuestGrants, the last step with cnvNodeQuestEnds, a middle step with cnvNodeQuestProgress (yuleph_phan, kolovish, master_silvarte, moracen, master_bela_kiwiiks, keeper). The other 3,763 are ids that some quest uses but the keyed quest's tasks do not carry: mostly 8572565631771144812 (a step-0 id in other quests) and -3973526218951927179 (a last-step id); e.g. cnv.location.tython.world.the_chamber_of_speech.do_zonn ends qst.location.tython.world.the_chamber_of_speech with -3973526218951927179, which appears nowhere in that quest.",
-  "meaning": "For each quest this root node is an entry for, the quest tasks (by qstHookId) that must be active for the conversation to open here."
+  "evidence": "Map from Quest to a list of hook ids, on 13,105 nodes, all root children. Every one of the 21,471 hook ids is ON START, ON END or PROGRESS n by FNV-1a 64 of the name (see 4000004164287098), so the 'shared hashed ids' are the hook names. Joined to the keyed quest on (quest, hook): 19,423 name one task, 3 several tasks of one step, 1,205 several steps (ON END on quests whose branches each end), 794 no task (595 ON END where the last step's task has no hook, PROGRESS n beyond the quest's numbering), 46 quests missing. Step 0 goes with cnvNodeQuestGrants, the last step with cnvNodeQuestEnds, a middle step with cnvNodeQuestProgress.",
+  "meaning": "For each quest this root node is an entry for, the hook names (ON START, ON END, PROGRESS n) whose task must be active for the conversation to open here."
  },
  "4000004d0336685a": {
   "confidence": "proved",
-  "evidence": "14,145 of 17,735 values in the filtered build equal the qstHookId of a task of the quest in the node's cnvActionQuest; see 40000034b21f4106 for the rest.",
-  "meaning": "The qstHookId of the task of cnvActionQuest that this node completes."
+  "evidence": "All 17,735 values are ON START, ON END or PROGRESS n (FNV-1a 64 of the name). Joined to the quest in cnvActionQuest on (quest, hook): 16,330 name one task, 2 several tasks of one step, 608 several steps (mostly ON END across branches), 749 no task, 46 quests missing; 6,453 action nodes carry no hook.",
+  "meaning": "The hook this node fires on the quest in cnvActionQuest: ON START grants, ON END completes, PROGRESS n advances the task carrying that qstHookId."
+ },
+ "4000004e04ee5c20": {
+  "confidence": "proved",
+  "evidence": "Over 39,890 clauses in 20,153 Conditions, every type's populated fields are the fields named for it: 27 carries only cndAchievementId (570/570), 34 only cndDisciplineId, 117/118 only cndConditionalId pointing at qst.*, 8 cndOfClassClasses, 43 cndAreaId, 129 cndConditionalInteger with cndTargetQuestEraState. The 19 clauses with no type field carry only cndForceAlignmentComparison/Value (type 0).",
+  "meaning": "Clause type of one Condition clause: an index into enum cndConditionType (137 members, gom_enums.json hash 7C7B7B6804EE5C1F), e.g. 3 GlobalVariable (quest variable), 4 HasItems, 19 NestedConditional, 27 HasAchievement, 34 IsDiscipline, 117 IsOnQuest, 118 HasCompletedQuest, 129 IsQuestEraInState. Absent means 0 (ForceAlignment). Value 137 (2 clauses, cnd.alliance.legacy_reborn.is_in_space_game) is past the enum's end."
+ },
+ "4000004e0c0f2895": {
+  "confidence": "proved",
+  "evidence": "5,197 of 5,209 ids resolve their high 32 bits to a Quest's string_id (12 to no extracted object); 2,676 of 2,737 non-builtin ids equal a qstVariableGUID exactly. FQN words split by n: 'on_quest'/'is_on' take n=1 (197 vs 13 at n=2), 'complete'/'completed' take n=2 (430 vs 11 at n=1).",
+  "meaning": "Quest variable a GlobalVariable clause tests: (quest string_id << 32) | n. n = 1 is the quest's ACTIVE state, n = 2 COMPLETE, n = 4 ELIGIBLE (likely; see 4000001ce4ee1382); any other n equals a qstVariableGUID (400000002c1fe390) in that quest's variable lists, i.e. a named quest variable."
+ },
+ "400000429d291241": {
+  "confidence": "proved",
+  "evidence": "7,677 of 7,689 entries resolve to a Quest; cnd.exp.04.systems.mod.all_mission_complete_328_330 (only NestedConditional clauses) lists the 20 #COMPLETE variables of the ten conditions it nests.",
+  "meaning": "Every quest variable the Condition reads, transitively through nested conditions, in the same (string_id << 32 | n) form as cndGlobalVariableId: the invalidation list."
+ },
+ "400000448d60c770": {
+  "confidence": "proved",
+  "evidence": "Equals {t + 1 for t in transitive clause types} on 20,151 of 20,151 Conditions that carry it.",
+  "meaning": "Every clause type the Condition uses, transitively through nested conditions, each stored as type + 1."
+ },
+ "40000043bd2cc2c4": {
+  "confidence": "proved",
+  "evidence": "Equals the transitive type set on 20,149 of 20,151; the 2 exceptions (cnd.stronghold.is_in/not_guild_apartment, type 63) have an empty set.",
+  "meaning": "Bitset (64-bit words) of every clause type the Condition uses, transitively: bit t set for type t."
+ },
+ "400000429e352b11": {
+  "confidence": "likely",
+  "evidence": "Absent on 7,055, 1 on 13,094, 2 on 4. cnd.exp.04.systems.mod.mod_quest_pro_336_complete (OR over the imp and rep 336 quests) has 1; the bulk of OR use is the HasItems pair 'has item' / 'has item equipped'. Not checked against a game outcome.",
+  "meaning": "How the clauses combine: enum cndLogicEnum, 0 (absent) AND, 1 OR, 2 XOR."
+ },
+ "40000034bc126755": {
+  "confidence": "proved",
+  "evidence": "All 3,134 expressions evaluate to exactly one value on the stack; 6,317 of 6,344 variable tokens resolve to a quest. Jedi Knight chapter 1 decodes to the known order: Coruscant introduction <= Tython seeking_darkness#COMPLETE; act_1 thedefector <= taris the_rescue#COMPLETE AND nar_shaddaa showdownwithlordsardic#COMPLETE; Sith Warrior Korriban arm_yourself > judge_executioner > slaying_the_beast > a_new_master > sith_arithmetic > the_final_trial > leaving_korriban.",
+  "meaning": "A quest's requirement expression in postfix: token 8 = AND, 9 = OR (binary), 10 = NOT (unary); every other token is a quest variable id (prefix48 << 16 | n) where prefix48 = the owning quest's qstAlternateEndingVariableID >> 16 and n = 1 ACTIVE, 2 COMPLETE, 4 ELIGIBLE (likely), else a named variable (qstVariableFqnId 40000034b21e56a4)."
+ },
+ "40000034bc126754": {
+  "confidence": "proved",
+  "evidence": "Over 622,641 gated nodes in 10,752 conversations, 622,277 evaluate to one value with 8/9/11/12 binary and 10 unary; 887,391 of 905,411 variable tokens equal a qstVariableFqnId, e.g. 10549456612798496869..876 = qst.utility.class is_jedi_knight .. is_spy (the class gates on 470,350 '== 1' tests). Conversation decode (RESEARCH 01a1c272): 622,641 nodes; 193,408 are [1,1,8] (true AND true). The commonest forms read 1 1 <is_jedi_knight> 1 11 <is_jedi_wizard> 9 <is_trooper> 9 ... 8 8: class flags ORed (9) after an equality test (11), ANDed (8) into the leading true. 12 compares int variables to const ids (glb_broonmark_status 12 const_broonmark_recruited). 3,235 of the 5,278 variables conversation actions set are tested by some conversation condition. Op 10 is unary NOT (as in qstReqExpression 40000034bc126755); op 3 is rare and its exact comparison is unproved.",
+  "meaning": "A conversation node's compiled gate in the same postfix language as qstReqExpression, plus literals 0 and 1 and comparisons: 11 = variable == literal (var, literal, 11), 12 = variable == variable (int var vs const var); 3-7 are integer comparisons (5 seen as count >= tier constant; exact op per code unproved). The wrapper [1, 1, ..., 8, 8] ANDs two TRUE constants; [1, 1, 8] is an ungated node. (cnvConditionCompiled; the same code as cnvActionExpressionCompiled.)"
+ },
+ "4000001ce4ee1382": {
+  "confidence": "proved",
+  "evidence": "6,317 of 6,344 qstReqExpression variable tokens match a quest's base >> 16.",
+  "meaning": "The quest's variable namespace base: prefix48 << 16 with n = 0; every qstVariableFqnId of the quest shares its top 48 bits, and qstReqExpression / cnvConditionCompiled tokens name the quest by those bits."
+ },
+ "400000002c1fe412": {
+  "confidence": "proved",
+  "evidence": "Equals string_id << 32 on every sampled quest (qst.location.nar_shaddaa.world.republic.worker_justice_credits: 2054454656368640 = 478340 << 32).",
+  "meaning": "Quest definition id = the quest's string_id << 32; qstVariableGUID values are this base + n, the form Conditions use."
+ },
+ "40000034bc126752": {
+  "confidence": "proved",
+  "evidence": "10,391 non-empty lists, all length 3. Operand ids resolve through qstVariableFqnId (40000034b21e56a4) to 8,797 variables; in 8,795 the variable belongs to the node's cnvActionQuest. Op agrees with the variable's list: 11 only on qstSimpleBool/qstPermanentBool/link variables (7,154; values 0/1), 12 only on int/permanent int/counter/stringid variables, with the rhs a qstConstVariableDefinition id whose qstVariableIdValue is the value (glb_broonmark_status := const_broonmark_recruited = 2). 14 adds: cnv.test.bret.test_blackjack adds card consts 1..11 to int_pc_points; turn-in counters (int_caches_found += const_1, counter_supplies_turned_in += 1). 15 appears on the same up/down variables as 14 (cnv_elara_happiness, mias_affection, gbl_smuggler_alignment). 1,501 lists have variable 0 and no quest. Of the 6,453 cnvActionQuest nodes with no cnvActionHookId, 6,055 carry an expression (5,977 resolve, all in the named quest) and 398 carry neither. Tool kessel-discovery/examples/cnv_actions.rs.",
+  "meaning": "cnvActionExpressionCompiled: what a conversation node sets when reached. Always three tokens [variable, value, op], op 11 = set bool variable to literal 0/1, 12 = set int variable to a value (const variable id or literal), 14 = add value, 15 = subtract value. The variable is a quest variable of the node's cnvActionQuest; 0 as the variable is an inert placeholder."
+ },
+ "4000000b8c279053": {
+  "confidence": "proved",
+  "evidence": "All four keys on 3,301 nodes resolve to a row of the singleton; the keys hash: fnv1a64('SMALL') = 2959999436154067372, 'MEDIUM' = 589686270506543030, 'LARGE' = -2493745135610518796, 'VERY LARGE' = 5787183427540372334. Use: SMALL 1,744, MEDIUM 1,034, LARGE 325, VERY LARGE 70 nodes. The 50/100/150/200 tiers match the known in-game LS/DS choice values.",
+  "meaning": "cnvRewardForceAmount: the light or dark side points a choice gives, as a key into qstrewardsconvoforcealignmentData (qstRewardsPerLevelData): FNV-1a 64 of SMALL = 50, MEDIUM = 100, LARGE = 150, VERY LARGE = 200, flat over levels 0-80. cnvRewardForceType (4000000ea744d62a) says light (1) or dark (2)."
+ },
+ "4000000b8c279058": {
+  "confidence": "proved",
+  "evidence": "98 nodes, 3 keys; fnv1a64('LOW') = 2693367092410997505, 'MEDIUM' = 589686270506543030, 'HIGH' = -5509327477874054083, the three keys of qstrewardsconvocreditsData.",
+  "meaning": "cnvRewardCredits: credits a node pays, as a key into qstrewardsconvocreditsData: FNV-1a 64 of LOW, MEDIUM, HIGH, each a per-level credit curve (LOW level 1 = 5, HIGH level 1 = 20)."
+ },
+ "4000000b8c279055": {
+  "confidence": "proved",
+  "evidence": "Present as an empty map on all 622,641 nodes of 10,752 conversations.",
+  "meaning": "cnvRewardAffectionRewards: the pre-4.0 per-node companion affection reward. Empty on every 7.x node; companion influence from choices is now cnvNpcReactions."
+ },
+ "400000426c54c424": {
+  "confidence": "proved",
+  "evidence": "57,281 reactions on 23,160 nodes, 129 companions (NpcCompanion objects); 57,277 keys are in the 75-row map. Influence per reaction: 200 on 39,171 ('<<1>> approves.', 'greatly approves.'), 50 on 17,900 ('disapproves.'), 0 on 149, larger one-offs 500-10,000 on 58. Texts from str/gui/conversationreactions.stb (id2 832245), 75/75 resolve.",
+  "meaning": "cnvNpcReactions: the companion reactions a choice triggers, a list of {cnvReactionNpcId companion, cnvReactionType key}; the key looks up cnvReactionsDataPrototype's cnvNpcReactionMap for the message and the influence gained."
+ },
+ "400000426c54c421": {
+  "confidence": "proved",
+  "evidence": "57,281 of 57,281 resolve to NpcCompanion objects, e.g. nco.companions_original.bounty_hunter.mako 3,044.",
+  "meaning": "cnvReactionNpcId: the companion that reacts (an NpcCompanion object)."
+ },
+ "400000426c54c422": {
+  "confidence": "proved",
+  "evidence": "57,277 of 57,281 resolve in cnvNpcReactionMap; fnv1a64('WILL_REMEMBER_THAT') = the key of the row whose text is '<<1>> will remember that.'",
+  "meaning": "cnvReactionType: key of the reaction row in cnvReactionsDataPrototype (FNV-1a 64 of the uppercased reaction name, e.g. WILL_REMEMBER_THAT)."
+ },
+ "40000042946e6bf1": {
+  "confidence": "proved",
+  "evidence": "269 nodes: items 243, credits 44, influence 2. Known exchange: cnv.alliance.camp.doctor_oggurobb node 990 debits 1 itm.loot.lockbox.alliance.supply_crate.locked.alien_research and credits 1 ...unlocked.alien_research plus 500 influence with nco.alliance.doctor_oggurobb: the Alliance specialist crate trade (hand in a locked crate, get the unlocked crate and influence). Iokath vendor nodes debit 10-25 itm.loot.token.iokath.shards plus 2,000 credits. Error strings 270-272 of str/sys/cnvconfirmationtext.stb name credits, influence and items as what the player lacks.",
+  "meaning": "cnvDebitTransaction: what the player gives up when the node fires: items (cnvTransactionItems, item -> count), credits (cnvTransactionPlayerCredits), influence. The node asks first (cnvConfirmationDialogLocId 'Proceed with this transaction?') and fails with 'Not enough credits / influence / Missing required item(s)'."
+ },
+ "40000042946e6bf2": {
+  "confidence": "proved",
+  "evidence": "169 nodes: items 101, influence 72, credits 6. Same proof as the debit: the Oggurobb crate trade credits the unlocked crate and 500 influence; Lokin's turn-ins (cnv.alliance.alderaan.lokin.lokin) debit 24 bio samples and credit 300 influence to nco.companions_updated.eckard_lokin_updated; error string 273 'Not enough space in inventory' is the credit side.",
+  "meaning": "cnvCreditTransaction: what the player receives when the node fires: items, credits, companion influence (cnvTransactionInfluenceChanges, companion -> amount)."
+ },
+ "400000429a7ba581": {
+  "confidence": "proved",
+  "evidence": "72 credit and 2 debit transactions; keys are NpcCompanion objects, values 250-2,000 (Alliance specialists 500).",
+  "meaning": "cnvTransactionInfluenceChanges: companion -> influence points moved by the transaction."
+ },
+ "400000429a7ba580": {
+  "confidence": "proved",
+  "evidence": "243 debit and 101 credit transactions; keys resolve to Item objects.",
+  "meaning": "cnvTransactionItems: item -> count moved by the transaction."
+ },
+ "40000042946e6bfb": {
+  "confidence": "proved",
+  "evidence": "44 debits (e.g. 2,000 at the Iokath vendor) and 6 credits.",
+  "meaning": "cnvTransactionPlayerCredits: credits moved by the transaction."
+ },
+ "40000042946e6bfc": {
+  "confidence": "proved",
+  "evidence": "312 of 312 values have high 32 = 856957 and low 32 = an entry of cnvconfirmationtext.stb; 107 are 261 'Proceed with this transaction?', 52 are 264 'Are you sure you wish to unlock this companion?'.",
+  "meaning": "cnvConfirmationDialogLocId: string id (str/sys/cnvconfirmationtext.stb, id2 856957) of the confirmation the client shows before the node fires: 'Proceed with this transaction?' (261), romance and companion-loss warnings."
+ },
+ "400003d2b05565b3": {
+  "confidence": "proved",
+  "meaning": "achRepeatInterval: how often a repeatable achievement (conquest, Galactic Seasons, ventures) can complete again. Client enum lgcAchievementRepeatInterval (400003D2B05565B2): 0 Never (absent), 1 Infinitely, 2 Daily, 3 Weekly. It is a repeat interval, not a character-or-legacy scope.",
+  "evidence": "The client.gom enum record lists lgcAchievementRepeatIntervalNever, Infinitely, Daily, Weekly in that order. Zero-based index proved by a join: in cnqConquestInfoAchievementMap (8f33cf59) every objective carries a cnqConquestAchievementTypeEnum, and on all 4,732 event-objective pairs where both are set they agree under that index with no exception: Infinitely <-> Repeatable 374, Daily <-> DailyRepeatable 4,018, Weekly <-> Unrepeatable 340; the 8,245 pairs with the field absent (Never) are all Unrepeatable. Galactic Seasons names agree: all 30 'Daily PO: ...' objectives are 2 and all 12 'Weekly PO: ...' are 3. Exarch's conquest sheet (Mission Type Daily / Weekly / Infinitely Repeatable) agrees on 1,952 of 2,023 event-objective rows; the 71 disagreements are mostly '... Eternal' objectives and second-tier objectives such as 'Crafting: Inventor 2' that the sheet marks Weekly where the data says Daily or Infinitely (live 7.x)."
+ },
+ "400003d2b05565b1": {
+  "confidence": "proved",
+  "meaning": "achType: which system an achievement belongs to. Client enum lgcAchievementType: 0 Standard (absent), 1 Conquest, 2 GalacticSeasons, 3 PvPSeasons, 4 Ventures.",
+  "evidence": "The client.gom enum record lists lgcAchievementTypeStandard, Conquest, GalacticSeasons, PvPSeasons, Ventures in that order. Zero-based index proved by FQN family on all 1,221 uses: 1 on 397 ach.conquests.*; 2 on 570 ach.galactic_seasons.* and 42 ach.conquests.galactic_seasons.priority_objectives.*; 3 on 36 ach.pvp_seasons.*; 4 on 176 ach.ventures.*; no exception. Every conquest objective a conquest event lists carries it; 367 ach.conquests.* that no event lists lack it (live 7.x)."
  }
 }
