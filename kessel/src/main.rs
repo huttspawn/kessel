@@ -686,6 +686,7 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
             | "nco"  // NPC companions, era-tagged
             | "mrp"  // mount/reward packages, event-tied
             | "ipp" // item paint/pattern prototypes
+            | "rdd" // raid difficulties; rdd.location.* name achievement events
     ) {
         return false;
     }
@@ -740,6 +741,22 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
 
     if fqn.contains(".test_") || fqn.contains("_test.") || fqn.contains(".debug_") {
         return false;
+    }
+
+    // FR-KESSEL-025: achievement events are named by object fqns, so the
+    // objects that name them are kept: rdd.location.* (operation and
+    // flashpoint completion), abl.player.mount.* and abl.itm.vanity_pet.*
+    // (learned), npc.blueprints.* (killed).
+    if prefix == "rdd" && parts.get(1) != Some(&"location") {
+        return false;
+    }
+    if prefix == "abl"
+        && matches!(
+            (parts.get(1), parts.get(2)),
+            (Some(&"player"), Some(&"mount")) | (Some(&"itm"), Some(&"vanity_pet"))
+        )
+    {
+        return true;
     }
 
     // Content-based filters below
@@ -841,7 +858,7 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
         let second = parts[1];
         if matches!(
             second,
-            "blueprints" | "ability" | "combat" | "cinematic_extras" | "heavy_weight_cos"
+            "ability" | "combat" | "cinematic_extras" | "heavy_weight_cos"
         ) {
             return false;
         }
@@ -975,6 +992,11 @@ mod tests {
             "ipp.custom.sow.progresson.ge_a13_purple_holo.legs",
             "abl.placeables.examine_lore_object",
             "world.areas.4611686019802841877.mapdata",
+            "abl.mtx.toy.incentive.party_jawa",
+            "abl.player.mount.hoverbike.aggressor_green",
+            "abl.itm.vanity_pet.acklay.lylek_a01_infected01",
+            "npc.blueprints.creature.acklay",
+            "rdd.location.flashpoint.raid.asation",
         ];
         for fqn in samples {
             assert!(
@@ -1006,6 +1028,8 @@ mod tests {
     #[test]
     fn should_extract_object_still_rejects_unknown_prefix() {
         assert!(!should_extract_object("zzzunknownprefix.foo", false));
+        assert!(!should_extract_object("rdd.galaxy.other", false));
+        assert!(!should_extract_object("abl.player.sprint", false));
         assert!(!should_extract_object("randomgarbage", false));
     }
 
