@@ -1,5 +1,6 @@
 //! Item classification, itemization tables, per-item stats, and relic proc classification.
 
+use super::title::ITEM_TEACHES_VALUE;
 use super::*;
 use crate::schema::item;
 use regex::Regex;
@@ -611,16 +612,12 @@ const REWARD_CLASSES: u32 = 0xd9f3_5ee9;
 const WORLD_EVENTS: u32 = 0x395e_03f8;
 const EVENT_DROPS: u32 = 0x1bdc_8ed4;
 const EVENT_QUEST: u32 = 0x6f56_8b11;
-// Achievement -> achRewardsTable reward id.
-const ACH_REWARD_ID: u32 = 0xdeaa_a365;
 // Hydra script variables: FNV-1a 64 of the uppercased name -> record naming an object.
 const HYD_VARIABLES: u32 = 0xed10_e6a0;
 const HYD_VARIABLE_FQN: u32 = 0x080c_e2d2;
 // Item fields.
 const ITEM_SOURCE_LIST: u32 = 0x9ef1_a7fa;
 const ITEM_USAGE_ABILITY: u32 = 0x2d7b_8779;
-const ITEM_TEACHES_CATEGORY: u32 = 0xdc16_d5e1;
-const ITEM_TEACHES_VALUE: u32 = 0xdc16_d5e3;
 const ITEM_LOOT_PACKAGE: u32 = 0x407c_89a3;
 // itmSourceProto: source id -> packed (id2 << 32 | id1) gui/item_source.stb ref.
 const SOURCE_LABELS: u32 = 0x9ef1_a7f9;
@@ -637,11 +634,7 @@ type UnlockRow = (String, &'static str, String);
 
 /// FNV-1a 64 of the uppercased name: how a Hydra script keys its variables.
 fn hydra_name_hash(name: &str) -> u64 {
-    name.to_uppercase()
-        .bytes()
-        .fold(0xcbf2_9ce4_8422_2325, |h, b| {
-            (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
-        })
+    crate::hash::fnv1a64(&name.to_uppercase())
 }
 
 fn map_field(
@@ -777,15 +770,8 @@ fn item_facts(
     if let Some(mount) = teaches.filter(|m| grants_mount && lk.mounts.contains(m)) {
         unlock("mount", mount.to_string());
     }
-    // itmTeachesCategory is an enum: 5 = player title, 9 = legacy title.
-    let category = obj.embedded_field(ITEM_TEACHES_CATEGORY);
-    let title_kind = match category.and_then(crate::gom_reader::GomValue::as_i64) {
-        Some(5) => Some("player"),
-        Some(9) => Some("legacy"),
-        _ => None,
-    };
-    if let (Some(kind), Some(id)) = (title_kind, teaches) {
-        unlock("title", format!("{kind}:{}", id as i64));
+    if let Some((kind, id)) = super::title::item_title(obj) {
+        unlock("title", format!("{kind}:{id}"));
     }
     if let Some(package) = field(ITEM_LOOT_PACKAGE) {
         unlock("loot_package", format!("{package:016X}"));
@@ -818,7 +804,8 @@ impl Database {
                  WHERE reward_id = ?1 AND item_fqn IS NOT NULL",
             )?;
             for (ach, obj) in decoded_objects(tx, "Achievement")? {
-                let Some(reward) = obj.embedded_field(ACH_REWARD_ID).and_then(bits) else {
+                let Some(reward) = obj.embedded_field(super::title::ACH_REWARD).and_then(bits)
+                else {
                     continue;
                 };
                 let rows = reward_items.query_map([reward as i64], |r| r.get::<_, String>(0))?;
@@ -1310,6 +1297,7 @@ mod tests {
     mod sources {
         use super::super::*;
         use crate::db::testutil::temp_db_path;
+        use crate::db::title::ITEM_TEACHES;
         use crate::gom_reader::GomValue as G;
 
         fn obj(fields: Vec<(u32, G)>) -> G {
@@ -1462,7 +1450,7 @@ mod tests {
 
             let title = |category| {
                 facts(vec![
-                    (ITEM_TEACHES_CATEGORY, G::Enum(category)),
+                    (ITEM_TEACHES, G::Enum(category)),
                     (ITEM_TEACHES_VALUE, G::I64(114)),
                 ])
                 .1
