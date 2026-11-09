@@ -45,6 +45,39 @@ mod reward_field {
     pub const QUANTITY: u32 = 0x0f72cd23;
 }
 
+/// Achievement object fields read for earn chains (FR-KESSEL-025).
+mod ach_field {
+    /// achActions: task number -> task.
+    pub const ACTIONS: u32 = 0x8ce6_ac36;
+    /// achEvents: event code -> (unread) per task.
+    pub const EVENTS: u32 = 0x8ce6_ac37;
+    /// achMaxCounter: the count a task needs.
+    pub const MAX_COUNTER: u32 = 0xdeaa_a366;
+    /// locTextRetrieverMap: task number -> text ref (str.ach id1 256+).
+    pub const TEXT: u32 = 0xa787_ee87;
+    pub const TEXT_STRING_ID: u32 = 0x5ce8_7488;
+    /// Conditions, and on each: type, owner (2 = the event's target),
+    /// integer-list params (key 8 = effect tag hashes), condition refs.
+    pub const CONDITIONS: u32 = 0x42cc_2550;
+    pub const COND_TYPE: u32 = 0xb8dc_994b;
+    pub const COND_OWNER: u32 = 0x7fbd_af73;
+    pub const COND_ID_LISTS: u32 = 0xb8dc_9943;
+    pub const COND_REFS: u32 = 0xb8dc_9946;
+}
+
+/// Hydra hook pairs on quests and achievements: the script and the custom
+/// event they send it.
+const HOOK_SCRIPT: u32 = 0x4fa1_4a1f;
+const HOOK_EVENT: u32 = 0xcdeb_4375;
+
+/// Condition type 18 tests that a participant carries an effect.
+const COND_HAS_EFFECT: i64 = 18;
+const COND_EFFECT_TAGS: i64 = 8;
+/// The log prints an effect as its owning ability's string id << 32 plus the
+/// effect's index; an ability's first effect is index 256 (str.abl id1 256,
+/// Party Jawa's 3044178330124544).
+const FIRST_EFFECT_INDEX: i64 = 256;
+
 /// The raw 64 bits of a numeric GOM value. Ids and GUIDs arrive as either
 /// UInt64 or Int64 depending on the field; both are the same bits.
 fn bits(v: &GomValue) -> Option<u64> {
@@ -477,6 +510,436 @@ fn achievement_name(tx: &Transaction, fqn: &str) -> Option<String> {
     .ok()
 }
 
+/// One task of an achievement as its payload states it.
+#[derive(Debug, PartialEq)]
+struct Task {
+    /// achievement_tasks.task_index: the task's text line (str.ach id1 - 256),
+    /// else its number - 1.
+    index: i64,
+    count_needed: Option<i64>,
+    event_codes: Vec<u64>,
+}
+
+/// One achievement condition.
+#[derive(Debug, PartialEq)]
+struct Condition {
+    kind: Option<i64>,
+    on_target: bool,
+    effect_tags: Vec<u64>,
+    refs: Vec<u64>,
+}
+
+fn achievement_tasks(obj: &GomValue) -> Vec<Task> {
+    use ach_field as f;
+    let text: HashMap<i64, i64> = obj
+        .embedded_field(f::TEXT)
+        .and_then(GomValue::as_map)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|(k, v)| {
+            let id1 = (field_bits(v, f::TEXT_STRING_ID)? & 0xFFFF_FFFF) as i64;
+            Some((k.as_i64()?, id1))
+        })
+        .collect();
+    obj.embedded_field(f::ACTIONS)
+        .and_then(GomValue::as_map)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|(k, task)| {
+            let n = k.as_i64()?;
+            Some(Task {
+                index: text
+                    .get(&n)
+                    .filter(|id1| **id1 >= 256)
+                    .map_or(n - 1, |id1| id1 - 256),
+                count_needed: task
+                    .embedded_field(f::MAX_COUNTER)
+                    .and_then(GomValue::as_i64),
+                event_codes: task
+                    .embedded_field(f::EVENTS)
+                    .and_then(GomValue::as_map)
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|(code, _)| bits(code))
+                    .collect(),
+            })
+        })
+        .collect()
+}
+
+fn achievement_conditions(obj: &GomValue) -> Vec<Condition> {
+    use ach_field as f;
+    let entries = |c: &GomValue, id: u32| -> Vec<(GomValue, GomValue)> {
+        c.embedded_field(id)
+            .and_then(GomValue::as_map)
+            .unwrap_or_default()
+            .to_vec()
+    };
+    obj.embedded_field(f::CONDITIONS)
+        .and_then(GomValue::as_list)
+        .unwrap_or_default()
+        .iter()
+        .map(|c| Condition {
+            kind: c.embedded_field(f::COND_TYPE).and_then(GomValue::as_i64),
+            on_target: c.embedded_field(f::COND_OWNER).and_then(GomValue::as_i64) == Some(2),
+            effect_tags: entries(c, f::COND_ID_LISTS)
+                .iter()
+                .filter(|(k, _)| k.as_i64() == Some(COND_EFFECT_TAGS))
+                .flat_map(|(_, v)| v.as_list().unwrap_or_default().iter().filter_map(bits))
+                .collect(),
+            refs: entries(c, f::COND_REFS)
+                .iter()
+                .filter_map(|(_, v)| bits(v))
+                .collect(),
+        })
+        .collect()
+}
+
+/// What an event code counts, by the kind of object or name that hashes to it.
+struct EventName {
+    kind: Option<&'static str>,
+    name: String,
+    ref_fqn: Option<String>,
+}
+
+/// The task-count kind of an object fqn, by its prefix. Kinds outside the
+/// table's list (rdd, nco ...) keep their name with no kind.
+fn fqn_count_kind(fqn: &str) -> Option<&'static str> {
+    match fqn.split('.').next()? {
+        "npc" => Some("npc"),
+        "qst" => Some("quest"),
+        "ach" => Some("achievement"),
+        "cdx" => Some("codex"),
+        "itm" => Some("item"),
+        "abl" => Some("ability"),
+        "plc" => Some("placeable"),
+        _ => None,
+    }
+}
+
+/// Whether a combat log can show a task's progress, and why not. The log
+/// prints NPC kills and effects, never an achievement event: a task counted
+/// only by NPC kills, under no condition but a has-effect test, is visible.
+fn log_visibility(
+    counted: &[Option<&str>],
+    conditions: &[Condition],
+) -> (bool, Option<&'static str>) {
+    let reason = counted.iter().find_map(|kind| match kind {
+        Some("npc") => None,
+        Some("quest") => Some("quest event"),
+        Some("codex") => Some("codex unlock"),
+        Some("item") => Some("item"),
+        _ => Some("script event"),
+    });
+    match reason {
+        Some(r) => (false, Some(r)),
+        None if counted.is_empty()
+            || conditions.iter().any(|c| c.kind != Some(COND_HAS_EFFECT)) =>
+        {
+            (false, Some("condition"))
+        }
+        None => (true, None),
+    }
+}
+
+/// How a script action is reached: hooked by a quest or achievement, or the
+/// root handlers (On Use, On Death ...) that reach it; `uncalled` when an On
+/// Custom handler on the way has no decoded caller.
+#[derive(Debug, Default, PartialEq)]
+struct Reach {
+    hooked: bool,
+    triggers: std::collections::BTreeSet<String>,
+    uncalled: bool,
+}
+
+/// Follow `script`'s `handler` back to its roots. `callers` maps a lowercased
+/// `script:custom event` to the (script, handler) pairs that execute it;
+/// `hooks` holds the lowercased `script:custom event` pairs quests and
+/// achievements send.
+fn reach(
+    script: &str,
+    handler: &str,
+    callers: &HashMap<String, Vec<(String, String)>>,
+    hooks: &std::collections::HashSet<String>,
+    seen: &mut std::collections::HashSet<String>,
+    out: &mut Reach,
+) {
+    let Some(event) = handler.strip_prefix("On Custom:") else {
+        out.triggers.insert(handler.to_string());
+        return;
+    };
+    let key = format!("{script}:{event}").to_lowercase();
+    if !seen.insert(key.clone()) {
+        return;
+    }
+    if hooks.contains(&key) {
+        out.hooked = true;
+    }
+    match callers.get(&key) {
+        Some(from) => {
+            for (s, h) in from {
+                reach(s, h, callers, hooks, seen, out);
+            }
+        }
+        None if !hooks.contains(&key) => out.uncalled = true,
+        None => {}
+    }
+}
+
+/// Every `script:custom event` (lowercased) a hook pair anywhere in `v` sends.
+fn hook_pairs(
+    v: &GomValue,
+    guid_fqn: &HashMap<u64, String>,
+    out: &mut std::collections::HashSet<String>,
+) {
+    match v {
+        GomValue::Embedded(fields) => {
+            let script = v.embedded_field(HOOK_SCRIPT).and_then(|s| match s {
+                GomValue::Str(s) => Some(s.trim_start_matches('@').to_string()),
+                other => bits(other).and_then(|g| guid_fqn.get(&g).cloned()),
+            });
+            if let (Some(script), Some(GomValue::Str(event))) =
+                (script, v.embedded_field(HOOK_EVENT))
+            {
+                out.insert(format!("{script}:{event}").to_lowercase());
+            }
+            fields
+                .iter()
+                .for_each(|(_, x)| hook_pairs(x, guid_fqn, out));
+        }
+        GomValue::List(items) => items.iter().for_each(|x| hook_pairs(x, guid_fqn, out)),
+        GomValue::Map(entries) => entries
+            .iter()
+            .for_each(|(_, x)| hook_pairs(x, guid_fqn, out)),
+        _ => {}
+    }
+}
+
+impl Database {
+    /// Populate `achievement_task_rules`, `achievement_task_counts` and
+    /// `hidden_earnables` (FR-KESSEL-025 c1, c2, c3, c7). Runs after
+    /// achievements, `script_actions` and `ability_tags`. Returns (task rules,
+    /// task counts, hidden earnables).
+    pub(crate) fn populate_earn_chains(&self) -> Result<(u64, u64, u64)> {
+        self.with_tx(|tx| {
+            let guid_fqn = object_guid_map(tx)?;
+
+            // Event code -> the name that hashes to it: object fqns first, then
+            // the names scripts raise.
+            let mut names: HashMap<u64, EventName> = HashMap::new();
+            {
+                let mut stmt = tx.prepare("SELECT fqn FROM objects WHERE is_canonical = 1")?;
+                for fqn in stmt.query_map([], |r| r.get::<_, String>(0))? {
+                    let fqn = fqn?;
+                    names
+                        .entry(crate::hash::achievement_event_code(&fqn))
+                        .or_insert_with(|| EventName {
+                            kind: fqn_count_kind(&fqn),
+                            name: fqn.clone(),
+                            ref_fqn: Some(fqn),
+                        });
+                }
+                let mut stmt = tx.prepare(
+                    "SELECT DISTINCT value FROM script_actions \
+                     WHERE action = 'Achievement Event' AND value IS NOT NULL",
+                )?;
+                for name in stmt.query_map([], |r| r.get::<_, String>(0))? {
+                    let name = name?;
+                    names
+                        .entry(crate::hash::achievement_event_code(&name))
+                        .or_insert(EventName {
+                            kind: Some("script_event"),
+                            name,
+                            ref_fqn: None,
+                        });
+                }
+            }
+
+            // Effect tag -> (effect ability, the id the log prints for it):
+            // the ability the tag is named after (tag.abl.x -> abl.x), else
+            // an ability ability_tags finds carrying it. The default extract
+            // keeps one object per fqn, so the tag's name is the surer key.
+            let mut effects: HashMap<String, (String, Option<i64>)> = HashMap::new();
+            {
+                let mut stmt = tx.prepare(
+                    "SELECT t.tag_hash, COALESCE(o.fqn, a.ability_fqn, substr(t.tag_fqn, 5)), \
+                            COALESCE(o.string_id, ao.string_id) \
+                     FROM tags t \
+                     LEFT JOIN objects o ON o.fqn = substr(t.tag_fqn, 5) AND o.is_canonical = 1 \
+                     LEFT JOIN ability_tags a ON a.tag_hash = t.tag_hash \
+                     LEFT JOIN objects ao ON ao.fqn = a.ability_fqn AND ao.is_canonical = 1 \
+                     ORDER BY a.ability_fqn",
+                )?;
+                let rows = stmt.query_map([], |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, String>(1)?,
+                        r.get::<_, Option<i64>>(2)?,
+                    ))
+                })?;
+                for row in rows {
+                    let (tag, ability, string_id) = row?;
+                    effects
+                        .entry(tag)
+                        .or_insert((ability, string_id.map(|s| (s << 32) | FIRST_EFFECT_INDEX)));
+                }
+            }
+
+            for t in ["achievement_task_rules", "achievement_task_counts", "hidden_earnables"] {
+                tx.execute(&format!("DELETE FROM {t}"), [])?;
+            }
+            let mut ins_rule = tx.prepare(
+                "INSERT OR REPLACE INTO achievement_task_rules \
+                   (achievement_fqn, task_index, count_needed, log_visible, log_reason, \
+                    buff_effect_fqn, buff_log_id, buff_on) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            )?;
+            let mut ins_count = tx.prepare(
+                "INSERT OR REPLACE INTO achievement_task_counts \
+                   (achievement_fqn, task_index, kind, ref_fqn, event_name, event_code) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
+
+            let mut counted_by: HashMap<u64, Vec<String>> = HashMap::new();
+            let mut hooks = std::collections::HashSet::new();
+            for (fqn, obj) in super::world::decoded_objects(tx, "Achievement")? {
+                hook_pairs(&obj, &guid_fqn, &mut hooks);
+                let conditions = achievement_conditions(&obj);
+                let buff = conditions
+                    .iter()
+                    .filter(|c| c.kind == Some(COND_HAS_EFFECT))
+                    .find_map(|c| {
+                        c.effect_tags.iter().find_map(|t| {
+                            effects
+                                .get(&format!("{t:016X}"))
+                                .map(|(abl, log_id)| (abl.clone(), *log_id, c.on_target))
+                        })
+                    });
+                for task in achievement_tasks(&obj) {
+                    let mut kinds = Vec::new();
+                    for code in &task.event_codes {
+                        let named = names.get(code);
+                        kinds.push(named.and_then(|n| n.kind));
+                        counted_by.entry(*code).or_default().push(fqn.clone());
+                        ins_count.execute(params![
+                            fqn,
+                            task.index,
+                            named.and_then(|n| n.kind),
+                            named.and_then(|n| n.ref_fqn.clone()),
+                            named.map(|n| n.name.clone()),
+                            format!("{code:016X}"),
+                        ])?;
+                    }
+                    for cnd in conditions.iter().flat_map(|c| &c.refs) {
+                        ins_count.execute(params![
+                            fqn,
+                            task.index,
+                            "condition",
+                            guid_fqn.get(cnd),
+                            None::<String>,
+                            None::<String>,
+                        ])?;
+                    }
+                    let (visible, reason) = log_visibility(&kinds, &conditions);
+                    let (effect, log_id, on) = match &buff {
+                        Some((abl, log_id, target)) => (
+                            Some(abl.as_str()),
+                            *log_id,
+                            Some(if *target { "target" } else { "player" }),
+                        ),
+                        None => (None, None, None),
+                    };
+                    ins_rule.execute(params![
+                        fqn,
+                        task.index,
+                        task.count_needed,
+                        visible,
+                        reason,
+                        effect,
+                        log_id,
+                        on
+                    ])?;
+                }
+            }
+            for (_, obj) in super::world::decoded_objects(tx, "Quest")? {
+                hook_pairs(&obj, &guid_fqn, &mut hooks);
+            }
+
+            // Custom events: who executes each `script:event`.
+            let mut callers: HashMap<String, Vec<(String, String)>> = HashMap::new();
+            let mut raised = Vec::new();
+            {
+                let mut stmt = tx.prepare(
+                    "SELECT script_fqn, handler, action, value, selector FROM script_actions \
+                     WHERE action IN ('Execute Hydra Script', 'Achievement Event') \
+                       AND value IS NOT NULL",
+                )?;
+                let rows = stmt.query_map([], |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, String>(1)?,
+                        r.get::<_, String>(2)?,
+                        r.get::<_, String>(3)?,
+                        r.get::<_, Option<String>>(4)?,
+                    ))
+                })?;
+                for row in rows {
+                    let (script, handler, action, value, selector) = row?;
+                    if action == "Achievement Event" {
+                        raised.push((script, handler, value, selector));
+                    } else {
+                        callers
+                            .entry(value.to_lowercase())
+                            .or_default()
+                            .push((script, handler));
+                    }
+                }
+            }
+
+            let mut ins_hidden = tx.prepare(
+                "INSERT OR REPLACE INTO hidden_earnables \
+                   (event_name, event_code, script_fqn, handler, trigger, credits, achievement_fqn) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            )?;
+            for (script, handler, name, selector) in &raised {
+                let mut r = Reach::default();
+                reach(script, handler, &callers, &hooks, &mut Default::default(), &mut r);
+                if r.hooked {
+                    continue;
+                }
+                let trigger = r.triggers.iter().next().map_or("On Custom", String::as_str);
+                let code = crate::hash::achievement_event_code(name);
+                let achievements = counted_by.get(&code);
+                let achievements: Vec<Option<&str>> = match achievements {
+                    Some(a) => a.iter().map(|a| Some(a.as_str())).collect(),
+                    None => vec![None],
+                };
+                for ach in achievements {
+                    ins_hidden.execute(params![
+                        name,
+                        format!("{code:016X}"),
+                        script,
+                        handler,
+                        trigger,
+                        selector,
+                        ach
+                    ])?;
+                }
+            }
+            // Rows written, not inserts: an action repeated in one handler
+            // lands on the same hidden_earnables row.
+            let rows = |t: &str| -> Result<u64> {
+                Ok(tx.query_row(&format!("SELECT COUNT(*) FROM {t}"), [], |r| r.get(0))?)
+            };
+            Ok((
+                rows("achievement_task_rules")?,
+                rows("achievement_task_counts")?,
+                rows("hidden_earnables")?,
+            ))
+        })
+    }
+}
+
 /// Create the achievement and venture tables (idempotent).
 pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
     tx.execute_batch(
@@ -510,6 +973,54 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 PRIMARY KEY (achievement_fqn, ordinal)
             );
             CREATE INDEX IF NOT EXISTS idx_achievement_refs_ref ON achievement_refs(ref_fqn);
+            -- Earn chains (FR-KESSEL-025), joined to achievement_tasks on
+            -- (achievement_fqn, task_index). A task's rule: the count it
+            -- needs; whether a combat log can show its progress (NPC kills,
+            -- logged effects) and when not why (script event, quest event,
+            -- codex unlock, item, condition); and the effect a has-effect
+            -- condition requires, with the id the log prints for its
+            -- ApplyEffect and whom it must sit on (player or target).
+            CREATE TABLE IF NOT EXISTS achievement_task_rules (
+                achievement_fqn TEXT NOT NULL,
+                task_index      INTEGER NOT NULL,
+                count_needed    INTEGER,
+                log_visible     INTEGER NOT NULL,
+                log_reason      TEXT,
+                buff_effect_fqn TEXT,
+                buff_log_id     INTEGER,
+                buff_on         TEXT,
+                PRIMARY KEY (achievement_fqn, task_index)
+            );
+            -- What a task counts: each achievement event code (E000 + the
+            -- 48-bit fold of FNV-1a 64 over the uppercased name) with the
+            -- name and kind that hash to it (npc, quest, achievement, codex,
+            -- item, ability, placeable, script_event), and each condition
+            -- the achievement names (kind condition, no code).
+            CREATE TABLE IF NOT EXISTS achievement_task_counts (
+                achievement_fqn TEXT NOT NULL,
+                task_index      INTEGER NOT NULL,
+                kind            TEXT,
+                ref_fqn         TEXT,
+                event_name      TEXT,
+                event_code      TEXT,
+                PRIMARY KEY (achievement_fqn, task_index, event_code)
+            );
+            CREATE INDEX IF NOT EXISTS idx_achievement_task_counts_ref ON achievement_task_counts(ref_fqn);
+            CREATE INDEX IF NOT EXISTS idx_achievement_task_counts_code ON achievement_task_counts(event_code);
+            -- Every Achievement Event a script raises that no quest or
+            -- achievement hook reaches: the root handler that does (On Use,
+            -- On Death ..., On Custom when no caller is decoded), the
+            -- selector it credits, and each achievement counting the event.
+            CREATE TABLE IF NOT EXISTS hidden_earnables (
+                event_name      TEXT NOT NULL,
+                event_code      TEXT NOT NULL,
+                script_fqn      TEXT NOT NULL,
+                handler         TEXT NOT NULL,
+                trigger         TEXT NOT NULL,
+                credits         TEXT,
+                achievement_fqn TEXT,
+                PRIMARY KEY (event_code, script_fqn, handler, achievement_fqn)
+            );
             CREATE INDEX IF NOT EXISTS idx_achievement_refs_kind ON achievement_refs(ref_kind);
 
             -- Ventures (lgcVentures_Prototype). kind: classic (type 6,
@@ -614,5 +1125,188 @@ mod tests {
             payload_refs(&payload, &guids, 0xE000_0000_0000_0002),
             vec![2, 0]
         );
+    }
+
+    fn emb(fields: Vec<(u32, GomValue)>) -> GomValue {
+        GomValue::Embedded(
+            fields
+                .into_iter()
+                .map(|(id, v)| (0x4000_0000_0000_0000 | u64::from(id), v))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn achievement_tasks_read_count_codes_and_text_line() {
+        use ach_field as f;
+        let meatbag = 0xE000_39BA_78F5_3C4C_u64;
+        let task = |codes: Vec<u64>, count: i64| {
+            emb(vec![
+                (
+                    f::EVENTS,
+                    GomValue::Map(
+                        codes
+                            .into_iter()
+                            .map(|c| (GomValue::I64(c as i64), GomValue::I64(0)))
+                            .collect(),
+                    ),
+                ),
+                (f::MAX_COUNTER, GomValue::I64(count)),
+            ])
+        };
+        let obj = emb(vec![
+            (
+                f::ACTIONS,
+                GomValue::Map(vec![
+                    (GomValue::I64(1), task(vec![meatbag], 1)),
+                    (GomValue::I64(2), task(vec![1, 2], 25)),
+                ]),
+            ),
+            (
+                f::TEXT,
+                GomValue::Map(vec![(
+                    GomValue::I64(2),
+                    emb(vec![(f::TEXT_STRING_ID, GomValue::I64((7 << 32) | 259))]),
+                )]),
+            ),
+        ]);
+        assert_eq!(
+            achievement_tasks(&obj),
+            [
+                Task {
+                    index: 0,
+                    count_needed: Some(1),
+                    event_codes: vec![meatbag]
+                },
+                Task {
+                    index: 3,
+                    count_needed: Some(25),
+                    event_codes: vec![1, 2]
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn achievement_conditions_read_effect_tags_and_owner() {
+        use ach_field as f;
+        let party_jawa = 0x151C_0E05_3876_C9C6_u64;
+        let obj = emb(vec![(
+            f::CONDITIONS,
+            GomValue::List(vec![
+                emb(vec![
+                    (f::COND_TYPE, GomValue::Enum(18)),
+                    (f::COND_OWNER, GomValue::Enum(2)),
+                    (
+                        f::COND_ID_LISTS,
+                        GomValue::Map(vec![(
+                            GomValue::Enum(8),
+                            GomValue::List(vec![GomValue::U64(party_jawa)]),
+                        )]),
+                    ),
+                ]),
+                emb(vec![
+                    (f::COND_TYPE, GomValue::Enum(20)),
+                    (
+                        f::COND_REFS,
+                        GomValue::Map(vec![(
+                            GomValue::Enum(20),
+                            GomValue::U64(0xE000_0000_0000_0009),
+                        )]),
+                    ),
+                ]),
+            ]),
+        )]);
+        assert_eq!(
+            achievement_conditions(&obj),
+            [
+                Condition {
+                    kind: Some(18),
+                    on_target: true,
+                    effect_tags: vec![party_jawa],
+                    refs: vec![]
+                },
+                Condition {
+                    kind: Some(20),
+                    on_target: false,
+                    effect_tags: vec![],
+                    refs: vec![0xE000_0000_0000_0009]
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn log_visibility_shows_only_npc_kills_under_effect_conditions() {
+        let cond = |kind| Condition {
+            kind: Some(kind),
+            on_target: false,
+            effect_tags: vec![],
+            refs: vec![],
+        };
+        assert_eq!(log_visibility(&[Some("npc")], &[]), (true, None));
+        assert_eq!(log_visibility(&[Some("npc")], &[cond(18)]), (true, None));
+        assert_eq!(
+            log_visibility(&[Some("npc")], &[cond(29)]),
+            (false, Some("condition"))
+        );
+        assert_eq!(
+            log_visibility(&[Some("script_event")], &[]),
+            (false, Some("script event"))
+        );
+        assert_eq!(
+            log_visibility(&[Some("npc"), Some("quest")], &[]),
+            (false, Some("quest event"))
+        );
+        assert_eq!(
+            log_visibility(&[Some("codex")], &[]),
+            (false, Some("codex unlock"))
+        );
+        assert_eq!(log_visibility(&[Some("item")], &[]), (false, Some("item")));
+        assert_eq!(log_visibility(&[None], &[]), (false, Some("script event")));
+    }
+
+    #[test]
+    fn reach_follows_custom_handlers_to_roots_and_hooks() {
+        let callers: HashMap<String, Vec<(String, String)>> = [
+            (
+                "hyd.a:found".to_string(),
+                vec![("hyd.b".to_string(), "On Use".to_string())],
+            ),
+            (
+                "hyd.c:step".to_string(),
+                vec![("hyd.c".to_string(), "On Custom:quest".to_string())],
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let hooks: std::collections::HashSet<String> = ["hyd.c:quest".to_string()].into();
+        let run = |script: &str, handler: &str| {
+            let mut r = Reach::default();
+            reach(
+                script,
+                handler,
+                &callers,
+                &hooks,
+                &mut Default::default(),
+                &mut r,
+            );
+            r
+        };
+        let r = run("hyd.a", "On Custom:Found");
+        assert!(!r.hooked && !r.uncalled);
+        assert_eq!(r.triggers.into_iter().collect::<Vec<_>>(), ["On Use"]);
+        assert!(run("hyd.c", "On Custom:step").hooked);
+        let r = run("hyd.d", "On Custom:nobody");
+        assert!(r.uncalled && r.triggers.is_empty() && !r.hooked);
+        assert_eq!(run("hyd.d", "On Death").triggers.len(), 1);
+    }
+
+    #[test]
+    fn earn_chain_tables_exist_after_schema_init() {
+        let path = crate::db::testutil::temp_db_path("earn_chain_tables");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        assert_eq!(db.populate_earn_chains().unwrap(), (0, 0, 0));
     }
 }

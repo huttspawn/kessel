@@ -793,7 +793,9 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
                 | "galactic_seasons"
                 | "gld"
                 | "itm"
-                | "mtx"
+                // `abl.mtx.*` is kept (FR-KESSEL-025 c3): toy effects such as
+                // abl.mtx.toy.incentive.party_jawa are the buffs achievement
+                // tasks require, and the log prints their ids.
                 | "player"
                 | "pvp"
                 | "reputation"
