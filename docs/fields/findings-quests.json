@@ -375,5 +375,50 @@
   "meaning": "The trigger volume that starts a Dynamic Encounter quest: a hydra trig_* script placed in the area's rooms.",
   "evidence": "204 Quests, almost all qst.dynamic_events.*; every value resolves to a hyd.* object named trig_event_volume (33), trig_event_region (78, plus 14 variants), trig_quest_trig_<event> (61) or another trig_* volume. Ilum: 13 of 20 DE quests name their trig_event_volume, whose only handler is On Enter -> Passes Conditional(cnd...is_volume_on_quest) -> Play Transmission(<event>_intro); the quest's hydra hooks (4fa14a1f + cdeb4375: spawn_boss, despawn_boss, end) drive inst_advance_mission's Set Active on the event's encounters. The volume is placed by FQN in the same room as the event's encounters (ensuring_victory_2: h1_rayshielded_republic_base). The reference is proved; 'entering it starts the event' is read from the scripts, not seen in a log.",
   "confidence": "likely"
+ },
+ "4000000024c97989": {
+  "confidence": "proved",
+  "evidence": "On Npc objects (7,126) it is the conversation the NPC opens. Live combat logs (Oct 30 to Nov 9, 2026; 11 files): of 184 conversations, 97 follow a TargetSet on an NPC within 1 s, and all 97 resolve (log id >> 32 = objects.string_id) to an Npc whose field names a conversation (79 distinct), e.g. Yuleph Phan {292835165208576} -> npc.location.tython.world.the_thousand_steps.yuleph_phan -> cnv.location.tython.world.the_thousand_steps.yuleph_phan. On Conversation objects it is the conversation's own fqn. Many NPC templates share one conversation (companions on ship, planet and stronghold), and in 42 of 110 logged npc/conversation pairs the conversation's cnvDefaultSpeaker is a different template, so the NPC's field, not the default speaker, says who opens it.",
+  "meaning": "On an NPC: the conversation it opens when the player talks to it. On a conversation: its own fqn."
+ },
+ "40000000f0827b5d": {
+  "confidence": "proved",
+  "evidence": "On 1,298 Placeable objects, always a cnv.* fqn. plc.location.tython.data_holocron.datacron_strength_tython -> cnv.location.tython.data_holocron.datacron_a_tython, whose nodes grant and complete qst.location.tython.data_holocron.tyt_endurance_i; a live log (2026-11-09 06:31:35, Tython) shows a datacron use as a 5-second In Conversation with no target.",
+  "meaning": "The conversation a placeable opens when used (plcConvo)."
+ },
+ "40000034b21f4106": {
+  "confidence": "proved",
+  "evidence": "On 24,188 nodes; 20,841 resolve to Quest objects in the filtered build. With cnvActionHookId (17,735 present) it names a task of that quest on 14,145; the rest name an id the quest's tasks do not carry, mostly the shared step-0 (1,244) and last-step (1,313) ids. 6,453 actions carry no hook id (e.g. ranna_taoven choice nodes), so what they do is in cnvActionExpressionCompiled. Sits at the end of the branch its root entry opens: yuleph_phan node 50 (silent player node after the offer) fires the_thousand_steps b0.s0.t0; kolovish node 57 fires b0.s5.t0, the last step; datacron cnv.location.tython.data_holocron.datacron_a_tython node 58 fires qst.location.tython.data_holocron.tyt_endurance_i b0.s1.t0.",
+  "meaning": "Quest whose task this node completes when the conversation reaches it; the task is cnvActionHookId. Step 0 grants (starts) the quest, the last step completes it, any other step advances it."
+ },
+ "40000034c45852d0": {
+  "confidence": "proved",
+  "evidence": "On 6,364 nodes, every one a root child (cnvTreeRootNode_Prototype's cnvChildNodes); never below the root. Keys are Quest objects (7,197 of 7,236 resolve). The same root node's cnvNodeQuestHookIds names the quest's first task (b0.s0.t0) on every checked case, and its line is the quest offer: cnv.location.tython.world.the_thousand_steps.yuleph_phan node 3 'More young Jedi in Kalikori...' offers qst.location.tython.world.the_thousand_steps; a live combat log (2026-11-09, Tython) shows that conversation opening the quest chain the next conversation (kolovish) ends.",
+  "meaning": "Set of quests this root node is the entry for when the player can be granted them: the conversation opens here to offer the quest. The grant itself fires on a later node's cnvActionQuest and cnvActionHookId."
+ },
+ "40000034c45852d1": {
+  "confidence": "proved",
+  "evidence": "On 4,548 nodes, all root children. Keys are Quest objects (5,752 of 5,756). The root node's cnvNodeQuestHookIds names the quest's last step's task on every checked case: kolovish node 2 'You perform the rite of the Pilgrims well...' ends qst.location.tython.world.the_thousand_steps with task b0.s5.t0 'Speak to Kolovish'; keeper (cnv.location.hutta.class.spy.keeper) roots 478, 483, 486 and 489 each end one Hutta agent quest and grant the next.",
+  "meaning": "Set of quests this root node is the entry for when the player can complete them (the turn-in branch). Completion fires on a later node's cnvActionQuest and cnvActionHookId."
+ },
+ "40000034c45852d2": {
+  "confidence": "proved",
+  "evidence": "On 5,152 nodes, all root children. Keys are Quest objects (5,386 of 5,389). The root's cnvNodeQuestHookIds names a middle task: keeper root 464 (speaker plc.location.hutta.class.spy.multi.holo_console) progresses qst.location.hutta.class.spy.claim_your_new_identity at task b0.s1.t0 'Use the Holoterminal'.",
+  "meaning": "Set of quests this root node is the entry for while a middle task of them is active; the task is named by cnvNodeQuestHookIds."
+ },
+ "4000004164287098": {
+  "confidence": "proved",
+  "evidence": "On quest tasks (branch 05a2a6d3 > step 05a2a6d1 > task 05a2a6d0). Conversation hook ids match one in the quest the node names for 17,708 of 21,471 cnvNodeQuestHookIds and 14,145 of 17,735 cnvActionHookId in the filtered build. qst.location.hutta.class.spy.claim_your_new_identity: b0.s0.t0 = 8572565631771144812, b0.s1.t0 = 4652755957192867296, b0.s5.t0 = -3973526218951927179. Values repeat across quests and neighbouring values differ by the 64-bit FNV prime (4652757056704495507 - 4652755957192867296 = 1099511628211), so they are hashes of short shared names and key a task only together with the quest.",
+  "meaning": "A quest task's hook id: the id a conversation node names to gate on or complete this task. Unique within a quest, not across quests."
+ },
+ "400000416428709a": {
+  "confidence": "proved",
+  "evidence": "Map from Quest to a list of hook ids, on 13,105 nodes, all root children. 17,708 of 21,471 hook ids equal the qstHookId (4000004164287098) of a task of the keyed quest. Step 0 goes with cnvNodeQuestGrants, the last step with cnvNodeQuestEnds, a middle step with cnvNodeQuestProgress (yuleph_phan, kolovish, master_silvarte, moracen, master_bela_kiwiiks, keeper). The other 3,763 are ids that some quest uses but the keyed quest's tasks do not carry: mostly 8572565631771144812 (a step-0 id in other quests) and -3973526218951927179 (a last-step id); e.g. cnv.location.tython.world.the_chamber_of_speech.do_zonn ends qst.location.tython.world.the_chamber_of_speech with -3973526218951927179, which appears nowhere in that quest.",
+  "meaning": "For each quest this root node is an entry for, the quest tasks (by qstHookId) that must be active for the conversation to open here."
+ },
+ "4000004d0336685a": {
+  "confidence": "proved",
+  "evidence": "14,145 of 17,735 values in the filtered build equal the qstHookId of a task of the quest in the node's cnvActionQuest; see 40000034b21f4106 for the rest.",
+  "meaning": "The qstHookId of the task of cnvActionQuest that this node completes."
  }
 }
