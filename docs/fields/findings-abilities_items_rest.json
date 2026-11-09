@@ -360,7 +360,12 @@
  },
  "4000004bdeaaa365": {
   "confidence": "proved",
-  "meaning": "The achievement's reward row: a key of achRewardsTable_Prototype (0f72cd27), which holds points, items, cartel coins and the legacy title.",
-  "evidence": "7,362 of 7,362 values are keys of the reward table. 263 reward ids are shared by more than one achievement. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+  "meaning": "achRewards: the achievement's reward row, a key of achRewardsTable_Prototype (0f72cd27), which holds points, items, cartel coins and the legacy title (kessel's achievement_reward_items).",
+  "evidence": "7,362 of 7,362 values are keys of the reward table (#369); 845 distinct ids, 263 shared by more than one achievement. No other achievement field matches any (#371). Example: ach.alliance.old_wounds.voss_reconstruction.exploration.we_can_keep_him -> 3458821350120179871 -> itm.pet.vanity.cat.mawvorr_a02v03, 25 points. Build: live 7.x unfiltered extract, 2026-11-09."
+ },
+ "4000004d9ef1a7fa": {
+  "confidence": "proved",
+  "meaning": "itmSourceList: the item's source ids (one, sometimes 2 to 4), keys of itmSourceProto itmSources; gives the game's own Source label for the item.",
+  "evidence": "10,290 items in the filtered extract carry it; all but 2 values resolve through itmSources to item_source.stb text, and the labels fit the items (Feast of Prosperity rewards -> 'Vendor: Feast of Prosperity'; itm.mount.speederbike.ikas_stingray -> 'Tier 1 Galactic Command Crate'; Shrine of Silence vanity armour -> 'Flashpoint: Shrine of Silence'). 390 distinct sources in use. A label is a category (vendor, flashpoint, pack), not the exact NPC or loot table."
  }
 }
