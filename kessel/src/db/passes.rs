@@ -380,6 +380,37 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     let cnv_options = timed!("conversation_options", db.populate_conversation_options())?;
     println!("  Conversation options: {cnv_options} player choices");
 
+    // World areas (FR-KESSEL-025 c5, c10): room placements, trigger volumes,
+    // placeable grants and hydra script actions, read from every area.dat
+    // and room .dat; positions in the frame the combat log prints.
+    let world = timed!(
+        "world_areas",
+        db.populate_world_areas(ctx.input, ctx.hash_dict)
+    )?;
+    let w = &world;
+    println!(
+        "  World areas: {} directories, {} area.dat found, {} parsed, {} unparseable; \
+         {} rooms listed, {} read, {} missing, {} unparseable; \
+         {} of {} asset ids resolved; {} placements, {} trigger volumes, \
+         {} placeable grants, {} script actions; {} log area ids in {} pairs",
+        w.areas_listed,
+        w.areas_found,
+        w.areas_parsed,
+        w.areas_unparseable,
+        w.rooms_listed,
+        w.rooms_read,
+        w.rooms_missing,
+        w.rooms_unparseable,
+        w.assets_resolved,
+        w.instances,
+        w.placements,
+        w.trigger_volumes,
+        w.placeable_grants,
+        w.script_actions,
+        w.log_area_ids,
+        w.area_log_ids,
+    );
+
     // Quest_chain via NPC giver overlap. Must run AFTER both
     // populate_quest_clusters (cluster filter) and populate_conversation_refs
     // (the conv_quest_refs / conv_npcs join surface).

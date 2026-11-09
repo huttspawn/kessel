@@ -344,6 +344,521 @@ impl Database {
     }
 }
 
+/// What the world-area pass wrote, for the run summary.
+#[derive(Debug, Default)]
+pub struct WorldAreaCounts {
+    /// (log area id, directory) pairs, and the distinct log area ids among them.
+    pub area_log_ids: u64,
+    pub log_area_ids: u64,
+    /// Directories tried; area.dat found in the archives; parsed; found but
+    /// unreadable or unparseable.
+    pub areas_listed: u64,
+    pub areas_found: u64,
+    pub areas_parsed: u64,
+    pub areas_unparseable: u64,
+    /// Rooms the parsed area.dat files list; read; not in the archives;
+    /// found but unreadable or unparseable.
+    pub rooms_listed: u64,
+    pub rooms_read: u64,
+    pub rooms_missing: u64,
+    pub rooms_unparseable: u64,
+    pub instances: u64,
+    pub assets_resolved: u64,
+    pub placements: u64,
+    pub trigger_volumes: u64,
+    pub placeable_grants: u64,
+    pub script_actions: u64,
+}
+
+// mapAreasDataProto: the area map, and per entry the area directory and the
+// id the combat log prints in AreaEntered.
+const MAP_AREAS: u32 = 0x0027_bf7b;
+const MAP_AREA_DIR: u32 = 0x0027_bf77;
+const MAP_AREA_LOG_ID: u32 = 0x0027_bf7f;
+// Spawn: entity list, each naming the template it places.
+const SPN_ENTRIES: u32 = 0xaa61_0ec0;
+const SPN_ENTRY_TEMPLATE: u32 = 0xb78d_6eec;
+// Encounter: slot letter -> spawner FQN.
+const ENC_SLOTS: u32 = 0xd9a5_2ab9;
+// Placeable: plcAbilitySpecOnUse, plcCodexSpec, plcConvo, On Use script.
+const PLC_ON_USE: u32 = 0x1d6b_4924;
+const PLC_CODEX: u32 = 0x2d7b_8797;
+const PLC_CONVO: u32 = 0xf082_7b5d;
+const PLC_SCRIPT: u32 = 0x4fa1_4a25;
+// Hydra: handler map, action lists, action name and value.
+const HYD_HANDLERS: u32 = 0xe389_e2e3;
+const HYD_ACTION_LIST: u32 = 0xe534_715a;
+const HYD_ACTION: u32 = 0xe534_6fa0;
+const HYD_VALUE: u32 = 0xe534_6faf;
+
+impl Database {
+    /// Populate the world tables (FR-KESSEL-025 c5, c10): `area_log_ids`
+    /// from mapAreasDataProto; `placeable_grants` and `script_actions` from
+    /// the Placeable and Hydra objects; `placements` and `trigger_volumes`
+    /// from every area.dat and room .dat under `/resources/world/areas`.
+    /// Area directories come from mapAreasDataProto and the map-page objects
+    /// `world.areas.<id>.mapdata`; a supplied hash dictionary adds its
+    /// area.dat paths.
+    pub fn populate_world_areas(
+        &self,
+        tor_dir: &std::path::Path,
+        hashes: &crate::hash::HashDictionary,
+    ) -> Result<WorldAreaCounts> {
+        use std::collections::{BTreeSet, HashMap};
+
+        self.with_tx(|tx| {
+            let mut counts = WorldAreaCounts::default();
+
+            let pairs = match load_singleton(tx, "mapAreasDataProto")? {
+                Some(proto) => area_log_pairs(&proto),
+                None => Vec::new(),
+            };
+            let mut insert = tx.prepare(
+                "INSERT OR REPLACE INTO area_log_ids (log_area_id, area_dir_id) VALUES (?1, ?2)",
+            )?;
+            for (log_id, dir) in &pairs {
+                if let Some(log_id) = log_id {
+                    insert.execute(params![log_id, *dir as i64])?;
+                    counts.area_log_ids += 1;
+                }
+            }
+            drop(insert);
+            counts.log_area_ids = pairs
+                .iter()
+                .filter_map(|(log_id, _)| *log_id)
+                .collect::<BTreeSet<_>>()
+                .len() as u64;
+
+            counts.placeable_grants = insert_placeable_grants(tx)?;
+            counts.script_actions = insert_script_actions(tx)?;
+
+            let mut dirs: BTreeSet<u64> = pairs.iter().map(|(_, dir)| *dir).collect();
+            let mut mapdata =
+                tx.prepare("SELECT fqn FROM objects WHERE fqn LIKE 'world.areas.%.mapdata'")?;
+            for fqn in mapdata.query_map([], |r| r.get::<_, String>(0))? {
+                if let Some(dir) = fqn?
+                    .strip_prefix("world.areas.")
+                    .and_then(|s| s.strip_suffix(".mapdata"))
+                    .and_then(|d| d.parse().ok())
+                {
+                    dirs.insert(dir);
+                }
+            }
+            drop(mapdata);
+            for (_, path) in hashes.paths_matching("/resources/world/areas/") {
+                if let Some(dir) = path
+                    .strip_prefix("/resources/world/areas/")
+                    .and_then(|p| p.strip_suffix("/area.dat"))
+                    .and_then(|d| d.parse().ok())
+                {
+                    dirs.insert(dir);
+                }
+            }
+
+            let spawn_entities: HashMap<String, String> = decoded_objects(tx, "Spawn")?
+                .into_iter()
+                .filter_map(|(fqn, obj)| {
+                    let first = obj.embedded_field(SPN_ENTRIES)?.as_list()?.first()?;
+                    Some((fqn, gom_str(first.embedded_field(SPN_ENTRY_TEMPLATE)?)?))
+                })
+                .collect();
+            let encounter_slots: HashMap<String, HashMap<String, String>> =
+                decoded_objects(tx, "Encounter")?
+                    .into_iter()
+                    .filter_map(|(fqn, obj)| {
+                        let slots = obj.embedded_field(ENC_SLOTS)?.as_map()?;
+                        let slots = slots
+                            .iter()
+                            .filter_map(|(k, v)| Some((gom_str(k)?, gom_str(v)?)))
+                            .collect();
+                        Some((fqn, slots))
+                    })
+                    .collect();
+
+            let mut files = ArchiveFiles::open(tor_dir)?;
+            let mut placement = tx.prepare(
+                "INSERT OR REPLACE INTO placements \
+                   (area_dir_id, room, instance_id, parent_instance_id, asset_path, spawner_fqn, \
+                    spawner_type, entity_fqn, world_x, world_y, world_z, yaw, log_x, log_y, log_z) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+            )?;
+            let mut volume = tx.prepare(
+                "INSERT OR REPLACE INTO trigger_volumes \
+                   (area_dir_id, room, instance_id, shape, size_x, size_height, size_z, yaw, \
+                    world_x, world_y, world_z, log_min_x, log_min_y, log_min_z, \
+                    log_max_x, log_max_y, log_max_z, script_fqn, region_name) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, \
+                         ?16, ?17, ?18, ?19)",
+            )?;
+            for dir in dirs {
+                counts.areas_listed += 1;
+                let prefix = format!("/resources/world/areas/{dir}");
+                let Some(data) = files.read(&format!("{prefix}/area.dat")) else {
+                    continue;
+                };
+                counts.areas_found += 1;
+                let Some(area) = data.ok().and_then(|d| crate::area::read_area(&d).ok()) else {
+                    counts.areas_unparseable += 1;
+                    continue;
+                };
+                counts.areas_parsed += 1;
+                let mut insts = Vec::new();
+                // Archive paths are lowercase; area.dat writes room names in mixed case.
+                for room in area.rooms.iter().map(|r| r.to_lowercase()) {
+                    counts.rooms_listed += 1;
+                    let Some(data) = files.read(&format!("{prefix}/{room}.dat")) else {
+                        counts.rooms_missing += 1;
+                        continue;
+                    };
+                    let Some(room_insts) = data.ok().and_then(|d| crate::area::read_room(&d).ok())
+                    else {
+                        counts.rooms_unparseable += 1;
+                        continue;
+                    };
+                    counts.rooms_read += 1;
+                    insts.extend(room_insts.into_iter().map(|i| (room.clone(), i)));
+                }
+                let by_id: HashMap<u64, &crate::area::Instance> =
+                    insts.iter().map(|(_, i)| (i.id, i)).collect();
+                for (room, inst) in &insts {
+                    counts.instances += 1;
+                    let Some(path) = area.assets.get(&inst.asset) else {
+                        continue;
+                    };
+                    counts.assets_resolved += 1;
+                    let world = crate::area::world_of(inst.id, &by_id);
+                    let (pos, yaw) = (world.map(|w| w.0), world.map(|w| w.1));
+                    if path.ends_with(".trg") {
+                        let size = inst.size;
+                        let bounds = match (pos, yaw, size) {
+                            (Some(p), Some(y), [Some(x), Some(h), Some(z)]) => {
+                                Some(crate::area::log_bounds(p, [x, h, z], y))
+                            }
+                            _ => None,
+                        };
+                        let script = inst.script.as_deref();
+                        let is_hydra = script.is_some_and(|s| s.starts_with("hyd."));
+                        volume.execute(params![
+                            dir as i64,
+                            room,
+                            inst.id as i64,
+                            inst.shape,
+                            size[0],
+                            size[1],
+                            size[2],
+                            yaw,
+                            pos.map(|p| p[0]),
+                            pos.map(|p| p[1]),
+                            pos.map(|p| p[2]),
+                            bounds.map(|b| b.0[0]),
+                            bounds.map(|b| b.0[1]),
+                            bounds.map(|b| b.0[2]),
+                            bounds.map(|b| b.1[0]),
+                            bounds.map(|b| b.1[1]),
+                            bounds.map(|b| b.1[2]),
+                            script.filter(|_| is_hydra),
+                            script.filter(|_| !is_hydra),
+                        ])?;
+                        counts.trigger_volumes += 1;
+                    } else if let Some(spawner) = crate::area::spawner_of_asset(path) {
+                        let spawner_fqn = match &spawner {
+                            crate::area::SpawnerAsset::Spawner { fqn, .. } => Some(fqn.clone()),
+                            crate::area::SpawnerAsset::Slot {
+                                encounter, slot, ..
+                            } => encounter_slots
+                                .get(encounter)
+                                .and_then(|s| s.get(slot))
+                                .cloned(),
+                        };
+                        let entity = spawner_fqn.as_ref().and_then(|f| spawn_entities.get(f));
+                        let log = pos.map(crate::area::to_log);
+                        placement.execute(params![
+                            dir as i64,
+                            room,
+                            inst.id as i64,
+                            (inst.parent != 0).then_some(inst.parent as i64),
+                            path,
+                            spawner_fqn,
+                            crate::area::spawner_type(spawner.ext()),
+                            entity,
+                            pos.map(|p| p[0]),
+                            pos.map(|p| p[1]),
+                            pos.map(|p| p[2]),
+                            yaw,
+                            log.map(|l| l[0]),
+                            log.map(|l| l[1]),
+                            log.map(|l| l[2]),
+                        ])?;
+                        counts.placements += 1;
+                    }
+                }
+            }
+            Ok(counts)
+        })
+    }
+}
+
+/// Every file in the archives, found by the hash of its path.
+struct ArchiveFiles {
+    archives: Vec<crate::myp::Archive>,
+    index: std::collections::HashMap<u64, (usize, crate::myp::FileEntry)>,
+}
+
+impl ArchiveFiles {
+    fn open(tor_dir: &std::path::Path) -> Result<Self> {
+        let mut tor_files: Vec<std::path::PathBuf> = std::fs::read_dir(tor_dir)?
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "tor"))
+            .collect();
+        tor_files.sort();
+        let mut archives = Vec::new();
+        let mut index = std::collections::HashMap::new();
+        for path in tor_files {
+            let Ok(archive) = crate::myp::Archive::open(&path) else {
+                continue;
+            };
+            let i = archives.len();
+            for entry in archive.entries()? {
+                index
+                    .entry(entry.filename_hash)
+                    .or_insert_with(|| (i, entry.clone()));
+            }
+            archives.push(archive);
+        }
+        Ok(Self { archives, index })
+    }
+
+    /// `None` when no archive holds the path; `Some(Err)` when the entry
+    /// cannot be read.
+    fn read(&mut self, path: &str) -> Option<Result<Vec<u8>>> {
+        let (ph, sh) = crate::hash::hashlittle2(path.as_bytes(), 0, 0);
+        let (i, entry) = self.index.get(&crate::hash::combine_hash(ph, sh))?;
+        Some(self.archives.get_mut(*i)?.read_entry(entry))
+    }
+}
+
+/// Decode a singleton by FQN; `None` when absent or undecodable.
+fn load_singleton(tx: &Transaction, fqn: &str) -> Result<Option<crate::gom_reader::GomValue>> {
+    let row: Option<(String, String)> = tx
+        .query_row(
+            "SELECT header_hex, payload_b64 FROM singletons WHERE fqn = ?1",
+            [fqn],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .ok();
+    Ok(row.and_then(|(header, payload)| decode_framed(&header, &payload)))
+}
+
+/// Every canonical object of `kind`, decoded; undecodable payloads are skipped.
+fn decoded_objects(
+    tx: &Transaction,
+    kind: &str,
+) -> Result<Vec<(String, crate::gom_reader::GomValue)>> {
+    let mut stmt = tx.prepare(
+        "SELECT fqn, json_extract(json, '$.header_hex'), json_extract(json, '$.payload_b64') \
+         FROM objects WHERE kind = ?1 AND is_canonical = 1",
+    )?;
+    let rows = stmt
+        .query_map([kind], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, Option<String>>(1)?,
+                r.get::<_, Option<String>>(2)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(fqn, header, payload)| Some((fqn, decode_framed(&header?, &payload?)?)))
+        .collect())
+}
+
+fn decode_framed(header_hex: &str, payload_b64: &str) -> Option<crate::gom_reader::GomValue> {
+    use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+    let header = hex::decode(header_hex).ok()?;
+    let payload = BASE64.decode(payload_b64).ok()?;
+    crate::gom_reader::read_framed_object(&header, &payload)
+        .ok()
+        .map(|(v, _)| v)
+}
+
+fn gom_str(v: &crate::gom_reader::GomValue) -> Option<String> {
+    match v {
+        crate::gom_reader::GomValue::Str(s) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+/// (log area id, area directory id) for every mapAreasDataProto entry; an
+/// entry with no log area id still names its directory.
+fn area_log_pairs(proto: &crate::gom_reader::GomValue) -> Vec<(Option<i64>, u64)> {
+    let Some(areas) = proto.embedded_field(MAP_AREAS).and_then(|m| m.as_map()) else {
+        return Vec::new();
+    };
+    areas
+        .iter()
+        .filter_map(|(_, area)| {
+            let dir = area.embedded_field(MAP_AREA_DIR)?.as_i64()?;
+            let log_id = area
+                .embedded_field(MAP_AREA_LOG_ID)
+                .and_then(crate::gom_reader::GomValue::as_i64);
+            Some((log_id, dir as u64))
+        })
+        .collect()
+}
+
+/// The GUID-or-FQN fields of a placeable that name what it grants.
+#[derive(Debug, Default, PartialEq)]
+struct PlaceableRefs {
+    on_use: Option<u64>,
+    codex: Option<u64>,
+    convo: Option<String>,
+    script: Option<u64>,
+}
+
+fn placeable_refs(obj: &crate::gom_reader::GomValue) -> PlaceableRefs {
+    let guid = |id| {
+        obj.embedded_field(id)
+            .and_then(crate::gom_reader::GomValue::as_i64)
+            .filter(|g| *g != 0)
+            .map(|g| g as u64)
+    };
+    PlaceableRefs {
+        on_use: guid(PLC_ON_USE),
+        codex: guid(PLC_CODEX),
+        convo: obj.embedded_field(PLC_CONVO).and_then(gom_str),
+        script: guid(PLC_SCRIPT),
+    }
+}
+
+fn insert_placeable_grants(tx: &Transaction) -> Result<u64> {
+    let mut by_guid = tx.prepare(
+        "SELECT fqn, string_id FROM objects WHERE guid = ?1 AND is_canonical = 1 LIMIT 1",
+    )?;
+    let mut lookup = |guid: Option<u64>| -> Option<(String, Option<i64>)> {
+        let guid = format!("{:016X}", guid?);
+        by_guid
+            .query_row([guid], |r| Ok((r.get(0)?, r.get(1)?)))
+            .ok()
+    };
+    let mut insert = tx.prepare(
+        "INSERT OR REPLACE INTO placeable_grants \
+           (placeable_fqn, use_ability_fqn, use_ability_log_id, codex_fqn, conversation_fqn, script_fqn) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+    )?;
+    let mut written = 0;
+    for (fqn, obj) in decoded_objects(tx, "Placeable")? {
+        let refs = placeable_refs(&obj);
+        if refs == PlaceableRefs::default() {
+            continue;
+        }
+        let ability = lookup(refs.on_use);
+        let log_id = ability
+            .as_ref()
+            .and_then(|(_, sid)| *sid)
+            .map(|sid| sid << 32);
+        insert.execute(params![
+            fqn,
+            ability.map(|a| a.0),
+            log_id,
+            lookup(refs.codex).map(|c| c.0),
+            refs.convo,
+            lookup(refs.script).map(|s| s.0),
+        ])?;
+        written += 1;
+    }
+    Ok(written)
+}
+
+/// One action in a hydra script handler, in handler order.
+#[derive(Debug, PartialEq)]
+struct ScriptAction {
+    handler: String,
+    action: String,
+    target_fqn: Option<String>,
+    value: Option<String>,
+}
+
+/// Every action of every handler in a hydra script. Actions are the entries
+/// of the action lists; conditions are not actions.
+fn script_actions(obj: &crate::gom_reader::GomValue) -> Vec<ScriptAction> {
+    use crate::gom_reader::GomValue;
+
+    fn walk(v: &GomValue, handler: &str, out: &mut Vec<ScriptAction>) {
+        match v {
+            GomValue::Embedded(fields) => {
+                for (id, x) in fields {
+                    if *id as u32 == HYD_ACTION_LIST {
+                        for a in x.as_list().unwrap_or_default() {
+                            if let Some(action) = a.embedded_field(HYD_ACTION).and_then(gom_str) {
+                                let value = a.embedded_field(HYD_VALUE).and_then(|v| match v {
+                                    GomValue::Str(s) => Some(s.clone()),
+                                    other => other.as_i64().map(|n| n.to_string()),
+                                });
+                                out.push(ScriptAction {
+                                    handler: handler.to_string(),
+                                    action,
+                                    target_fqn: value.clone().filter(|v| names_object(v)),
+                                    value,
+                                });
+                            }
+                        }
+                    }
+                    walk(x, handler, out);
+                }
+            }
+            GomValue::List(items) => items.iter().for_each(|x| walk(x, handler, out)),
+            GomValue::Map(entries) => entries.iter().for_each(|(_, x)| walk(x, handler, out)),
+            _ => {}
+        }
+    }
+
+    let mut out = Vec::new();
+    for (name, handler) in obj
+        .embedded_field(HYD_HANDLERS)
+        .and_then(GomValue::as_map)
+        .unwrap_or_default()
+    {
+        if let Some(name) = gom_str(name) {
+            walk(handler, &name, &mut out);
+        }
+    }
+    out
+}
+
+/// True when an action value is an object FQN (`cdx.persons.x`), not a name
+/// or a number.
+fn names_object(value: &str) -> bool {
+    value.split_once('.').is_some_and(|(prefix, rest)| {
+        !prefix.is_empty()
+            && prefix.bytes().all(|b| b.is_ascii_lowercase())
+            && !rest.is_empty()
+            && rest
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'.')
+    })
+}
+
+fn insert_script_actions(tx: &Transaction) -> Result<u64> {
+    let mut insert = tx.prepare(
+        "INSERT OR REPLACE INTO script_actions \
+           (script_fqn, handler, ordinal, action, target_fqn, value) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+    )?;
+    let mut written = 0;
+    for (fqn, obj) in decoded_objects(tx, "Hydra")? {
+        let mut ordinal: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+        for a in script_actions(&obj) {
+            let n = ordinal.entry(a.handler.clone()).or_default();
+            insert.execute(params![fqn, a.handler, *n, a.action, a.target_fqn, a.value])?;
+            *n += 1;
+            written += 1;
+        }
+    }
+    Ok(written)
+}
+
 /// Convert a `.fxspec` resource path into the path-relative key used by
 /// `<fxSpecString>` references in `.epp` files. Returns None when the
 /// path doesn't contain a `/fxspec/` segment or a `.fxspec` suffix. Used
@@ -461,6 +976,76 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 decoded_body_b64   TEXT NOT NULL,
                 extracted_at       INTEGER NOT NULL DEFAULT (unixepoch())
             );
+            -- World areas (FR-KESSEL-025 c5, c10). The id the combat log
+            -- prints in AreaEntered, joined to the area directories it names
+            -- (mapAreasDataProto 0027bf7f / 0027bf77); an id with several
+            -- directories has several rows.
+            CREATE TABLE IF NOT EXISTS area_log_ids (
+                log_area_id  INTEGER NOT NULL,
+                area_dir_id  INTEGER NOT NULL,
+                PRIMARY KEY (log_area_id, area_dir_id)
+            );
+            -- One row per room instance whose asset is a spawner (encounter
+            -- slots included). World position (x, height y, z) is composed
+            -- through the parent chain; the log frame is 10 x (x, z, y).
+            CREATE TABLE IF NOT EXISTS placements (
+                area_dir_id         INTEGER NOT NULL,
+                room                TEXT NOT NULL,
+                instance_id         INTEGER NOT NULL,
+                parent_instance_id  INTEGER,
+                asset_path          TEXT NOT NULL,
+                spawner_fqn         TEXT,
+                spawner_type        TEXT,
+                entity_fqn          TEXT,
+                world_x REAL, world_y REAL, world_z REAL,
+                yaw     REAL,
+                log_x   REAL, log_y   REAL, log_z   REAL,
+                PRIMARY KEY (area_dir_id, instance_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_placements_spawner ON placements(spawner_fqn);
+            CREATE INDEX IF NOT EXISTS idx_placements_entity ON placements(entity_fqn);
+            -- What a placeable names: its use ability (and the id the log
+            -- prints for it, string_id << 32), codex entry, conversation and
+            -- On Use script.
+            CREATE TABLE IF NOT EXISTS placeable_grants (
+                placeable_fqn       TEXT PRIMARY KEY,
+                use_ability_fqn     TEXT,
+                use_ability_log_id  INTEGER,
+                codex_fqn           TEXT,
+                conversation_fqn    TEXT,
+                script_fqn          TEXT
+            );
+            -- Trigger volumes: full sizes centred on the volume, turned by
+            -- yaw; the log-frame box encloses it. script_fqn holds a hyd.*
+            -- script, region_name a bare region name.
+            CREATE TABLE IF NOT EXISTS trigger_volumes (
+                area_dir_id  INTEGER NOT NULL,
+                room         TEXT NOT NULL,
+                instance_id  INTEGER NOT NULL,
+                shape        INTEGER,
+                size_x REAL, size_height REAL, size_z REAL,
+                yaw    REAL,
+                world_x REAL, world_y REAL, world_z REAL,
+                log_min_x REAL, log_min_y REAL, log_min_z REAL,
+                log_max_x REAL, log_max_y REAL, log_max_z REAL,
+                script_fqn   TEXT,
+                region_name  TEXT,
+                PRIMARY KEY (area_dir_id, instance_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_trigger_volumes_script ON trigger_volumes(script_fqn);
+            -- Every hydra handler's actions in order. target_fqn is the
+            -- value when it names an object (Grant Codex cdx.*); value is
+            -- the action's value as written (an event name, a title id).
+            CREATE TABLE IF NOT EXISTS script_actions (
+                script_fqn  TEXT NOT NULL,
+                handler     TEXT NOT NULL,
+                ordinal     INTEGER NOT NULL,
+                action      TEXT NOT NULL,
+                target_fqn  TEXT,
+                value       TEXT,
+                PRIMARY KEY (script_fqn, handler, ordinal)
+            );
+            CREATE INDEX IF NOT EXISTS idx_script_actions_target ON script_actions(target_fqn);
         "#,
     )?;
     Ok(())
@@ -513,6 +1098,156 @@ mod tests {
         assert!(paths
             .values()
             .any(|p| p == "/resources/art/fx/fxspec/x/y.fxspec"));
+    }
+
+    use crate::gom_reader::GomValue as G;
+
+    fn obj(fields: Vec<(u32, G)>) -> G {
+        G::Embedded(
+            fields
+                .into_iter()
+                .map(|(id, v)| (0x4000_0000_0000_0000 | u64::from(id), v))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn area_log_ids_keep_every_directory() {
+        let entry = |dir: u64, log: i64| {
+            obj(vec![
+                (MAP_AREA_DIR, G::U64(dir)),
+                (MAP_AREA_LOG_ID, G::I64(log)),
+            ])
+        };
+        let proto = obj(vec![(
+            MAP_AREAS,
+            G::Map(vec![
+                (G::U64(1), entry(4_611_686_019_802_841_877, 137_438_987_025)),
+                (G::U64(2), entry(4_611_686_019_802_841_878, 137_438_987_025)),
+                (G::U64(3), obj(vec![(MAP_AREA_DIR, G::U64(9))])),
+            ]),
+        )]);
+        assert_eq!(
+            area_log_pairs(&proto),
+            [
+                (Some(137_438_987_025), 4_611_686_019_802_841_877),
+                (Some(137_438_987_025), 4_611_686_019_802_841_878),
+                (None, 9)
+            ]
+        );
+    }
+
+    #[test]
+    fn placeable_refs_read_grant_fields() {
+        let plc = obj(vec![
+            (PLC_CONVO, G::Str("cnv.location.tython.datacron_b".into())),
+            (PLC_ON_USE, G::U64(0xE000_6101_0000_0001)),
+            (PLC_CODEX, G::U64(0xE000_2D74_70E2_B65E)),
+            (PLC_SCRIPT, G::U64(0xE000_0000_0000_0002)),
+        ]);
+        assert_eq!(
+            placeable_refs(&plc),
+            PlaceableRefs {
+                on_use: Some(0xE000_6101_0000_0001),
+                codex: Some(0xE000_2D74_70E2_B65E),
+                convo: Some("cnv.location.tython.datacron_b".into()),
+                script: Some(0xE000_0000_0000_0002),
+            }
+        );
+        assert_eq!(placeable_refs(&obj(vec![])), PlaceableRefs::default());
+    }
+
+    #[test]
+    fn script_actions_read_each_handler_in_order_without_conditions() {
+        let action = |name: &str, value: &str| {
+            obj(vec![
+                (HYD_ACTION, G::Str(name.into())),
+                (HYD_VALUE, G::Str(value.into())),
+            ])
+        };
+        let handler = |actions: Vec<G>| {
+            obj(vec![(
+                0xe52e_3b17,
+                G::List(vec![obj(vec![
+                    (
+                        0xe52e_42ef,
+                        G::List(vec![obj(vec![(HYD_ACTION_LIST, G::List(actions))])]),
+                    ),
+                    (
+                        0xe52e_4395,
+                        obj(vec![(0x9e1f_7013, G::List(vec![action("==", "true")]))]),
+                    ),
+                ])]),
+            )])
+        };
+        let script = obj(vec![(
+            HYD_HANDLERS,
+            G::Map(vec![
+                (
+                    G::Str("On Enter".into()),
+                    handler(vec![
+                        action("Grant Codex", "cdx.persons.smuggler.drooga_the_hutt"),
+                        action("Achievement Event", "RishiHiddenTome05"),
+                    ]),
+                ),
+                (
+                    G::Str("On Custom:Found Willpower".into()),
+                    handler(vec![action("Grant Title", "671")]),
+                ),
+            ]),
+        )]);
+        let got = script_actions(&script);
+        let row = |h: &str, a: &str, t: Option<&str>, v: &str| ScriptAction {
+            handler: h.into(),
+            action: a.into(),
+            target_fqn: t.map(Into::into),
+            value: Some(v.into()),
+        };
+        assert_eq!(
+            got,
+            [
+                row(
+                    "On Enter",
+                    "Grant Codex",
+                    Some("cdx.persons.smuggler.drooga_the_hutt"),
+                    "cdx.persons.smuggler.drooga_the_hutt"
+                ),
+                row("On Enter", "Achievement Event", None, "RishiHiddenTome05"),
+                row("On Custom:Found Willpower", "Grant Title", None, "671"),
+            ]
+        );
+    }
+
+    #[test]
+    fn names_object_tells_fqns_from_names_and_numbers() {
+        assert!(names_object("cdx.persons.smuggler.drooga_the_hutt"));
+        assert!(names_object(
+            "qst.daily_area.oricon.republic.seeds_of_change"
+        ));
+        assert!(!names_object("SDR_FoundCreature"));
+        assert!(!names_object("671"));
+        assert!(!names_object("-7306138348266915620"));
+        assert!(!names_object("a:enc.location.tython.flesh_raider_leader"));
+    }
+
+    #[test]
+    fn world_tables_exist_after_schema_init() {
+        let path = temp_db_path("world_tables");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let conn = db.conn.lock().unwrap();
+        for table in [
+            "area_log_ids",
+            "placements",
+            "placeable_grants",
+            "trigger_volumes",
+            "script_actions",
+        ] {
+            let n: i64 = conn
+                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(n, 0, "{table}");
+        }
     }
 
     #[test]

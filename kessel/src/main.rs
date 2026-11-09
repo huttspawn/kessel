@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+mod area;
 mod buckets_info;
 mod db;
 mod dds;
@@ -633,6 +634,12 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
         return true;
     }
 
+    // An area's map pages (`world.areas.<area dir id>.mapdata`) name the
+    // area directories the world-area pass reads (FR-KESSEL-025).
+    if is_area_mapdata(fqn) {
+        return true;
+    }
+
     let prefix = match fqn.find('.') {
         Some(pos) => &fqn[..pos],
         None => fqn,
@@ -770,7 +777,8 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
                 | "flashpoint"
                 | "dynamic_events"
                 | "world_design"
-                | "placeables"
+                // `abl.placeables.*` is kept (FR-KESSEL-025): a placeable's
+                // use ability is how a logged use cast finds the placeable.
                 | "ballistics"
                 | "state"
                 | "creature"
@@ -838,6 +846,13 @@ fn should_extract_object(fqn: &str, unfiltered: bool) -> bool {
     }
 
     true
+}
+
+/// True for an area's map-page object, `world.areas.<area dir id>.mapdata`.
+fn is_area_mapdata(fqn: &str) -> bool {
+    fqn.strip_prefix("world.areas.")
+        .and_then(|rest| rest.strip_suffix(".mapdata"))
+        .is_some_and(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// True for FQNs that are PBUK singleton prototypes (zero-dot PascalCase /
@@ -956,6 +971,8 @@ mod tests {
             "nco.companions_original.warrior.broonmark",
             "mrp.galactic_seasons.season_5.mouse_droid",
             "ipp.custom.sow.progresson.ge_a13_purple_holo.legs",
+            "abl.placeables.examine_lore_object",
+            "world.areas.4611686019802841877.mapdata",
         ];
         for fqn in samples {
             assert!(
