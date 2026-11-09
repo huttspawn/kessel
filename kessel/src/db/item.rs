@@ -1,8 +1,11 @@
 //! Item classification, itemization tables, per-item stats, and relic proc classification.
 
+use super::title::ITEM_TEACHES_VALUE;
 use super::*;
 use crate::schema::item;
 use regex::Regex;
+use rusqlite::OptionalExtension;
+use std::collections::{HashMap, HashSet};
 
 impl Database {
     pub fn populate_item_tables(&self) -> Result<u64> {
@@ -595,6 +598,359 @@ pub(crate) fn parse_proc_effect(effect: &str) -> ProcEffect {
     }
 }
 
+// FR-KESSEL-025 c8: every source that grants an item, and what using it unlocks.
+
+// qstRewardsInfoPrototype: quest -> reward rows, and quest -> branch id -> rows.
+const QUEST_REWARDS: u32 = 0xe146_d0c0;
+const BRANCH_REWARDS: u32 = 0xc788_046a;
+const REWARD_ITEM: u32 = 0xd9f3_5ee6;
+const REWARD_ALWAYS: u32 = 0xd9f3_5ee5;
+const REWARD_MIN_LEVEL: u32 = 0xb300_6cb8;
+const REWARD_MAX_LEVEL: u32 = 0xb300_6cb9;
+const REWARD_CLASSES: u32 = 0xd9f3_5ee9;
+// wevEventInfoPrototype_client: event id -> record (drops, the event's quest).
+const WORLD_EVENTS: u32 = 0x395e_03f8;
+const EVENT_DROPS: u32 = 0x1bdc_8ed4;
+const EVENT_QUEST: u32 = 0x6f56_8b11;
+// Hydra script variables: FNV-1a 64 of the uppercased name -> record naming an object.
+const HYD_VARIABLES: u32 = 0xed10_e6a0;
+const HYD_VARIABLE_FQN: u32 = 0x080c_e2d2;
+// Item fields.
+const ITEM_SOURCE_LIST: u32 = 0x9ef1_a7fa;
+const ITEM_USAGE_ABILITY: u32 = 0x2d7b_8779;
+const ITEM_LOOT_PACKAGE: u32 = 0x407c_89a3;
+// itmSourceProto: source id -> packed (id2 << 32 | id1) gui/item_source.stb ref.
+const SOURCE_LABELS: u32 = 0x9ef1_a7f9;
+// ablVanityPetsPrototype: vanity-pet ability -> npc.pet.*.
+const PET_NPCS: u32 = 0x8021_ef5f;
+// mntMountInfoPrototype: mount id -> record index.
+const MOUNT_IDS: u32 = 0x3c08_fc62;
+const GRANT_MOUNT: &str = "abl.player.mount.grant_mount";
+
+/// (item fqn, source kind, source fqn, detail).
+type SourceRow = (String, &'static str, String, String);
+/// (item fqn, unlock kind, unlock fqn).
+type UnlockRow = (String, &'static str, String);
+
+/// FNV-1a 64 of the uppercased name: how a Hydra script keys its variables.
+fn hydra_name_hash(name: &str) -> u64 {
+    crate::hash::fnv1a64(&name.to_uppercase())
+}
+
+fn map_field(
+    v: &crate::gom_reader::GomValue,
+    id: u32,
+) -> &[(crate::gom_reader::GomValue, crate::gom_reader::GomValue)] {
+    v.embedded_field(id)
+        .and_then(crate::gom_reader::GomValue::as_map)
+        .unwrap_or_default()
+}
+
+/// Quest reward rows: `always` when d9f35ee5 is true, `choose-one` when it is
+/// absent; c788046a rows add ` branch <id>`. Each row then names its level band
+/// and class allowlist (` band <min>-<max>`, ` class <a>,<b>`; no class is every
+/// class), so rows that differ only by band or class stay distinct.
+fn quest_reward_sources(
+    proto: &crate::gom_reader::GomValue,
+    guids: &HashMap<u64, String>,
+) -> Vec<SourceRow> {
+    use super::achievement::bits;
+    use crate::gom_reader::GomValue;
+    let fqn = |v: &GomValue| bits(v).and_then(|g| guids.get(&g).cloned());
+    let mut out = Vec::new();
+    let mut push = |quest: &str, rows: &GomValue, branch: &str| {
+        for row in rows.as_list().unwrap_or_default() {
+            let Some(item) = row.embedded_field(REWARD_ITEM).and_then(fqn) else {
+                continue;
+            };
+            let always = matches!(
+                row.embedded_field(REWARD_ALWAYS),
+                Some(GomValue::Bool(true))
+            );
+            let kind = if always { "always" } else { "choose-one" };
+            let level = |id| row.embedded_field(id).and_then(GomValue::as_i64);
+            let band = match (level(REWARD_MIN_LEVEL), level(REWARD_MAX_LEVEL)) {
+                (Some(lo), Some(hi)) => format!(" band {lo}-{hi}"),
+                _ => String::new(),
+            };
+            // The class allowlist: class refs -> true; empty is every class.
+            let mut classes: Vec<String> = map_field(row, REWARD_CLASSES)
+                .iter()
+                .filter_map(|(c, _)| fqn(c))
+                .map(|c| c.rsplit('.').next().unwrap_or_default().to_string())
+                .collect();
+            classes.sort();
+            let class = if classes.is_empty() {
+                String::new()
+            } else {
+                format!(" class {}", classes.join(","))
+            };
+            out.push((
+                item,
+                "quest_reward",
+                quest.to_string(),
+                format!("{kind}{branch}{band}{class}"),
+            ));
+        }
+    };
+    for (quest, rows) in map_field(proto, QUEST_REWARDS) {
+        if let Some(quest) = fqn(quest) {
+            push(&quest, rows, "");
+        }
+    }
+    for (quest, branches) in map_field(proto, BRANCH_REWARDS) {
+        let Some(quest) = fqn(quest) else { continue };
+        for (branch, rows) in branches.as_map().unwrap_or_default() {
+            if let Some(branch) = branch.as_i64() {
+                push(&quest, rows, &format!(" branch {branch}"));
+            }
+        }
+    }
+    out
+}
+
+/// World-event drops (1bdc8ed4), answered with the event's quest (6f568b11).
+fn world_event_sources(
+    proto: &crate::gom_reader::GomValue,
+    guids: &HashMap<u64, String>,
+) -> Vec<SourceRow> {
+    use super::achievement::bits;
+    let fqn = |v: &crate::gom_reader::GomValue| bits(v).and_then(|g| guids.get(&g).cloned());
+    let mut out = Vec::new();
+    for (_, event) in map_field(proto, WORLD_EVENTS) {
+        let Some(quest) = event.embedded_field(EVENT_QUEST).and_then(fqn) else {
+            continue;
+        };
+        let drops = event.embedded_field(EVENT_DROPS).and_then(|d| d.as_list());
+        for item in drops.unwrap_or_default().iter().filter_map(fqn) {
+            out.push((item, "world_event", quest.clone(), String::new()));
+        }
+    }
+    out
+}
+
+/// Lookups an item's own fields resolve through.
+struct ItemLookups {
+    guids: HashMap<u64, String>,
+    /// itmSourceProto source id -> item_source.stb text.
+    labels: HashMap<u64, String>,
+    /// Vanity-pet ability guid -> npc.pet.* fqn.
+    pets: HashMap<u64, String>,
+    /// mntMountInfoPrototype mount ids.
+    mounts: HashSet<u64>,
+}
+
+/// An item's source labels (9ef1a7fa) and unlocks: a pet, a mount, a title or
+/// a lockbox's loot package.
+fn item_facts(
+    fqn: &str,
+    obj: &crate::gom_reader::GomValue,
+    lk: &ItemLookups,
+) -> (Vec<SourceRow>, Vec<UnlockRow>) {
+    use super::achievement::bits;
+    let field = |id| obj.embedded_field(id).and_then(bits);
+    let labels = obj
+        .embedded_field(ITEM_SOURCE_LIST)
+        .and_then(|l| l.as_list())
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|id| lk.labels.get(&bits(id)?))
+        .map(|text| (fqn.to_string(), "source_label", text.clone(), String::new()))
+        .collect();
+    let mut unlocks = Vec::new();
+    let mut unlock = |kind, value: String| unlocks.push((fqn.to_string(), kind, value));
+    let usage = field(ITEM_USAGE_ABILITY);
+    let teaches = field(ITEM_TEACHES_VALUE);
+    if let Some(pet) = usage.and_then(|a| lk.pets.get(&a)) {
+        unlock("pet", pet.clone());
+    }
+    let grants_mount = usage
+        .and_then(|a| lk.guids.get(&a))
+        .is_some_and(|a| a == GRANT_MOUNT);
+    if let Some(mount) = teaches.filter(|m| grants_mount && lk.mounts.contains(m)) {
+        unlock("mount", mount.to_string());
+    }
+    if let Some((kind, id)) = super::title::item_title(obj) {
+        unlock("title", format!("{kind}:{id}"));
+    }
+    if let Some(package) = field(ITEM_LOOT_PACKAGE) {
+        unlock("loot_package", format!("{package:016X}"));
+    }
+    (labels, unlocks)
+}
+
+impl Database {
+    /// Populate `item_sources` and `item_unlocks` (FR-KESSEL-025 c8). Run
+    /// after `populate_achievement_rewards` and `populate_conversation_grants`,
+    /// whose tables this reads. Returns (source rows, unlock rows).
+    pub fn populate_item_sources(&self) -> Result<(u64, u64)> {
+        use super::achievement::{bits, object_guid_map};
+        use super::world::{decoded_objects, load_singleton};
+        use crate::gom_reader::GomValue;
+
+        self.with_tx(|tx| {
+            let guids = object_guid_map(tx)?;
+            let mut sources = Vec::new();
+            if let Some(proto) = load_singleton(tx, "qstRewardsInfoPrototype")? {
+                sources.extend(quest_reward_sources(&proto, &guids));
+            }
+            if let Some(proto) = load_singleton(tx, "wevEventInfoPrototype_client")? {
+                sources.extend(world_event_sources(&proto, &guids));
+            }
+
+            // Achievement rewards: deaaa365 -> achRewardsTable reward id.
+            let mut reward_items = tx.prepare(
+                "SELECT item_fqn FROM achievement_reward_items \
+                 WHERE reward_id = ?1 AND item_fqn IS NOT NULL",
+            )?;
+            for (ach, obj) in decoded_objects(tx, "Achievement")? {
+                let Some(reward) = obj.embedded_field(super::title::ACH_REWARD).and_then(bits)
+                else {
+                    continue;
+                };
+                let rows = reward_items.query_map([reward as i64], |r| r.get::<_, String>(0))?;
+                for item in rows {
+                    sources.push((item?, "achievement_reward", ach.clone(), String::new()));
+                }
+            }
+            drop(reward_items);
+
+            // Give Items: the action names a script variable whose record names the item.
+            let gives: Vec<(String, String, String)> = {
+                let mut stmt = tx.prepare(
+                    "SELECT script_fqn, handler, value FROM script_actions \
+                     WHERE action = 'Give Items' AND value IS NOT NULL",
+                )?;
+                let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+                rows.collect::<rusqlite::Result<_>>()?
+            };
+            let scripts: HashSet<&str> = gives.iter().map(|(s, _, _)| s.as_str()).collect();
+            let variables: HashMap<String, HashMap<u64, String>> = decoded_objects(tx, "Hydra")?
+                .into_iter()
+                .filter(|(fqn, _)| scripts.contains(fqn.as_str()))
+                .map(|(fqn, obj)| {
+                    let vars = map_field(&obj, HYD_VARIABLES)
+                        .iter()
+                        .filter_map(|(k, v)| {
+                            let target = v.embedded_field(HYD_VARIABLE_FQN).and_then(|t| match t {
+                                GomValue::Str(s) => Some(s.clone()),
+                                _ => None,
+                            });
+                            Some((bits(k)?, target?))
+                        })
+                        .collect();
+                    (fqn, vars)
+                })
+                .collect();
+            let mut conversations = tx.prepare(
+                "SELECT DISTINCT conversation_fqn FROM conversation_node_actions \
+                 WHERE kind = 'script' AND script_fqn = ?1 AND handler = ?2",
+            )?;
+            for (script, handler, value) in &gives {
+                let Some(item) = variables
+                    .get(script)
+                    .and_then(|vars| vars.get(&hydra_name_hash(value)))
+                else {
+                    continue;
+                };
+                let via = format!("{script} {handler}");
+                let mut callers = conversations
+                    .query_map(params![script, handler], |r| r.get::<_, String>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
+                if callers.is_empty() {
+                    callers.push(script.clone());
+                }
+                for caller in callers {
+                    sources.push((item.clone(), "script", caller, via.clone()));
+                }
+            }
+            drop(conversations);
+
+            // The item's own fields: source labels and unlocks.
+            let labels: HashMap<u64, String> = {
+                let mut text = tx.prepare(
+                    "SELECT text FROM strings WHERE id2 = ?1 AND id1 = ?2 \
+                     AND locale = 'en-us' AND text <> '' LIMIT 1",
+                )?;
+                let mut labels = HashMap::new();
+                if let Some(proto) = load_singleton(tx, "itmSourceProto")? {
+                    for (id, packed) in map_field(&proto, SOURCE_LABELS) {
+                        let (Some(id), Some(packed)) = (bits(id), bits(packed)) else {
+                            continue;
+                        };
+                        let (id2, id1) = ((packed >> 32) as i64, (packed & 0xFFFF_FFFF) as i64);
+                        if let Some(t) = text.query_row([id2, id1], |r| r.get(0)).optional()? {
+                            labels.insert(id, t);
+                        }
+                    }
+                }
+                labels
+            };
+            let pets = match load_singleton(tx, "ablVanityPetsPrototype")? {
+                Some(proto) => map_field(&proto, PET_NPCS)
+                    .iter()
+                    .filter_map(|(a, n)| Some((bits(a)?, guids.get(&bits(n)?)?.clone())))
+                    .collect(),
+                None => HashMap::new(),
+            };
+            let mounts = match load_singleton(tx, "mntMountInfoPrototype")? {
+                Some(proto) => map_field(&proto, MOUNT_IDS)
+                    .iter()
+                    .filter_map(|(k, _)| bits(k))
+                    .collect(),
+                None => HashSet::new(),
+            };
+            let lookups = ItemLookups {
+                guids,
+                labels,
+                pets,
+                mounts,
+            };
+            let mut unlocks = Vec::new();
+            for_each_item_object(tx, |fqn, _, obj| {
+                let (labels, item_unlocks) = item_facts(fqn, obj, &lookups);
+                sources.extend(labels);
+                unlocks.extend(item_unlocks);
+                Ok(())
+            })?;
+            insert_item_sources(tx, &sources, &unlocks)
+        })
+    }
+}
+
+/// Write the rows, then one `none` row for every item no source names.
+fn insert_item_sources(
+    tx: &Transaction,
+    sources: &[SourceRow],
+    unlocks: &[UnlockRow],
+) -> Result<(u64, u64)> {
+    tx.execute("DELETE FROM item_sources", [])?;
+    tx.execute("DELETE FROM item_unlocks", [])?;
+    let mut insert = tx.prepare(
+        "INSERT OR IGNORE INTO item_sources (item_fqn, source_kind, source_fqn, detail) \
+         VALUES (?1, ?2, ?3, ?4)",
+    )?;
+    for (item, kind, source, detail) in sources {
+        insert.execute(params![item, kind, source, detail])?;
+    }
+    let mut insert = tx.prepare(
+        "INSERT OR IGNORE INTO item_unlocks (item_fqn, unlock_kind, unlock_fqn) VALUES (?1, ?2, ?3)",
+    )?;
+    for (item, kind, unlock) in unlocks {
+        insert.execute(params![item, kind, unlock])?;
+    }
+    tx.execute(
+        "INSERT OR IGNORE INTO item_sources (item_fqn, source_kind, source_fqn, detail) \
+         SELECT fqn, 'none', '', '' FROM objects o WHERE kind = 'Item' AND is_canonical = 1 \
+         AND NOT EXISTS (SELECT 1 FROM item_sources s WHERE s.item_fqn = o.fqn)",
+        [],
+    )?;
+    let count = |t: &str| -> Result<u64> {
+        Ok(tx.query_row(&format!("SELECT COUNT(*) FROM {t}"), [], |r| r.get(0))?)
+    };
+    Ok((count("item_sources")?, count("item_unlocks")?))
+}
+
 /// Create the item tables (idempotent).
 pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
     tx.execute_batch(
@@ -768,6 +1124,33 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 FOREIGN KEY (set_fqn) REFERENCES item_sets(set_fqn)
             );
             CREATE INDEX IF NOT EXISTS idx_item_set_members_set ON item_set_members(set_fqn);
+
+            -- One row per way an item is granted (FR-KESSEL-025 c8).
+            -- source_kind: quest_reward (detail 'always' or 'choose-one',
+            -- plus ' branch <id>' for per-branch rows, then ' band <min>-<max>'
+            -- and ' class <a>,<b>' when the row names classes), world_event (the
+            -- event's qst.dynamic_events quest), achievement_reward, script
+            -- (a Give Items action; source_fqn is the conversation that calls
+            -- it, or the script; detail '<script_fqn> <handler>'),
+            -- source_label (the item_source.stb text), or none.
+            CREATE TABLE IF NOT EXISTS item_sources (
+                item_fqn    TEXT NOT NULL,
+                source_kind TEXT NOT NULL,
+                source_fqn  TEXT NOT NULL,
+                detail      TEXT NOT NULL,
+                PRIMARY KEY (item_fqn, source_kind, source_fqn, detail)
+            );
+            CREATE INDEX IF NOT EXISTS idx_item_sources_source ON item_sources(source_fqn);
+            -- What using an item grants: pet (npc.pet fqn), mount (decimal
+            -- mount id), title ('player:<id>' or 'legacy:<id>'), or
+            -- loot_package (a lockbox's package hash, hex; its item list is
+            -- not in the client).
+            CREATE TABLE IF NOT EXISTS item_unlocks (
+                item_fqn    TEXT NOT NULL,
+                unlock_kind TEXT NOT NULL,
+                unlock_fqn  TEXT NOT NULL,
+                PRIMARY KEY (item_fqn, unlock_kind, unlock_fqn)
+            );
         "#,
     )?;
     Ok(())
@@ -909,5 +1292,203 @@ mod tests {
 
         drop(conn);
         let _ = std::fs::remove_file(&path);
+    }
+
+    mod sources {
+        use super::super::*;
+        use crate::db::testutil::temp_db_path;
+        use crate::db::title::ITEM_TEACHES;
+        use crate::gom_reader::GomValue as G;
+
+        fn obj(fields: Vec<(u32, G)>) -> G {
+            G::Embedded(
+                fields
+                    .into_iter()
+                    .map(|(id, v)| (0x4000_0000_0000_0000 | u64::from(id), v))
+                    .collect(),
+            )
+        }
+
+        fn guids() -> HashMap<u64, String> {
+            [
+                (1, "qst.droid_repossession"),
+                (2, "itm.always"),
+                (3, "itm.choice"),
+                (4, "qst.dynamic_events.hoth.boss"),
+                (5, "itm.armor_feet"),
+                (6, "abl.player.mount.grant_mount"),
+                (7, "npc.pet.gizka"),
+                (9, "class.pc.advanced.sorcerer"),
+                (10, "class.pc.advanced.juggernaut"),
+            ]
+            .into_iter()
+            .map(|(g, f)| (g, f.to_string()))
+            .collect()
+        }
+
+        fn row(item: &str, kind: &'static str, source: &str, detail: &str) -> SourceRow {
+            (item.into(), kind, source.into(), detail.into())
+        }
+
+        #[test]
+        fn hydra_variables_key_on_fnv1a_of_the_uppercased_name() {
+            // INSTIGATOR, as hydObject holds it.
+            assert_eq!(
+                hydra_name_hash("instigator") as i64,
+                -7_570_262_538_488_060_923
+            );
+        }
+
+        #[test]
+        fn quest_rewards_are_always_or_choose_one_and_branch_rows_name_the_branch() {
+            let reward = |item: u64, always: bool| {
+                let mut f = vec![(REWARD_ITEM, G::U64(item))];
+                if always {
+                    f.push((REWARD_ALWAYS, G::Bool(true)));
+                } else {
+                    f.push((REWARD_MIN_LEVEL, G::I64(25)));
+                    f.push((REWARD_MAX_LEVEL, G::I64(28)));
+                    let class = |g| (G::U64(g), G::Bool(true));
+                    f.push((REWARD_CLASSES, G::Map(vec![class(9), class(10)])));
+                }
+                obj(f)
+            };
+            let proto = obj(vec![
+                (
+                    QUEST_REWARDS,
+                    G::Map(vec![(
+                        G::U64(1),
+                        // An item outside the extract (guid 99) is no row.
+                        G::List(vec![reward(2, true), reward(3, false), reward(99, true)]),
+                    )]),
+                ),
+                (
+                    BRANCH_REWARDS,
+                    G::Map(vec![(
+                        G::U64(1),
+                        G::Map(vec![(G::I64(2), G::List(vec![reward(2, true)]))]),
+                    )]),
+                ),
+            ]);
+            let q = "qst.droid_repossession";
+            assert_eq!(
+                quest_reward_sources(&proto, &guids()),
+                [
+                    row("itm.always", "quest_reward", q, "always"),
+                    row(
+                        "itm.choice",
+                        "quest_reward",
+                        q,
+                        "choose-one band 25-28 class juggernaut,sorcerer"
+                    ),
+                    row("itm.always", "quest_reward", q, "always branch 2"),
+                ]
+            );
+        }
+
+        #[test]
+        fn world_event_drops_name_the_event_quest() {
+            let event = |drops| {
+                obj(vec![
+                    (EVENT_DROPS, G::List(drops)),
+                    (EVENT_QUEST, G::U64(4)),
+                ])
+            };
+            let proto = obj(vec![(
+                WORLD_EVENTS,
+                G::Map(vec![
+                    (G::U64(100), event(vec![G::U64(5)])),
+                    (G::U64(101), event(vec![])),
+                ]),
+            )]);
+            assert_eq!(
+                world_event_sources(&proto, &guids()),
+                [row(
+                    "itm.armor_feet",
+                    "world_event",
+                    "qst.dynamic_events.hoth.boss",
+                    ""
+                )]
+            );
+        }
+
+        #[test]
+        fn item_fields_give_labels_pets_mounts_titles_and_loot_packages() {
+            let lk = ItemLookups {
+                guids: guids(),
+                labels: [(40, "Vendor: Manaan".to_string())].into_iter().collect(),
+                pets: [(8, "npc.pet.gizka".to_string())].into_iter().collect(),
+                mounts: [u64::MAX - 1].into_iter().collect(),
+            };
+            let facts = |fields| item_facts("itm.x", &obj(fields), &lk);
+            let u = |k: &'static str, v: &str| ("itm.x".to_string(), k, v.to_string());
+
+            let (labels, unlocks) = facts(vec![
+                (ITEM_SOURCE_LIST, G::List(vec![G::I64(40), G::I64(41)])),
+                (ITEM_USAGE_ABILITY, G::U64(8)),
+                (ITEM_LOOT_PACKAGE, G::I64(-2)),
+            ]);
+            assert_eq!(labels, [row("itm.x", "source_label", "Vendor: Manaan", "")]);
+            assert_eq!(
+                unlocks,
+                [
+                    u("pet", "npc.pet.gizka"),
+                    u("loot_package", "FFFFFFFFFFFFFFFE")
+                ]
+            );
+
+            // A mount needs grant_mount and a known mount id, read unsigned.
+            let mount = |ability| {
+                facts(vec![
+                    (ITEM_USAGE_ABILITY, G::U64(ability)),
+                    (ITEM_TEACHES_VALUE, G::I64(-2)),
+                ])
+                .1
+            };
+            assert_eq!(mount(6), [u("mount", "18446744073709551614")]);
+            assert!(mount(7).is_empty());
+
+            let title = |category| {
+                facts(vec![
+                    (ITEM_TEACHES, G::Enum(category)),
+                    (ITEM_TEACHES_VALUE, G::I64(114)),
+                ])
+                .1
+            };
+            assert_eq!(title(5), [u("title", "player:114")]);
+            assert_eq!(title(9), [u("title", "legacy:114")]);
+            assert!(title(3).is_empty());
+        }
+
+        #[test]
+        fn an_item_no_source_names_answers_none() -> Result<()> {
+            let path = temp_db_path("item_sources");
+            let db = Database::with_grammar(&path, None)?;
+            db.init_schema()?;
+            let counts = db.with_tx(|tx| {
+                for (fqn, guid) in [("itm.always", "02"), ("itm.never", "03")] {
+                    tx.execute(
+                        "INSERT INTO objects (game_id, stable_id, payload_hash, guid, template_guid, \
+                           fqn, kind, version, revision, json, is_canonical) \
+                         VALUES (?1, ?1, '', ?1, '', ?2, 'Item', 0, 0, '{}', 1)",
+                        params![guid, fqn],
+                    )?;
+                }
+                let sources = [row("itm.always", "quest_reward", "qst.q", "always")];
+                let unlocks = [("itm.box".to_string(), "loot_package", "AB".to_string())];
+                insert_item_sources(tx, &sources, &unlocks)
+            })?;
+            assert_eq!(counts, (2, 1));
+            let conn = db.conn.lock().unwrap();
+            let kind: String = conn.query_row(
+                "SELECT source_kind FROM item_sources WHERE item_fqn = 'itm.never'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(kind, "none");
+            drop(conn);
+            let _ = std::fs::remove_file(&path);
+            Ok(())
+        }
     }
 }
