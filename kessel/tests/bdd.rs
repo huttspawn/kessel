@@ -770,11 +770,9 @@ fn names_npc_conversation_codex(world: &World) {
     );
 }
 
-// The generated feature tags only the first of c9's two scenarios; the
-// conversation scenario carries no tag, so `not @local` selects it.
 scenarios!(
     "tests",
     tags = "@smoke or @criterion-FR-KESSEL-025-c4 or @criterion-FR-KESSEL-025-c5 \
-            or @criterion-FR-KESSEL-025-c9 or @criterion-FR-KESSEL-025-c10 or not @local",
+            or @criterion-FR-KESSEL-025-c9 or @criterion-FR-KESSEL-025-c10",
     fixtures = [world: World]
 );
