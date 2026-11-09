@@ -397,5 +397,15 @@
   "meaning": "hydQueueObject: a second object selector on a Hydra action, encoded the same way as hydObject (FNV-1a 64 of the uppercased selector name).",
   "evidence": "Its values on Achievement Event actions are INSTIGATOR (296), EFFECT TARGET (130), OBJECT SELF (68), PHASE OWNER (8) and PHASE OCCUPANTS (1), all by the same hash as hydObject.",
   "confidence": "proved"
+ },
+ "4000000849010a75": {
+  "meaning": "itmGiftType: the gift's category, the key of the companion gift-interest maps: 1 Weapon, 2 Military Gear, 3 Courting, 4 Luxury, 5 Technology, 6 Republic Memorabilia, 7 Imperial Memorabilia, 8 Cultural Artifact, 9 Trophy, 10 Underworld Good, 11 Delicacies, 12 Maintenance (zero-based enum).",
+  "evidence": "itm.companion.gift.technology.* carry 5 and ...underworld_good.* 10; names from str/gui/companiongifttypes.stb (id2 889514) entries 2..13 = wire value.",
+  "confidence": "proved"
+ },
+ "4000000849010a7a": {
+  "meaning": "itmGiftAffectionRank: the gift's rank minus one (rank1 absent = 0, rank3 = 2, rank5 = 4).",
+  "evidence": "itm.companion.gift.technology.artifact_rank3_v1 = 2, underworld_good.prototype_rank5_v1 = 4, *_rank1_* omit it.",
+  "confidence": "proved"
  }
 }
