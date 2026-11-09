@@ -440,5 +440,55 @@
   "confidence": "proved",
   "evidence": "14,145 of 17,735 values in the filtered build equal the qstHookId of a task of the quest in the node's cnvActionQuest; see 40000034b21f4106 for the rest.",
   "meaning": "The qstHookId of the task of cnvActionQuest that this node completes."
+ },
+ "4000004e04ee5c20": {
+  "confidence": "proved",
+  "evidence": "Over 39,890 clauses in 20,153 Conditions, every type's populated fields are the fields named for it: 27 carries only cndAchievementId (570/570), 34 only cndDisciplineId, 117/118 only cndConditionalId pointing at qst.*, 8 cndOfClassClasses, 43 cndAreaId, 129 cndConditionalInteger with cndTargetQuestEraState. The 19 clauses with no type field carry only cndForceAlignmentComparison/Value (type 0).",
+  "meaning": "Clause type of one Condition clause: an index into enum cndConditionType (137 members, gom_enums.json hash 7C7B7B6804EE5C1F), e.g. 3 GlobalVariable (quest variable), 4 HasItems, 19 NestedConditional, 27 HasAchievement, 34 IsDiscipline, 117 IsOnQuest, 118 HasCompletedQuest, 129 IsQuestEraInState. Absent means 0 (ForceAlignment). Value 137 (2 clauses, cnd.alliance.legacy_reborn.is_in_space_game) is past the enum's end."
+ },
+ "4000004e0c0f2895": {
+  "confidence": "proved",
+  "evidence": "5,197 of 5,209 ids resolve their high 32 bits to a Quest's string_id (12 to no extracted object); 2,676 of 2,737 non-builtin ids equal a qstVariableGUID exactly. FQN words split by n: 'on_quest'/'is_on' take n=1 (197 vs 13 at n=2), 'complete'/'completed' take n=2 (430 vs 11 at n=1).",
+  "meaning": "Quest variable a GlobalVariable clause tests: (quest string_id << 32) | n. n = 1 is the quest's ACTIVE state, n = 2 COMPLETE, n = 4 ELIGIBLE (likely; see 4000001ce4ee1382); any other n equals a qstVariableGUID (400000002c1fe390) in that quest's variable lists, i.e. a named quest variable."
+ },
+ "400000429d291241": {
+  "confidence": "proved",
+  "evidence": "7,677 of 7,689 entries resolve to a Quest; cnd.exp.04.systems.mod.all_mission_complete_328_330 (only NestedConditional clauses) lists the 20 #COMPLETE variables of the ten conditions it nests.",
+  "meaning": "Every quest variable the Condition reads, transitively through nested conditions, in the same (string_id << 32 | n) form as cndGlobalVariableId: the invalidation list."
+ },
+ "400000448d60c770": {
+  "confidence": "proved",
+  "evidence": "Equals {t + 1 for t in transitive clause types} on 20,151 of 20,151 Conditions that carry it.",
+  "meaning": "Every clause type the Condition uses, transitively through nested conditions, each stored as type + 1."
+ },
+ "40000043bd2cc2c4": {
+  "confidence": "proved",
+  "evidence": "Equals the transitive type set on 20,149 of 20,151; the 2 exceptions (cnd.stronghold.is_in/not_guild_apartment, type 63) have an empty set.",
+  "meaning": "Bitset (64-bit words) of every clause type the Condition uses, transitively: bit t set for type t."
+ },
+ "400000429e352b11": {
+  "confidence": "likely",
+  "evidence": "Absent on 7,055, 1 on 13,094, 2 on 4. cnd.exp.04.systems.mod.mod_quest_pro_336_complete (OR over the imp and rep 336 quests) has 1; the bulk of OR use is the HasItems pair 'has item' / 'has item equipped'. Not checked against a game outcome.",
+  "meaning": "How the clauses combine: enum cndLogicEnum, 0 (absent) AND, 1 OR, 2 XOR."
+ },
+ "40000034bc126755": {
+  "confidence": "proved",
+  "evidence": "All 3,134 expressions evaluate to exactly one value on the stack; 6,317 of 6,344 variable tokens resolve to a quest. Jedi Knight chapter 1 decodes to the known order: Coruscant introduction <= Tython seeking_darkness#COMPLETE; act_1 thedefector <= taris the_rescue#COMPLETE AND nar_shaddaa showdownwithlordsardic#COMPLETE; Sith Warrior Korriban arm_yourself > judge_executioner > slaying_the_beast > a_new_master > sith_arithmetic > the_final_trial > leaving_korriban.",
+  "meaning": "A quest's requirement expression in postfix: token 8 = AND, 9 = OR (binary), 10 = NOT (unary); every other token is a quest variable id (prefix48 << 16 | n) where prefix48 = the owning quest's qstAlternateEndingVariableID >> 16 and n = 1 ACTIVE, 2 COMPLETE, 4 ELIGIBLE (likely), else a named variable (qstVariableFqnId 40000034b21e56a4)."
+ },
+ "40000034bc126754": {
+  "confidence": "proved",
+  "evidence": "Over 622,641 gated nodes in 10,752 conversations, 622,277 evaluate to one value with 8/9/11/12 binary and 10 unary; 887,391 of 905,411 variable tokens equal a qstVariableFqnId, e.g. 10549456612798496869..876 = qst.utility.class is_jedi_knight .. is_spy (the class gates on 470,350 '== 1' tests).",
+  "meaning": "A conversation node's compiled gate in the same postfix language as qstReqExpression, plus literals 0 and 1 and comparisons: 11 = variable == literal (var, literal, 11), 12 = variable == variable (int var vs const var); 3-7 are integer comparisons (5 seen as count >= tier constant; exact op per code unproved). The wrapper [1, 1, ..., 8, 8] ANDs two TRUE constants; [1, 1, 8] is an ungated node."
+ },
+ "4000001ce4ee1382": {
+  "confidence": "proved",
+  "evidence": "6,317 of 6,344 qstReqExpression variable tokens match a quest's base >> 16.",
+  "meaning": "The quest's variable namespace base: prefix48 << 16 with n = 0; every qstVariableFqnId of the quest shares its top 48 bits, and qstReqExpression / cnvConditionCompiled tokens name the quest by those bits."
+ },
+ "400000002c1fe412": {
+  "confidence": "proved",
+  "evidence": "Equals string_id << 32 on every sampled quest (qst.location.nar_shaddaa.world.republic.worker_justice_credits: 2054454656368640 = 478340 << 32).",
+  "meaning": "Quest definition id = the quest's string_id << 32; qstVariableGUID values are this base + n, the form Conditions use."
  }
 }
