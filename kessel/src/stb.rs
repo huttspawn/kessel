@@ -34,8 +34,8 @@ pub struct StbEntry {
     pub id1: u32,
     /// Secondary ID
     pub id2: u32,
-    /// Entry flags
-    #[allow(dead_code)]
+    /// Entry flags. Two entries of one (id1, id2) are told apart by these;
+    /// the low byte names the kind (see [`variant_kind`]).
     pub flags: u16,
     /// Version number
     pub version: u32,
@@ -144,6 +144,37 @@ pub fn parse(data: &[u8], path: &str) -> Result<StbFile> {
     })
 }
 
+/// The kind of a second entry of an (id1, id2) key, from its flags' low
+/// byte: 0x50 is a dialogue option's wheel text, 0x46 a female variant.
+pub fn variant_kind(flags: u16) -> &'static str {
+    match flags & 0xff {
+        0x50 => "wheel",
+        0x46 => "female",
+        _ => "variant",
+    }
+}
+
+/// For each entry, whether it is the one `strings` keeps for its (id1, id2):
+/// the highest `version`, the first on a tie. The rest are variants.
+pub fn primary_mask(entries: &[StbEntry]) -> Vec<bool> {
+    let mut winner: HashMap<(u32, u32), usize> = HashMap::new();
+    for (i, e) in entries.iter().enumerate() {
+        winner
+            .entry((e.id1, e.id2))
+            .and_modify(|w| {
+                if e.version > entries[*w].version {
+                    *w = i;
+                }
+            })
+            .or_insert(i);
+    }
+    entries
+        .iter()
+        .enumerate()
+        .map(|(i, e)| winner[&(e.id1, e.id2)] == i)
+        .collect()
+}
+
 /// Extract locale from STB file path
 ///
 /// Path format: `/resources/en-us/str/abl.stb`
@@ -197,7 +228,8 @@ fn extract_fqn_from_path(path: &str) -> String {
 /// hash of its path, so no dictionary is needed. Root tables hold the primary
 /// object kinds; the gui tables (every `/str/gui/` table in the archives, 178
 /// on the live game) hold the interface text the root tables lack, such as
-/// conquest themes, achievement categories, guild and mail text. Conversation tables (`/str/cnv/`) are not listed: they are
+/// conquest themes, achievement categories, guild and mail text; the pc tables
+/// hold player and legacy title text. Conversation tables (`/str/cnv/`) are not listed: they are
 /// derived from the `cnv.*` objects in `populate_conversation_strings`.
 const KNOWN_STB_PATHS: &[&str] = &[
     "/resources/en-us/str/abl.stb",
@@ -385,6 +417,8 @@ const KNOWN_STB_PATHS: &[&str] = &[
     "/resources/en-us/str/gui/wardrobe.stb",
     "/resources/en-us/str/gui/warzonejoin.stb",
     "/resources/en-us/str/gui/wholist.stb",
+    "/resources/en-us/str/pc/title.stb",
+    "/resources/en-us/str/pc/legacytitle.stb",
 ];
 
 /// Archive filename hash -> path for every known STB table. The hash is
@@ -402,6 +436,36 @@ pub fn known_stb_hashes() -> HashMap<u64, &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn entry(id1: u32, flags: u16, version: u32, text: &str) -> StbEntry {
+        StbEntry {
+            id1,
+            id2: 7,
+            flags,
+            version,
+            text: text.to_string(),
+        }
+    }
+
+    #[test]
+    fn primary_is_the_higher_version_then_the_first() {
+        let entries = [
+            entry(16, 0x41, 1, "Baron <<1>>"),
+            entry(16, 0x46, 1, "Baroness <<1>>"),
+            entry(17, 0x50, 1, "old"),
+            entry(17, 0x41, 2, "new"),
+            entry(18, 0x41, 1, "alone"),
+        ];
+        assert_eq!(primary_mask(&entries), [true, false, false, true, true]);
+    }
+
+    #[test]
+    fn variant_kind_reads_the_low_flag_byte() {
+        assert_eq!(variant_kind(0x0050), "wheel");
+        assert_eq!(variant_kind(0x1050), "wheel");
+        assert_eq!(variant_kind(0x0046), "female");
+        assert_eq!(variant_kind(0x0041), "variant");
+    }
 
     #[test]
     fn test_extract_locale() {
@@ -470,6 +534,16 @@ mod tests {
                 "/resources/en-us/str/gui/mail.stb",
                 0x8E7A_A9CF,
                 0x4A71_3705,
+            ),
+            (
+                "/resources/en-us/str/pc/title.stb",
+                0x3E55_0C96,
+                0xB6B2_B127,
+            ),
+            (
+                "/resources/en-us/str/pc/legacytitle.stb",
+                0xDA28_7E12,
+                0xB7A1_BE36,
             ),
         ];
         let derived = known_stb_hashes();

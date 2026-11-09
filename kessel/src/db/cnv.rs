@@ -346,8 +346,8 @@ impl Database {
     /// derives the en-us STB path from each FQN (the inverse of
     /// `stb::extract_fqn_from_path`: `cnv.X.Y -> /resources/en-us/str/cnv/X/Y.stb`),
     /// computes the archive filename hash, sweeps the archives once, and parses
-    /// each matching entry's STB into `strings`. Idempotent (`insert_string` is
-    /// INSERT OR REPLACE), so re-inserting strings the main loop already pulled
+    /// each matching entry's STB into `strings` and `string_variants`. Idempotent
+    /// (both upsert), so re-inserting strings the main loop already pulled
     /// via the dictionary is harmless.
     ///
     /// Returns the number of string rows inserted.
@@ -412,21 +412,11 @@ impl Database {
                     Ok(d) => d,
                     Err(_) => continue,
                 };
-                // Parse with the derived path so fqn_prefix/locale resolve. Then
-                // mirror main.rs's STB insert exactly:
-                //   fqn = "{fqn_prefix}.{id1}.{id2}", insert_string(fqn, locale, entry)
+                // Parse with the derived path so fqn_prefix/locale resolve, then
+                // insert exactly as main.rs does (strings + string_variants).
                 if let Ok(stb_file) = crate::stb::parse(&data, path) {
-                    for stb_entry in &stb_file.entries {
-                        let string_fqn = format!(
-                            "{}.{}.{}",
-                            stb_file.fqn_prefix, stb_entry.id1, stb_entry.id2
-                        );
-                        if self
-                            .insert_string(&string_fqn, &stb_file.locale, stb_entry)
-                            .is_ok()
-                        {
-                            rows_inserted += 1;
-                        }
+                    if let Ok(n) = self.insert_stb(&stb_file) {
+                        rows_inserted += n as u64;
                     }
                 }
             }

@@ -75,6 +75,24 @@ pub(crate) fn create_core_tables(tx: &Transaction) -> Result<()> {
 
             CREATE INDEX IF NOT EXISTS idx_strings_id2 ON strings(id2);
 
+            -- The other entries of a string key (#402): an STB can hold more
+            -- than one entry per (id1, id2), told apart by flags. `strings`
+            -- keeps one; the rest land here under that row's fqn. kind:
+            -- 'wheel' (low flag byte 0x50, a dialogue option's wheel text),
+            -- 'female' (0x46), 'variant' (any other).
+            CREATE TABLE IF NOT EXISTS string_variants (
+                fqn TEXT NOT NULL,
+                locale TEXT NOT NULL,
+                id1 INTEGER NOT NULL,
+                id2 INTEGER NOT NULL,
+                flags INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                text TEXT NOT NULL,
+                text_raw TEXT,
+                version INTEGER DEFAULT 0,
+                PRIMARY KEY (fqn, flags)
+            );
+
             -- guid -> string_id bridge for objects SEEN during extraction but
             -- DROPPED (unnamed / non-whitelisted FQN) and so absent from
             -- `objects`. Items reference such objects by guid (e.g. a relic's

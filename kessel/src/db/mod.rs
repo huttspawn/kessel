@@ -104,6 +104,10 @@ struct PendingString {
     /// so unchanged strings aren't stored twice.
     text_raw: Option<String>,
     version: u32,
+    flags: u16,
+    /// `Some(kind)` for a second entry of its key, bound for
+    /// `string_variants`; `None` for the `strings` row.
+    variant: Option<&'static str>,
 }
 
 /// Apply grammar cleaning to a raw STB string and return
@@ -276,9 +280,30 @@ impl Database {
         Ok(())
     }
 
-    /// Queue a string for batch insert
-    /// If grammar rules are configured, applies them to clean the text
-    pub fn insert_string(&self, fqn: &str, locale: &str, entry: &StbEntry) -> Result<()> {
+    /// Queue every entry of a parsed STB table. The entry `strings` keeps for
+    /// each (id1, id2) goes to `strings` at `{prefix}.{id1}.{id2}`; every other
+    /// entry of that key goes to `string_variants` under the same fqn (#402).
+    /// Returns the number of entries queued.
+    pub fn insert_stb(&self, stb_file: &crate::stb::StbFile) -> Result<usize> {
+        let primary = crate::stb::primary_mask(&stb_file.entries);
+        for (entry, is_primary) in stb_file.entries.iter().zip(primary) {
+            let fqn = format!("{}.{}.{}", stb_file.fqn_prefix, entry.id1, entry.id2);
+            let variant = (!is_primary).then(|| crate::stb::variant_kind(entry.flags));
+            self.queue_string(&fqn, &stb_file.locale, entry, variant)?;
+        }
+        Ok(stb_file.entries.len())
+    }
+
+    /// Queue a string for batch insert, to `strings` or (with a `variant`
+    /// kind) `string_variants`. If grammar rules are configured, applies them
+    /// to clean the text.
+    fn queue_string(
+        &self,
+        fqn: &str,
+        locale: &str,
+        entry: &StbEntry,
+        variant: Option<&'static str>,
+    ) -> Result<()> {
         // Apply grammar rules if configured, keeping the raw form when cleaning
         // changed the text (so <<N>> templates survive in `text_raw`).
         let (cleaned_text, text_raw) = prepare_string(self.grammar.as_deref(), &entry.text);
@@ -291,6 +316,8 @@ impl Database {
             text: cleaned_text,
             text_raw,
             version: entry.version,
+            flags: entry.flags,
+            variant,
         };
 
         let mut strings = self.pending_strings.lock().unwrap();
@@ -401,10 +428,29 @@ impl Database {
                 "#,
             )?;
 
+            let mut variants = tx.prepare_cached(
+                r#"
+                INSERT INTO string_variants (fqn, locale, id1, id2, flags, kind, text, text_raw, version)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                ON CONFLICT(fqn, flags) DO UPDATE SET
+                    locale = excluded.locale,
+                    kind = excluded.kind,
+                    text = excluded.text,
+                    text_raw = excluded.text_raw,
+                    version = excluded.version
+                WHERE excluded.version > string_variants.version
+                "#,
+            )?;
+
             for s in &batch {
-                stmt.execute(params![
-                    s.fqn, s.locale, s.id1, s.id2, s.text, s.text_raw, s.version
-                ])?;
+                match s.variant {
+                    None => stmt.execute(params![
+                        s.fqn, s.locale, s.id1, s.id2, s.text, s.text_raw, s.version
+                    ])?,
+                    Some(kind) => variants.execute(params![
+                        s.fqn, s.locale, s.id1, s.id2, s.flags, kind, s.text, s.text_raw, s.version
+                    ])?,
+                };
             }
         }
 
@@ -1020,6 +1066,73 @@ mod tests {
         );
         assert_eq!(singleton_guid("b03e56"), None);
         assert_eq!(singleton_guid("zz3e566b260800e0"), None);
+    }
+
+    #[test]
+    fn second_entries_of_a_key_land_in_string_variants() {
+        let path = temp_db_path("string_variants");
+        let db = Database::with_grammar(&path, None).unwrap();
+        db.init_schema().unwrap();
+        let entry = |id1, flags, text: &str| StbEntry {
+            id1,
+            id2: 469_654,
+            flags,
+            version: 1,
+            text: text.to_string(),
+        };
+        let stb = crate::stb::StbFile {
+            entries: vec![
+                entry(16, 0x41, "Baron <<1>>"),
+                entry(16, 0x46, "Baroness <<1>>"),
+                entry(20, 0x41, "Fear this!"),
+                entry(20, 0x50, "Do I look afraid? [Strike him]"),
+                entry(21, 0x41, "Alone"),
+            ],
+            locale: "en-us".to_string(),
+            fqn_prefix: "str.pc.title".to_string(),
+        };
+        assert_eq!(db.insert_stb(&stb).unwrap(), 5);
+        db.flush().unwrap();
+        let conn = db.conn.lock().unwrap();
+        let strings: Vec<(String, String)> = conn
+            .prepare("SELECT fqn, text FROM strings ORDER BY fqn")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            strings,
+            [
+                ("str.pc.title.16.469654".into(), "Baron <<1>>".into()),
+                ("str.pc.title.20.469654".into(), "Fear this!".into()),
+                ("str.pc.title.21.469654".into(), "Alone".into()),
+            ]
+        );
+        let variants: Vec<(String, u16, String, String)> = conn
+            .prepare("SELECT fqn, flags, kind, text FROM string_variants ORDER BY fqn")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            variants,
+            [
+                (
+                    "str.pc.title.16.469654".into(),
+                    0x46,
+                    "female".into(),
+                    "Baroness <<1>>".into()
+                ),
+                (
+                    "str.pc.title.20.469654".into(),
+                    0x50,
+                    "wheel".into(),
+                    "Do I look afraid? [Strike him]".into()
+                ),
+            ]
+        );
     }
 
     #[test]

@@ -254,13 +254,7 @@ fn main() -> Result<()> {
                 // Process STB files
                 if let Some(path) = stb_path {
                     if let Ok(stb_file) = stb::parse(&data, path) {
-                        for stb_entry in &stb_file.entries {
-                            let string_fqn = format!(
-                                "{}.{}.{}",
-                                stb_file.fqn_prefix, stb_entry.id1, stb_entry.id2
-                            );
-                            let _ = db.insert_string(&string_fqn, &stb_file.locale, stb_entry);
-                        }
+                        let _ = db.insert_stb(&stb_file);
                     }
                 }
                 // Process PBUK/DBLB files, found by their magic
