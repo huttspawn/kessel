@@ -536,5 +536,20 @@
   "meaning": "Name of a weapon fx spec the NPC uses.",
   "evidence": "Value 'pve_rifle_sniperhigh07_a01_v01' on npc.exp.seasons.01.ep_11.quest.dengril matches file /resources/art/fx/fxspec/weapons/pve_rifle_sniperhigh07_a01_v01.fxspec in the filename list.",
   "confidence": "proved"
+ },
+ "40000000293dbe27": {
+  "meaning": "spnAutoStart: true when the spawner fills on its own; absent when a script or quest switches it on (hydra Set Active).",
+  "evidence": "Present (true) on 53,611 of 67,829 Spawns. Dynamic Encounter spawners lack it on 1,444 of 2,119 (68%) against 12,774 of 65,710 (19%) elsewhere. Ilum DE bosses without it (spn.dynamic_events.ilum.eastern_shelf.imperial.ensuring_victory_2.rep_siege_captain, slot A of enc ...republic_boss) are switched on by hyd ...inst_advance_mission On Custom:spawn_boss -> Set Active(true), which the quest raises. Name from client.gom; the not-automatic reading rests on that script join, not on a server observation.",
+  "confidence": "likely"
+ },
+ "40000049b78d6eec": {
+  "meaning": "FQN of the template one spawner entry places (npc.* or plc.*): the object that stands where a room instance of this spawner is placed.",
+  "evidence": "Room instance asset id -> area.dat asset path (\\spn\\...spn_p) -> spn FQN -> this field names the plc. Logged object uses land on such placements: 29 of 29 Examining/Activating casts on Hutta, Tython and Korriban within 1.4-4.9 log units, next candidate typically 5-100 units away; Sean's Tython datacron conversation (06:31:35, 2026-11-09) 2.06 units from spn.location.tython.data_holocron.datacron_willpower_tython, which names plc...datacron_willpower_tython; 15 of 17 Tython conversation starts within 5 units of the spawn whose entry names the partner.",
+  "confidence": "proved"
+ },
+ "4000000a731cd8ba": {
+  "meaning": "GUID of the same template that the entry's FQN field (b78d6eec) names.",
+  "evidence": "On every entry decoded (totem_1, codex hutt/faathra, datacron_willpower_tython, surviellance_device_2, flesh_raider_parent_corpse) it resolves to the object b78d6eec names.",
+  "confidence": "proved"
  }
 }

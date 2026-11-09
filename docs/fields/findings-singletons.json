@@ -115,6 +115,16 @@
  "4000000d81a17fbc": {
   "reason": "Single 10000, likely ms. Hint respawn aggro delay; a single constant cannot confirm, only NPC observation can."
  },
+ "4000000e68c43612": {
+  "confidence": "likely",
+  "evidence": "Name proved by hash. 9 entries keyed 0-8, matching the 9 names of qstrewardscreditsdifficultyscale in order; Normal (3) is exactly 1.0. Not checked in game.",
+  "meaning": "qstExperienceMultiplierNormal: XP multiplier by qstDifficulty (0 NoExp 0, 1 ChainStep 0.15, 2 Easy 0.45, 3 Normal 1.0, 4 Hard 1.4, 5 VeryHard 1.8, 6 SeasonOne 7.25, 7 SeasonTwo 9, 8 LotS 25)."
+ },
+ "4000000e68c43613": {
+  "confidence": "likely",
+  "evidence": "Name proved by hash; exactly 0.5 x 4000000e68c43612 for indices 0-6. Not checked in game.",
+  "meaning": "qstExperienceMultiplierBonus: the bonus-mission XP multiplier by qstDifficulty, half the normal one up to VeryHard (0.5 at Normal), then 3.625, 4.5 and 5."
+ },
  "4000000ec8ced122": {
   "reason": "Single value 15.0 in dcvPVPPrototype, no hint and no named neighbour with the same shape. The data has nothing to compare it against."
  },
@@ -186,6 +196,11 @@
   "evidence": "-11.",
   "meaning": "PC attacks PC: level difference where the penalty starts."
  },
+ "40000010d9f35ee5": {
+  "confidence": "proved",
+  "evidence": "Row by row against TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) (IsAlwaysProvided): at levels 25-28 the rows for sorcerer, marauder, mercenary and agent/smuggler are true and show as Provided Rewards; powertech, assassin and juggernaut rows are absent and show as Select One (two lockboxes each). At 51-54 sniper and marauder are true; mercenary, operative, powertech, assassin, juggernaut and sorcerer are absent and show as Select One. TORCommunity mission mQAz54S (Executive Order 228): its credit box row is IsAlwaysProvided true and the bytes hold true. Across all quests, of 7,766 distinct choice sets per level and class, 683 have one option (single-role classes), the rest 2 to 12. Name proved by hash.",
+  "meaning": "qstRewardsInfoRewardTypeAll: true = the reward row is always granted; absent = the row belongs to the quest's choose-one list for that level band and class."
+ },
  "40000011a95ce76a": {
   "reason": "Single 8000, probably ms. Hint melee pursuit time; no test possible in data."
  },
@@ -212,6 +227,24 @@
  },
  "40000013a5bca46b": {
   "reason": "Single 1.0, a coefficient. Hint kiting distance; nothing confirms."
+ },
+ "40000018ae425253": {
+  "confidence": "proved",
+  "meaning": "The player title table: a list whose position plus one is the title id that every grant names (hydra Grant Title, item teach value, collection title).",
+  "evidence": "1,036 rows, 577 with text. Hydra Grant Title 114 (hyd.title.class.jedi_knight.master) lands on row 114 \"Master <<1>>\" codex cdx.titles.class.knight.master; 159 (gree superboss) on \"Combat Specimen <<1>>\" cdx.titles.event.combat_specimen; 207 of 210 Grant Title actions land on a filled row and the script names agree. Item teach value (dc16d5e3, category 5) names the same title as the item's \"Title: X\" name on 386 of 402 items, the other 16 differ only in wording. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "40000018ae425254": {
+  "confidence": "proved",
+  "meaning": "Title text: string reference (id2 << 32 | id1) into /resources/en-us/str/pc/title.stb, id2 469654. The text carries <<1>> for the character name.",
+  "evidence": "577 of 577 references resolve in pc/title.stb (605 entries), read from the archive by hashed path. Not a gui table. Several rows share one text (e.g. two \"Padawan <<1>>\" rows for Knight and Consular), so the low 32 bits are a string id, not the title id. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "40000018ae425255": {
+  "reason": "True on 27 rows, all prefix-form titles (text starts before <<1>>): the launch class and social prefixes (Darth, Sergeant .. Major, Padawan, Lord, Friendly, Chatterbox, Warzone Hero, Flygirl). 130 other prefix-form titles do not carry it, so it is not \"is a prefix\". The hashed name titleDetailLegacyPrefix suggests a prefix the legacy name can take; nothing in the data separates that from \"launch-era title\". Settling it needs the client UI code or a live check of which titles show beside a legacy name."
+ },
+ "40000018ae425258": {
+  "confidence": "likely",
+  "meaning": "Engine grant code -> player title ids: the codes the game itself grants titles by (class story ranks, social rank, alignment rank, advanced class, space and PvP).",
+  "evidence": "97 codes, 99 ids, all filled rows. Code families read cleanly: 2000-2003 trooper ranks Sergeant..Major, 2100-2703 one block per class story, 3001-3007 social ranks (Outgoing..Leader), 3010-3013 social prefixes, 3020-3024 dark side ranks (Vicious..Malevolent), 3040-3044 light side ranks (Respectable..Benevolent), 5001-5016 the 16 advanced classes in client order (Sniper..Vanguard), 10000/50000-50002 space, 30000-30001 warzones. The 24 social and alignment titles have no other grant path in the data, consistent with the engine granting them on rank. Likely, not proved: no consumer of the codes was found in game data. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  },
  "40000018b16934d1": {
   "reason": "Ids per alignment tier, light 650,651,92,652,93 and dark 647,648,87,649..., in threshold order. Hint says title id. No string table has fitting text at those ids: pc/legacytitle.stb gives 'The Notorious', gui/alignment.stb has none. An in-game title check at Light V would settle it."
@@ -389,6 +422,16 @@
  "40000040eded80bd": {
   "reason": "True on 640 of 1,360 rows in modDerivedStatModifiersList, on 8 of the 17 derived-stat keys for all 80 levels. Always on percentage rows (those with divisor and cap), never on flat ones, but 2 percentage keys lack it (e.g. 5403721675210785623, divisor 0.5605, cap 0.6). Stat keys are unnamed ids, so it cannot be tied to a stat kind; naming the 17 keys would settle it."
  },
+ "40000040f6395f99": {
+  "confidence": "proved",
+  "meaning": "Per reputation rank, the legacy title the Empire side earns at that rank (0 = none).",
+  "evidence": "Values are legacy title ids: Makeb ranks 3 and 6 -> Imperial Infiltrator, Terror of Makeb; GSI -> GSI Preferred Contractor, GSI Most Valued Partner; Gree -> Gree Research Assistant, Honored Silver Acute, Perfect Gold Bisector. As player title ids they would read Homewrecker, Agent, Sergeant, which do not fit. 99 legacy titles come from reputation ranks. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "40000040f6395f9a": {
+  "confidence": "proved",
+  "meaning": "Per reputation rank, the legacy title the Republic side earns at that rank (0 = none).",
+  "evidence": "Same reading as f6395f99, same evidence; shared factions repeat the Empire values. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
  "40000040f764e740": {
   "reason": "Single 0.3; the hint itself says unknown (Unk1Scale). Scale and alpha might fit a UI or screen effect but nothing shows which."
  },
@@ -463,6 +506,11 @@
  "400000412fecdb95": {
   "reason": "Single value 1000 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
+ "40000041352bc8a0": {
+  "confidence": "proved",
+  "meaning": "Legacy title the achievement reward grants (lgcTitleId, not a codex bit).",
+  "evidence": "Corrects the earlier codex-bit reading in #369. 321 of 330 values resolve to a legacy title; achievement to title matches published lists: Living Legend -> Living Legend, Meatbags -> Meatbag, Date Night: Romancing the Spy -> Theron's Treasure, set bonus achievement Hunter Killer -> Hunter Killer. 309 achievements reach 308 legacy titles through achRewards (deaaa365). Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
  "40000041395eeb00": {
   "reason": "Single value 250 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
@@ -471,6 +519,11 @@
  },
  "40000041395eeb02": {
   "reason": "Single value 2 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
+ },
+ "40000041436f3641": {
+  "confidence": "likely",
+  "evidence": "Name proved by hash. 80 entries, rising by level, with a step at 51 that matches the post-50 levelling curve. Not checked against an in-game XP number: combat logs carry no XP lines and the published quest pages show 0 XP. One quest's XP on its reward screen at a known level would prove it.",
+  "meaning": "qstExperiencePerLevel: base quest XP by quest level 1-80 (448 at 1, 13,952 at 34, 20,224 at 50, 46,700 at 51, 72,652 at 80). Quest XP = this[qstXpLevel] x qstExperienceMultiplierNormal[qstDifficulty]."
  },
  "400000414399efc0": {
   "confidence": "likely",
@@ -754,6 +807,11 @@
   "confidence": "proved",
   "evidence": "4611686350406668428; mapAreasDataAreaId with chat zone spvp_tutorial_chat, and arbSkirmish ee7e25be on the tutorial_arrival entry. Hint fits.",
   "meaning": "GSF tutorial area id."
+ },
+ "40000042394c09d0": {
+  "confidence": "likely",
+  "evidence": "Name proved by hash; the 21 members resolve to labels such as 'Development Hidden' and 'Item Slot: Chest' that read as internal. Not checked against a tooltip.",
+  "meaning": "itmHiddenSources: the set of source ids not shown to players (Development Hidden, the Item Slot: * gear-slot buckets, Ilum Lair augments, a few packs)."
  },
  "40000042693e3550": {
   "confidence": "likely",
@@ -1116,10 +1174,25 @@
  "4000004c91738753": {
   "reason": "Single value 7 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
+ "4000004ca21d88fb": {
+  "confidence": "proved",
+  "meaning": "Player title id a collection entry grants (Cartel Market collections).",
+  "evidence": "89 of 89 collection entries with a value: every value is a player title that one of the entry's own items teaches (dc16d5e3 with category 5). Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
  "4000004ca29b6b88": {
   "confidence": "proved",
   "evidence": "1074 entries, all values are mtxStorefrontItemMtxId and keys of d4f3ead1. Whether one table is a subset class of the other was not determined, only their sizes differ.",
   "meaning": "Index -> store mtx item id. The hint calls it a collection index; the data shows only the mapping."
+ },
+ "4000004ca875fc5a": {
+  "confidence": "proved",
+  "meaning": "Legacy title text: string reference into /resources/en-us/str/pc/legacytitle.stb, id2 746295.",
+  "evidence": "460 of 471 resolve in pc/legacytitle.stb (463 entries); the 11 misses carry no text in that table. Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
+ },
+ "4000004ca875fc5f": {
+  "confidence": "proved",
+  "meaning": "Legacy title id (equals the map key). Achievement reward rows (352bc8a0), teaching items (dc16d5e3 with category 9) and reputation ranks (f6395f99/9a) name legacy titles by this id.",
+  "evidence": "Equals its key on 471 of 471. 321 of 330 achievement reward legacy-title values resolve to a row with text, all 42 category-9 items do, and their item names read \"Legacy Title: <same text>\". Build: live 7.x unfiltered extract, 2026-11-09 (#369)."
  },
  "4000004cb99a42c8": {
   "confidence": "proved",
@@ -1263,6 +1336,11 @@
   "evidence": "144 of 148 values are mapAreasDataAreaId, 85 gmLzAreaId; e.g. ids used across phsInstanceDataPrototype and hydAreaIdToPlanetAliasTable.",
   "meaning": "The area's area id."
  },
+ "4000004d9ef1a7f9": {
+  "confidence": "proved",
+  "evidence": "417 ids; 415 resolve to text in item_source.stb, read with kessel-discovery dump_stb (kessel's STB allowlist skips this file). Items carrying an id (itmSourceList) match their label: the Feast of Prosperity reward items carry 'Vendor: Feast of Prosperity', the Voss Shrine of Silence vanity armour carries 'Flashpoint: Shrine of Silence', itm.reputation.*.manaan carries 'Reputation: Manaan'.",
+  "meaning": "itmSources: item source id -> stringref of its label, (id2 << 32) | id1 into /resources/en-us/str/gui/item_source.stb (id2 803237) and two other tables. The labels are the game's own Source text: 'Vendor: Feast of Prosperity', 'Flashpoint: Shrine of Silence', 'Achievements', 'Cartel Market: <pack>', 'Reputation: Manaan', 'Dynamic Encounters', 'Galactic Seasons: Season 9', 'Tier 1 Galactic Command Crate'."
+ },
  "4000004db4a42918": {
   "confidence": "proved",
   "evidence": "62 area keys; values: faction packages neutral (52), republic (coruscant_main, ord_resize, tython_blockout, tar_main, bal2_main), empire (dro_main, hut_main, kor_rebuild_test, bal_main, tar2_main). Values are cbtFaction ids.",
@@ -1327,8 +1405,18 @@
   "evidence": "500,550,600 for boost levels 60,65,70. Fits hint; rises with the boost.",
   "meaning": "Crew skill level given to a boosted character."
  },
+ "4000004ec7880469": {
+  "confidence": "likely",
+  "evidence": "On 168 rows in exactly 24 quests, all KotFE and KotET chapters (qst.exp.seasons.01.ep_* and seasons.02.ep_*), the only content with three chapter modes. Quantities rise with the value (10/20/30 of one token, 1/1/2 of another, a tier-3 catalyst only at 3). Which number is which mode is inferred from that order; no reward screen checked.",
+  "meaning": "qstRewardsInfoRewardDifficultyRequired: the chapter mode the row needs, 1 Story, 2 Veteran, 3 Master."
+ },
+ "4000004ec788046a": {
+  "confidence": "proved",
+  "evidence": "All 8 quests: every key is a branch id of that quest (counterfeit_tokens_* keys 2,3 of branches 1-4; cantina_rush_hard 2-5 of 1-6; rusk_skadge_recruitment 2,3,5 of 1-5; finale_the_endless_abyss 2,3 of 1-3; dantooine introduction_tour 1 of 1-2). Keys never exceed the quest's branch count. When a branch's rewards are granted (on finishing it, presumably) is not checked in game.",
+  "meaning": "qstRewardsItems: per-branch rewards; map qstBranchId (40000000308a97a4 on the quest's branches) -> list of reward rows of the same shape as qstGuaranteedRewardItems."
+ },
  "4000004ec788046b": {
-  "reason": "True on 19 rows, all in @qst.exp.seasons.01.ep_01_the_hunt: 19 of its 26 reward rows, all ilvl_0092 mainhand weapon choices, and none of the token or material rows. Marks those weapon rows, but the data does not say what the flag does (selection group, class-gated display). An in-game look at that mission's reward screen, or a second quest using it, would settle it."
+  "reason": "True on 19 rows, all in @qst.exp.seasons.01.ep_01_the_hunt: every ilvl_0092 mainhand weapon row of that quest, none of the token or material rows. It is not the choose-one flag: 2 of the 19 are type-All (d9f35ee5 true) and 17 are choice rows. Not in client.gom, so no name. Playing KotFE chapter 1 and looking at its reward screen would settle it."
  },
  "4000004ec7edf228": {
   "reason": "Constant 'bwaui_gmpoi_test' on all 40 space missions and in gm a869dc7c. A test-named GUI name, no variation to read."
@@ -1493,9 +1581,9 @@
   "meaning": "String ref: venture objective-completed message."
  },
  "400003d31d0c0e20": {
-  "confidence": "proved",
-  "evidence": "wevEventInfoPrototype_client; all 17 distinct values are gmLzAreaId, mapAreasDataAreaId and sysArea 9d6eff98.",
-  "meaning": "World-event's areas: list of area ids."
+  "meaning": "World-event's areas: list of area ids.",
+  "evidence": "wevEventInfoPrototype_client; all 17 distinct values are gmLzAreaId, mapAreasDataAreaId and sysArea 9d6eff98. 2026-11-09: all 341 ids across 552 events are /resources/world/areas/<id>/ directories holding an area.dat, and mapAreasDataProto keys; 338 events name one area, 213 none, 1 three. Ilum events name 4611686039258170278.",
+  "confidence": "proved"
  },
  "400003d320920091": {
   "confidence": "likely",
@@ -1530,5 +1618,10 @@
  },
  "400003d42d04d770": {
   "reason": "Race enum (12, same as chrBgDataCharacterRace) -> 10,72,46,68,40,71,70,69,81,96,104,112. Values look like ids or indexes, but no table with those ids was found. Species table comparisons or a client lookup would settle it."
+ },
+ "400000080027bf7f": {
+  "meaning": "The area's display-name id, which is also the area id the combat log prints on AreaEntered; with mapAreasDataAreaId (0027bf77) it maps a log area to its /resources/world/areas/<id>/ directory.",
+  "evidence": "mapAreasDataProto, 240 entries. 82 of 83 distinct AreaEntered area ids in the 2026 combat logs (~/swtor/logs and the live CombatLogs folder) equal a 0027bf7f value; the miss is Space (945872057663605, GSF). Ilum 137438955315 -> 4611686039258170278, Hutta 137438988437 -> 4611686019802841877, Tatooine 137438987025 -> 4611686018427650020. 21 log ids name several directories (instanced copies), so a log area can need position to pick one. Spawner positions read from those directories match logged NPC positions (kessel-discovery/examples/spn_assets.rs).",
+  "confidence": "proved"
  }
 }

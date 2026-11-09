@@ -1,4 +1,9 @@
 {
+ "400000002b8c1cef": {
+  "confidence": "proved",
+  "evidence": "1 on Executive Order 228 and 25 on Droid Repossession; TORCommunity mission mQAz54S (Executive Order 228) and TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) show RequiredLevel 1 and 25.",
+  "meaning": "qstReqMinLevel: lowest character level that can take the quest."
+ },
  "400000003aef5105": {
   "confidence": "likely",
   "evidence": "Value of the map 4000000a731cd8be; parallels named qstStepClientOnlySpawnerStateDisabled; 19,429 uses, never in one entry with 5b20eaaa. Follows enable for the same spawner in 3,672 of 4,416 cases.",
@@ -13,6 +18,16 @@
   "confidence": "likely",
   "evidence": "On 33 tasks, all with progress variable named *_fc_* (e.g. _fc_b1_s0_t0), and no other task has such a name; 32 also have named qstTaskForceConversationAssociatedObject (5d551476). 'fc' as force conversation comes from that sibling. Runtime effect not observed.",
   "meaning": "Marks a task as an auto-generated force-conversation task."
+ },
+ "40000000ad6e051c": {
+  "confidence": "proved",
+  "evidence": "34 on qst...jedi_consular.executive_order_228 and on qst.location.alderaan.world.imperial.droid_repossession; TORCommunity mission mQAz54S (Executive Order 228) and TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) both show XpLevel 34, and their credits equal the level-34 entries of the credit curves (see 4000000b8c27905a).",
+  "meaning": "qstXpLevel: the quest's level for XP and credit rewards; indexes the curves in qstExperiencePerLevel and qstRewardsPerLevelData."
+ },
+ "40000000b0e9baf2": {
+  "confidence": "likely",
+  "evidence": "Value 3 on Droid Repossession, which TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) calls qstDifficultyNormal; the XP multiplier at index 3 is exactly 1.0 and the credit scale rows in the same name order give Normal = 1. Only value 3 is checked against a published name; the other indices follow the order of qstrewardscreditsdifficultyscale.",
+  "meaning": "qstDifficulty, 0-based: 0 NoExp, 1 ChainStep, 2 Easy, 3 Normal, 4 Hard, 5 VeryHard, 6 SeasonOne, 7 SeasonTwo, 8 LotS. Selects the XP multiplier (qstExperienceMultiplierPrototype) and the credit scale (qstrewardscreditsdifficultyscale, whose own index for the same names is 1-based)."
  },
  "40000001c65955ed": {
   "reason": "Always true on 12 branches (7 location, 4 test, 1 dynamic event), e.g. waylaid_double_negative branch 3, contract_negotiations 2 to 4. Unlike qstBranchIsAlternateEnding, it shows no link to a named field. Playing one of these branches through would be needed."
@@ -88,6 +103,11 @@
   "confidence": "proved",
   "evidence": "151 branches, using exactly the 5 values of qstRewardsCredits (8c27905a), each a key in singleton qstrewardscreditsData's per-level curves. It differs from the quest's own tier in many quests. The singleton qstrewardscreditsdifficultyscale has a branchscale column (Normal 0.5 against questscale 1); that this field uses it is inferred and needs an in-game reward check. 70 of the 120 branches in quests carrying a quest-level tier differ from it.",
   "meaning": "Credit reward tier of a quest branch: a key into qstrewardscreditsData, like the quest-level qstRewardsCredits."
+ },
+ "4000000b8c27905a": {
+  "confidence": "proved",
+  "evidence": "Executive Order 228 holds 589686270506543030, the value TORCommunity mission mQAz54S (Executive Order 228) names CreditRewardType; that curve at level 34 is 2970, the page's CreditsRewarded. Droid Repossession holds 777615897300770849; TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) shows 4455 credits = 1.5 x 2970, and that curve runs 1.5x the first (level 25: 2185 vs 1455).",
+  "meaning": "qstRewardsCredits: which credit curve the quest pays from, a key of qstrewardscreditsData field 4000000b8c279054. Credits = curve[qstXpLevel], then scaled by difficulty."
  },
  "4000000cd6b80e69": {
   "confidence": "likely",
@@ -175,6 +195,11 @@
   "evidence": "Name pairs show it on type 29: flashpoint.*.solo.* and solo_and_veteran.* (excluding master) have the flag with key 18=2, while flashpoint.*.master.* and hardmode have key 18=2 without it. Six *.weekly.combat.no_companion have the flag on type 15 with companion [0]. Parallels named cndNegate.",
   "meaning": "Negates an achievement condition: the achievement counts when the test is false."
  },
+ "4000004055f64de0": {
+  "confidence": "proved",
+  "evidence": "Every achEvents key on every achievement is a key here, and its list names that achievement. The 175 small-integer keys (1, 2, 3...) belong to stat counters such as PvP player kills, and nothing kessel reads raises them (open). 159 E000 keys match no name in the unfiltered extract; some are named only as raw ids in other singletons (crew, ships, decoration subcategories) or by quest category tags (40000044372ac59e).",
+  "meaning": "lgcAchievementEventsPrototype map: achievement event code -> the achievements that count it. 10,952 keys are E000 event codes (hash under achEvents). 175 are small integers."
+ },
  "4000004267d92710": {
   "confidence": "likely",
   "evidence": "291 uses, all on map notes with type BindPoint (7946402a), out of 431 such notes; values 1 to 248, 154 distinct, repeating across planets. Hydra's 'Discover Bindpoint' action (485 uses) carries a 64-bit value, not this number. Whether it is a per-planet discovery bit index is not shown.",
@@ -248,9 +273,9 @@
   "reason": "Always true on 1,743 quests. Most are companion conversations (612), and 619 of 698 qstReqPrivacy quests have it (phi 0.51); the rest are breadcrumbs, conquests and dailies. This contradicts the community name qstIsEventQuest. No named field explains the set; comparing how flagged and unflagged quests are offered in game would be needed."
  },
  "4000004bb8dc9943": {
-  "confidence": "likely",
-  "evidence": "Key 14 (149, on type 15) holds a companion id: each companion's achievements repeat one id (two for Jaesa, light and dark), and the six no_companion achievements hold [0] negated. Key 8 (23, on type 18) holds unresolved ids, e.g. conquests.location.sectionx.worldboss_nightmarish. Neither key's ids resolve as object GUIDs or match cndSummonedCompanionId.",
-  "meaning": "Integer-list parameters of an achievement condition: map from a parameter enum to a list of ids."
+  "confidence": "proved",
+  "evidence": "Key 8 (23 uses, all on type 18): all 23 ids are tags.tag_hash values of effect tags (unfiltered 7.x extract), each set by the abilities in ability_tags. Examples: 151C0E053876C9C6 = tag.abl.mtx.toy.incentive.party_jawa (abl.mtx.toy.incentive.party_jawa, whose name id 3044178330124544 is the ApplyEffect id the combat log prints, seen live 2026-10-27) on kill_jawas_with_jawa, kill_100_target_jawa and kill_500_with_jawa; 746F32EB9BB7354A = tag.abl.galactic_seasons.uprising_buff.side_effect.npc on kill_buffed_mobs (tested on the target); 9924BDAC6175CF06 = tag.abl.pvp.huttball.ach_effect. Key 14 (149, on type 15) holds a companion id: each companion's achievements repeat one id (two for Jaesa, light and dark), and the six no_companion achievements hold [0] negated. Key 14 is likely, not proved.",
+  "meaning": "Integer-list parameters of an achievement condition: map from a parameter enum to a list of ids. Key 8 = effect tag hashes (tags.tag_hash): the condition holds while the tested participant carries an effect with that tag. Key 14 = companion ids."
  },
  "4000004bb8dc9944": {
   "confidence": "proved",
@@ -269,13 +294,23 @@
  },
  "4000004bb8dc994b": {
   "confidence": "proved",
-  "evidence": "20 values on 4,019 conditions. Use shows: 3 class (metrics.level.*_consular, kill_10_marauders), 8 time limit (with bb8dc9948), 11 faction (key 6 holds two values, one Imperial and one Republic in fqn), 16 PvP stat threshold, 19 companion influence, 29 difficulty, 15 companion in use. Most frequent, 20 (2,393), has no parameters and is unresolved, as are the rarest (4, 9, 31).",
+  "evidence": "20 values on 4,019 conditions. Use shows: 3 class (metrics.level.*_consular, kill_10_marauders), 8 time limit (with bb8dc9948), 11 faction (key 6 holds two values, one Imperial and one Republic in fqn), 16 PvP stat threshold, 19 companion influence, 29 difficulty, 15 companion in use, 18 has-effect (an effect tag in bb8dc9943 key 8, or the ability itself in bb8dc9947 key 4; 7fbdaf73 = 2 tests the event's target, absent tests the player). Type 18 is proved by its 23 tag ids, all of which resolve to tags rows (for example tag.abl.mtx.toy.incentive.party_jawa on ach.location.tatooine.fun.kill_jawas_with_jawa). Most frequent, 20 (2,393), has no parameters and is unresolved, as are the rarest (4, 9, 31).",
   "meaning": "Achievement condition type: an enum selecting what the condition tests. The enum has no name in the client's dictionary, so types are known by use only."
+ },
+ "4000004be866db30": {
+  "confidence": "proved",
+  "evidence": "The client.gom record for field 4000004BE866DB30 names enum type 4000004BB8CB3424, whose record lists achVisibilityAlways, achVisibilityProgress, achVisibilityCompletion, achVisibilityConditional in that order. The codec's zero-based index is proved by a join: the 1,119 achievements with index 3 are exactly the 1,119 that carry achDiscoveryConditional, 0 mismatches (live 7.x). Live 7.x counts: 6,058 always, 166 progress, 177 completion, 1,119 conditional. Example: ach.dynamic_events.coruscant.black_sun_territory.black_sun_boss_chain.free_adlestaa = 2 (completion). Simulated Meatbag carries no value, so the data lists it as always visible. Which values the UI hides is for Sean to confirm in game (#367).",
+  "meaning": "Achievement visibility (achDiscovery, client enum achVisibilityEnum 4000004BB8CB3424). Decoded index: 1 progress (shown once progress starts), 2 completion (hidden until earned), 3 conditional (shown while the achDiscoveryConditional condition holds). Absent means 0, achVisibilityAlways."
  },
  "4000004c7fbdaf73": {
   "confidence": "proved",
   "evidence": "Enum value 2 on all 228. Type 3 class test: kill_10_marauders and other kill_10_* have it, metrics.level.*_consular do not. Type 11 faction: bestiary killed_imperial_forces_3 has it, pvp imperial_conscript_victory does not. Also 98+9 of 145 type 18 conditions, e.g. conquests.class abilities.",
   "meaning": "Which participant the achievement condition tests: 2 means the event's target; absent means the player. The name AchConditionEffectTagOwner is too narrow."
+ },
+ "4000004c8ce6ac37": {
+  "confidence": "proved",
+  "evidence": "Simulated Meatbag's key E00039BA78F53C4C = fold(fnv1a64('SIMULATED_MEATBAG')), the name its script raises. Of the 10,952 E000 keys in lgcAchievementEventsPrototype, 10,793 resolve in an unfiltered live 7.x extract: 4,755 to Npc fqns (that NPC killed), 2,452 to Achievement fqns (that achievement earned), 1,846 to Quest fqns, 304 to Item fqns, 265 to Codex fqns, 92 to Ability fqns, 16 to rdd fqns, 5 to companion fqns, and 1,058 to names raised by Hydra 'Achievement Event' actions (1,058 of the 1,219 names those actions raise). A chance match on 48 bits is about 1 in 10^10 per name. Checked end to end on Sean's combat logs (2026-10-31 to 11-09): 235 of the 836 distinct killed NPC ids resolve to a key (log id >> 32 = string id -> npc fqn -> code). Example: Fa'athra Gangster -> npc.location.hutta.mob.humanoid.faathra_gangster -> ach.location.hutta.bestiary.killed_faathra_thugs_01..03.",
+  "meaning": "Per-task event map (achEvents): key = an achievement event code. A code is the 48-bit fold of FNV-1a 64 over the UPPERCASED event name under prefix 0xE000: h = fnv1a64(upper(name)); code = 0xE000000000000000 | (h & 0x0000FFFFFFFF0000) | ((h ^ (h >> 48)) & 0xFFFF). The name is an object fqn (npc, ach, qst, itm, cdx, abl, rdd) or a name a Hydra 'Achievement Event' action raises."
  },
  "4000004e134fd908": {
   "reason": "Only two values, 3588848902734087 (0xCC00A00000107) and 3588848902734088, on 3,694 conversation nodes in exp.seasons and character.combat_style and 3 scrolling-text nodes. They resolve to no object, quest variable or string, and occur on player, NPC, text and silent nodes alike. Viewing a conversation with both values in game, or a client trace, would be needed."
@@ -321,11 +356,21 @@
   "evidence": "27 values resolve to a PermanentBool named glb_repeat_* or repeat, e.g. qst.exp.seasons.02.ep_09 glb_repeat_season_2_ch_9 (the 27 are exactly the quests with 431424d192). The other 3,822 are the quest's id prefix with slot 0, which no variable definition holds. Whether the engine reads the placeholder at all is not shown.",
   "meaning": "The quest variable marking a repeat run of the quest. Only 27 quests point at a defined variable; for 3,822 others it is an empty placeholder."
  },
+ "4000004ec8023d79": {
+  "confidence": "proved",
+  "evidence": "600 on Executive Order 228, 1800 on Droid Repossession; TORCommunity mission mQAz54S (Executive Order 228) and TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) show CommandXP 600 and 1800.",
+  "meaning": "qstCommandPointValue: Command (Galactic Command) XP granted on completion."
+ },
  "4000004ec86c22f2": {
   "reason": "Always true on 512 quests: conquests, fpaccess, dailies, activities and dynamic events, 89% repeatable. All 212 quests with no qstCommandPointValue have it, and flagged quests with a value mostly have large ones (16,000 to 60,000 against the usual 600). That points at command-XP handling, but no value is explained. Comparing Command XP on flagged and unflagged completions would settle it."
  },
  "4000004f08946439": {
   "reason": "Always true on 24 steps, all the second step of their branch (2, 3 or 5 steps) on shared daily and weekly quests (qst.pvp.warzone.weekly_*, pvp.arena, daily_area.iokath.shared), all with qstStepIsShareable. The tasks are ordinary counters, and nothing else distinguishes the step. Sharing or abandoning one of these quests in game, compared with a similar unflagged one, would be needed."
+ },
+ "4000004f2af88f68": {
+  "confidence": "proved",
+  "evidence": "Present on exactly the 1,119 achievements whose achDiscovery index is 3 and on no others (0 mismatches). Mostly conquest objectives, shown only while their conquest runs.",
+  "meaning": "Condition that reveals an achievement whose achDiscovery is 3 (conditional). A reference to a Condition object."
  },
  "4000004f2fb0c04a": {
   "reason": "A single use, true, on cnd.ventures.basilisk_prototype.lanes_lab.can_claim_bb, type 46 HasCollectionItemUnlocked with cndCollectionItemMtxId. One sample has nothing to compare against. Finding a second use in a later build, or testing that claim in game, would be needed."
@@ -345,5 +390,55 @@
  },
  "400003d3834751e1": {
   "reason": "Integer always 1, on 117 of 133 qst.dynamic_events.dantooine quests and nowhere else, all with qstRequiredWorldEventId. Most biome and zone_progress quests have it; missions and world_boss quests do not. No other Dantooine field or value explains it, and with one value there is nothing to join. A future build with other values or a Dantooine play test would be needed."
+ },
+ "40000045816cd2a0": {
+  "meaning": "The trigger volume that starts a Dynamic Encounter quest: a hydra trig_* script placed in the area's rooms.",
+  "evidence": "204 Quests, almost all qst.dynamic_events.*; every value resolves to a hyd.* object named trig_event_volume (33), trig_event_region (78, plus 14 variants), trig_quest_trig_<event> (61) or another trig_* volume. Ilum: 13 of 20 DE quests name their trig_event_volume, whose only handler is On Enter -> Passes Conditional(cnd...is_volume_on_quest) -> Play Transmission(<event>_intro); the quest's hydra hooks (4fa14a1f + cdeb4375: spawn_boss, despawn_boss, end) drive inst_advance_mission's Set Active on the event's encounters. The volume is placed by FQN in the same room as the event's encounters (ensuring_victory_2: h1_rayshielded_republic_base). The reference is proved; 'entering it starts the event' is read from the scripts, not seen in a log.",
+  "confidence": "likely"
+ },
+ "4000000024c97989": {
+  "confidence": "proved",
+  "evidence": "On Npc objects (7,126) it is the conversation the NPC opens. Live combat logs (Oct 30 to Nov 9, 2026; 11 files): of 184 conversations, 97 follow a TargetSet on an NPC within 1 s, and all 97 resolve (log id >> 32 = objects.string_id) to an Npc whose field names a conversation (79 distinct), e.g. Yuleph Phan {292835165208576} -> npc.location.tython.world.the_thousand_steps.yuleph_phan -> cnv.location.tython.world.the_thousand_steps.yuleph_phan. On Conversation objects it is the conversation's own fqn. Many NPC templates share one conversation (companions on ship, planet and stronghold), and in 42 of 110 logged npc/conversation pairs the conversation's cnvDefaultSpeaker is a different template, so the NPC's field, not the default speaker, says who opens it.",
+  "meaning": "On an NPC: the conversation it opens when the player talks to it. On a conversation: its own fqn."
+ },
+ "40000000f0827b5d": {
+  "confidence": "proved",
+  "evidence": "On 1,298 Placeable objects, always a cnv.* fqn. plc.location.tython.data_holocron.datacron_strength_tython -> cnv.location.tython.data_holocron.datacron_a_tython, whose nodes grant and complete qst.location.tython.data_holocron.tyt_endurance_i; a live log (2026-11-09 06:31:35, Tython) shows a datacron use as a 5-second In Conversation with no target.",
+  "meaning": "The conversation a placeable opens when used (plcConvo)."
+ },
+ "40000034b21f4106": {
+  "confidence": "proved",
+  "evidence": "On 24,188 nodes; 20,841 resolve to Quest objects in the filtered build. With cnvActionHookId (17,735 present) it names a task of that quest on 14,145; the rest name an id the quest's tasks do not carry, mostly the shared step-0 (1,244) and last-step (1,313) ids. 6,453 actions carry no hook id (e.g. ranna_taoven choice nodes), so what they do is in cnvActionExpressionCompiled. Sits at the end of the branch its root entry opens: yuleph_phan node 50 (silent player node after the offer) fires the_thousand_steps b0.s0.t0; kolovish node 57 fires b0.s5.t0, the last step; datacron cnv.location.tython.data_holocron.datacron_a_tython node 58 fires qst.location.tython.data_holocron.tyt_endurance_i b0.s1.t0.",
+  "meaning": "Quest whose task this node completes when the conversation reaches it; the task is cnvActionHookId. Step 0 grants (starts) the quest, the last step completes it, any other step advances it."
+ },
+ "40000034c45852d0": {
+  "confidence": "proved",
+  "evidence": "On 6,364 nodes, every one a root child (cnvTreeRootNode_Prototype's cnvChildNodes); never below the root. Keys are Quest objects (7,197 of 7,236 resolve). The same root node's cnvNodeQuestHookIds names the quest's first task (b0.s0.t0) on every checked case, and its line is the quest offer: cnv.location.tython.world.the_thousand_steps.yuleph_phan node 3 'More young Jedi in Kalikori...' offers qst.location.tython.world.the_thousand_steps; a live combat log (2026-11-09, Tython) shows that conversation opening the quest chain the next conversation (kolovish) ends.",
+  "meaning": "Set of quests this root node is the entry for when the player can be granted them: the conversation opens here to offer the quest. The grant itself fires on a later node's cnvActionQuest and cnvActionHookId."
+ },
+ "40000034c45852d1": {
+  "confidence": "proved",
+  "evidence": "On 4,548 nodes, all root children. Keys are Quest objects (5,752 of 5,756). The root node's cnvNodeQuestHookIds names the quest's last step's task on every checked case: kolovish node 2 'You perform the rite of the Pilgrims well...' ends qst.location.tython.world.the_thousand_steps with task b0.s5.t0 'Speak to Kolovish'; keeper (cnv.location.hutta.class.spy.keeper) roots 478, 483, 486 and 489 each end one Hutta agent quest and grant the next.",
+  "meaning": "Set of quests this root node is the entry for when the player can complete them (the turn-in branch). Completion fires on a later node's cnvActionQuest and cnvActionHookId."
+ },
+ "40000034c45852d2": {
+  "confidence": "proved",
+  "evidence": "On 5,152 nodes, all root children. Keys are Quest objects (5,386 of 5,389). The root's cnvNodeQuestHookIds names a middle task: keeper root 464 (speaker plc.location.hutta.class.spy.multi.holo_console) progresses qst.location.hutta.class.spy.claim_your_new_identity at task b0.s1.t0 'Use the Holoterminal'.",
+  "meaning": "Set of quests this root node is the entry for while a middle task of them is active; the task is named by cnvNodeQuestHookIds."
+ },
+ "4000004164287098": {
+  "confidence": "proved",
+  "evidence": "On quest tasks (branch 05a2a6d3 > step 05a2a6d1 > task 05a2a6d0). Conversation hook ids match one in the quest the node names for 17,708 of 21,471 cnvNodeQuestHookIds and 14,145 of 17,735 cnvActionHookId in the filtered build. qst.location.hutta.class.spy.claim_your_new_identity: b0.s0.t0 = 8572565631771144812, b0.s1.t0 = 4652755957192867296, b0.s5.t0 = -3973526218951927179. Values repeat across quests and neighbouring values differ by the 64-bit FNV prime (4652757056704495507 - 4652755957192867296 = 1099511628211), so they are hashes of short shared names and key a task only together with the quest.",
+  "meaning": "A quest task's hook id: the id a conversation node names to gate on or complete this task. Unique within a quest, not across quests."
+ },
+ "400000416428709a": {
+  "confidence": "proved",
+  "evidence": "Map from Quest to a list of hook ids, on 13,105 nodes, all root children. 17,708 of 21,471 hook ids equal the qstHookId (4000004164287098) of a task of the keyed quest. Step 0 goes with cnvNodeQuestGrants, the last step with cnvNodeQuestEnds, a middle step with cnvNodeQuestProgress (yuleph_phan, kolovish, master_silvarte, moracen, master_bela_kiwiiks, keeper). The other 3,763 are ids that some quest uses but the keyed quest's tasks do not carry: mostly 8572565631771144812 (a step-0 id in other quests) and -3973526218951927179 (a last-step id); e.g. cnv.location.tython.world.the_chamber_of_speech.do_zonn ends qst.location.tython.world.the_chamber_of_speech with -3973526218951927179, which appears nowhere in that quest.",
+  "meaning": "For each quest this root node is an entry for, the quest tasks (by qstHookId) that must be active for the conversation to open here."
+ },
+ "4000004d0336685a": {
+  "confidence": "proved",
+  "evidence": "14,145 of 17,735 values in the filtered build equal the qstHookId of a task of the quest in the node's cnvActionQuest; see 40000034b21f4106 for the rest.",
+  "meaning": "The qstHookId of the task of cnvActionQuest that this node completes."
  }
 }

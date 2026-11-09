@@ -4,12 +4,12 @@
 
 | Status | Fields | How it was settled |
 |---|---:|---|
-| `named` | 3,237 | A name proved by its hash in `client.gom` |
-| `decoded-proved` | 208 | The data shows it: a join resolves or values match a known quantity. `evidence` says how |
-| `decoded-likely` | 173 | The values fit, but nothing excludes another reading |
-| `points-at` | 139 | Its values reference objects of a known kind |
+| `named` | 3,191 | A name proved by its hash in `client.gom` |
+| `decoded-proved` | 250 | The data shows it: a join resolves or values match a known quantity. `evidence` says how |
+| `decoded-likely` | 181 | The values fit, but nothing excludes another reading |
+| `points-at` | 134 | Its values reference objects of a known kind |
 | `container` | 34 | It holds other fields, which have their own lines |
-| `unsettled` | 287 | The data cannot settle it. `reason` says why and what would |
+| `unsettled` | 288 | The data cannot settle it. `reason` says why and what would |
 
 Names are for reading only. The wire format and most names rest on earlier community work, chiefly the PugTools project, read as a reference and checked here against the data. Extraction reads fields by id and never opens this folder. A name's letters are proved by hash; `name_proposed_by` says who proposed it, and most came from a community list. 565 field ids are not in `client.gom` at all, so a hash cannot prove anything about them: they are settled from the data or left unsettled.
 
