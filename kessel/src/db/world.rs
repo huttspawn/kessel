@@ -347,10 +347,21 @@ impl Database {
 /// What the world-area pass wrote, for the run summary.
 #[derive(Debug, Default)]
 pub struct WorldAreaCounts {
+    /// (log area id, directory) pairs, and the distinct log area ids among them.
     pub area_log_ids: u64,
+    pub log_area_ids: u64,
+    /// Directories tried; area.dat found in the archives; parsed; found but
+    /// unreadable or unparseable.
     pub areas_listed: u64,
+    pub areas_found: u64,
     pub areas_parsed: u64,
+    pub areas_unparseable: u64,
+    /// Rooms the parsed area.dat files list; read; not in the archives;
+    /// found but unreadable or unparseable.
+    pub rooms_listed: u64,
     pub rooms_read: u64,
+    pub rooms_missing: u64,
+    pub rooms_unparseable: u64,
     pub instances: u64,
     pub assets_resolved: u64,
     pub placements: u64,
@@ -412,6 +423,11 @@ impl Database {
                 }
             }
             drop(insert);
+            counts.log_area_ids = pairs
+                .iter()
+                .filter_map(|(log_id, _)| *log_id)
+                .collect::<BTreeSet<_>>()
+                .len() as u64;
 
             counts.placeable_grants = insert_placeable_grants(tx)?;
             counts.script_actions = insert_script_actions(tx)?;
@@ -477,20 +493,26 @@ impl Database {
             for dir in dirs {
                 counts.areas_listed += 1;
                 let prefix = format!("/resources/world/areas/{dir}");
-                let Some(area) = files
-                    .read(&format!("{prefix}/area.dat"))
-                    .and_then(|d| crate::area::read_area(&d).ok())
-                else {
+                let Some(data) = files.read(&format!("{prefix}/area.dat")) else {
+                    continue;
+                };
+                counts.areas_found += 1;
+                let Some(area) = data.ok().and_then(|d| crate::area::read_area(&d).ok()) else {
+                    counts.areas_unparseable += 1;
                     continue;
                 };
                 counts.areas_parsed += 1;
                 let mut insts = Vec::new();
                 // Archive paths are lowercase; area.dat writes room names in mixed case.
                 for room in area.rooms.iter().map(|r| r.to_lowercase()) {
+                    counts.rooms_listed += 1;
                     let Some(data) = files.read(&format!("{prefix}/{room}.dat")) else {
+                        counts.rooms_missing += 1;
                         continue;
                     };
-                    let Ok(room_insts) = crate::area::read_room(&data) else {
+                    let Some(room_insts) = data.ok().and_then(|d| crate::area::read_room(&d).ok())
+                    else {
+                        counts.rooms_unparseable += 1;
                         continue;
                     };
                     counts.rooms_read += 1;
@@ -607,10 +629,12 @@ impl ArchiveFiles {
         Ok(Self { archives, index })
     }
 
-    fn read(&mut self, path: &str) -> Option<Vec<u8>> {
+    /// `None` when no archive holds the path; `Some(Err)` when the entry
+    /// cannot be read.
+    fn read(&mut self, path: &str) -> Option<Result<Vec<u8>>> {
         let (ph, sh) = crate::hash::hashlittle2(path.as_bytes(), 0, 0);
         let (i, entry) = self.index.get(&crate::hash::combine_hash(ph, sh))?;
-        self.archives.get_mut(*i)?.read_entry(entry).ok()
+        Some(self.archives.get_mut(*i)?.read_entry(entry))
     }
 }
 

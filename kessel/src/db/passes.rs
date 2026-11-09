@@ -387,20 +387,28 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
         "world_areas",
         db.populate_world_areas(ctx.input, ctx.hash_dict)
     )?;
+    let w = &world;
     println!(
-        "  World areas: {} of {} area.dat parsed, {} rooms, {} of {} asset ids resolved; \
-         {} placements, {} trigger volumes, {} placeable grants, {} script actions, \
-         {} log area ids",
-        world.areas_parsed,
-        world.areas_listed,
-        world.rooms_read,
-        world.assets_resolved,
-        world.instances,
-        world.placements,
-        world.trigger_volumes,
-        world.placeable_grants,
-        world.script_actions,
-        world.area_log_ids,
+        "  World areas: {} directories, {} area.dat found, {} parsed, {} unparseable; \
+         {} rooms listed, {} read, {} missing, {} unparseable; \
+         {} of {} asset ids resolved; {} placements, {} trigger volumes, \
+         {} placeable grants, {} script actions; {} log area ids in {} pairs",
+        w.areas_listed,
+        w.areas_found,
+        w.areas_parsed,
+        w.areas_unparseable,
+        w.rooms_listed,
+        w.rooms_read,
+        w.rooms_missing,
+        w.rooms_unparseable,
+        w.assets_resolved,
+        w.instances,
+        w.placements,
+        w.trigger_volumes,
+        w.placeable_grants,
+        w.script_actions,
+        w.log_area_ids,
+        w.area_log_ids,
     );
 
     // Quest_chain via NPC giver overlap. Must run AFTER both
