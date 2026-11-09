@@ -585,6 +585,15 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
 
     // Fourteenth pass: decode talent→ability GUID refs from tal.* payloads
     let talent_abl_count = timed!("talent_abilities", db.populate_talent_abilities())?;
+
+    // Earn chains (FR-KESSEL-025 c1, c2, c3, c7): what each achievement task
+    // counts, whether the log can show it, the effect it requires, and the
+    // script-raised events no quest reaches. After achievements, the world
+    // pass (script_actions) and ability_tags.
+    let (task_rules, task_counts, hidden) = timed!("earn_chains", db.populate_earn_chains())?;
+    println!(
+        "  Earn chains: {task_rules} task rules, {task_counts} task counts, {hidden} hidden earnables"
+    );
     Ok(PassCounts {
         abl_tag_edges,
         combat_style_count,

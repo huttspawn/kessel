@@ -2,7 +2,7 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks and FR-KESSEL-025 c4, c5 and c10. The `@local`
+//! code: the `@smoke` checks and FR-KESSEL-025 c1, c2, c3, c4, c5, c7 and c10. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -399,9 +399,267 @@ fn names_volume_codex(world: &World) {
     );
 }
 
+// FR-KESSEL-025 c1, c2, c3: an achievement answers what each task counts,
+// whether the log can show it, and the buff it requires.
+
+/// The first achievement `sql` finds (it orders by preference), or fail.
+fn pick_achievement(world: &mut World, sql: &str, what: &str) {
+    let fqn: String = spice(world)
+        .query_row(sql, [], |r| r.get(0))
+        .unwrap_or_else(|e| panic!("{what}: {e}"));
+    world.subject = fqn;
+}
+
+#[given("a build holding a kill-count achievement")]
+fn kill_count_achievement(world: &mut World) {
+    // A bestiary achievement: named for the kills it counts.
+    pick_achievement(
+        world,
+        "SELECT fqn FROM achievements WHERE fqn LIKE 'ach.%.bestiary.killed_%' \
+         ORDER BY fqn = 'ach.location.hutta.bestiary.killed_faathra_thugs_01' DESC, fqn LIMIT 1",
+        "a bestiary achievement",
+    );
+}
+
+#[given("a build holding an achievement counted only by a script event")]
+fn script_event_achievement(world: &mut World) {
+    pick_achievement(
+        world,
+        "SELECT achievement_fqn FROM achievement_task_counts GROUP BY achievement_fqn \
+         HAVING SUM(kind = 'script_event') = COUNT(*) \
+         ORDER BY achievement_fqn = 'ach.alliance.followers.hk_55.simulated_meatbag' DESC, \
+                  achievement_fqn LIMIT 1",
+        "an achievement whose tasks count only script events",
+    );
+}
+
+#[given("a build holding an achievement that counts kills while a toy buff is active")]
+fn toy_buff_achievement(world: &mut World) {
+    // Killing jawas with the Party Jawa toy up; the buff field is not filtered on.
+    pick_achievement(
+        world,
+        "SELECT fqn FROM achievements \
+         WHERE fqn = 'ach.location.tatooine.fun.kill_jawas_with_jawa'",
+        "ach.location.tatooine.fun.kill_jawas_with_jawa",
+    );
+}
+
+#[when("kessel's agent asks for that achievement")]
+fn ask_achievement(world: &mut World) {
+    let fqn = world.subject.clone();
+    let conn = spice(world);
+    let mut answer = Vec::new();
+    let mut rules = conn
+        .prepare(
+            "SELECT task_index, count_needed, log_visible, log_reason, \
+                    buff_effect_fqn, buff_log_id, buff_on \
+             FROM achievement_task_rules WHERE achievement_fqn = ?1 ORDER BY task_index",
+        )
+        .expect("rules query");
+    let rows = rules
+        .query_map([&fqn], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, Option<i64>>(1)?,
+                r.get::<_, bool>(2)?,
+                r.get::<_, Option<String>>(3)?,
+                r.get::<_, Option<String>>(4)?,
+                r.get::<_, Option<i64>>(5)?,
+                r.get::<_, Option<String>>(6)?,
+            ))
+        })
+        .expect("rule rows");
+    for row in rows {
+        let (task, count, visible, reason, effect, log_id, on) = row.expect("rule row");
+        if let Some(count) = count {
+            answer.push(format!("task {task} needs {count}"));
+        }
+        answer.push(match reason {
+            Some(r) if !visible => format!("task {task} log cannot show: {r}"),
+            _ => format!("task {task} log can show"),
+        });
+        if let Some(effect) = effect {
+            let id = log_id.map_or_else(|| "?".into(), |i| i.to_string());
+            let on = on.unwrap_or_default();
+            answer.push(format!(
+                "task {task} counts inside effect {effect} {{{id}}} on the {on}"
+            ));
+        }
+    }
+    // A counted NPC joins to the log through its string id: the log prints
+    // string_id << 32 for it.
+    let mut counts = conn
+        .prepare(
+            "SELECT c.task_index, c.kind, c.ref_fqn, c.event_name, c.event_code, o.string_id \
+             FROM achievement_task_counts c \
+             LEFT JOIN objects o ON o.fqn = c.ref_fqn AND o.is_canonical = 1 \
+             WHERE c.achievement_fqn = ?1 ORDER BY c.task_index",
+        )
+        .expect("counts query");
+    let rows = counts
+        .query_map([&fqn], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, Option<String>>(1)?,
+                r.get::<_, Option<String>>(2)?,
+                r.get::<_, Option<String>>(3)?,
+                r.get::<_, Option<String>>(4)?,
+                r.get::<_, Option<i64>>(5)?,
+            ))
+        })
+        .expect("count rows");
+    for row in rows {
+        let (task, kind, ref_fqn, name, code, string_id) = row.expect("count row");
+        let kind = kind.unwrap_or_else(|| "unknown".into());
+        let what = ref_fqn.or(name).unwrap_or_default();
+        let code = code.unwrap_or_default();
+        answer.push(match (kind.as_str(), string_id) {
+            ("npc", Some(sid)) => format!(
+                "task {task} counts npc {what} (log id {{{}}}) {code}",
+                sid << 32
+            ),
+            _ => format!("task {task} counts {kind} {what} {code}"),
+        });
+    }
+    drop(rules);
+    drop(counts);
+    println!("{fqn}: {answer:#?}");
+    world.answer = answer;
+}
+
+#[then("each task is answered with the count it needs and the NPCs it counts")]
+fn tasks_count_npcs(world: &World) {
+    let tasks: Vec<&String> = world
+        .answer
+        .iter()
+        .filter(|a| a.contains(" log "))
+        .collect();
+    assert!(
+        !tasks.is_empty(),
+        "{} has no tasks: {:?}",
+        world.subject,
+        world.answer
+    );
+    for t in tasks {
+        let task = t.split(' ').nth(1).unwrap_or_default();
+        let has = |what: &str| {
+            world
+                .answer
+                .iter()
+                .any(|a| a.starts_with(&format!("task {task} {what}")))
+        };
+        assert!(
+            has("needs ") && has("counts npc "),
+            "{} task {task} lacks its count or NPCs: {:?}",
+            world.subject,
+            world.answer
+        );
+    }
+}
+
+#[then("the answer says a combat log cannot show its progress and names the script event")]
+fn log_cannot_show(world: &World) {
+    let a = &world.answer;
+    assert!(
+        a.iter()
+            .any(|l| l.ends_with("log cannot show: script event"))
+            && !a.iter().any(|l| l.ends_with("log can show")),
+        "{} is not answered as invisible to the log: {a:?}",
+        world.subject
+    );
+    assert!(
+        a.iter().any(|l| l.contains(" counts script_event ")),
+        "{} names no script event: {a:?}",
+        world.subject
+    );
+}
+
+#[then("the answer names the buff's effect")]
+fn names_buff(world: &World) {
+    assert!(
+        world
+            .answer
+            .iter()
+            .any(|a| a.contains(" counts inside effect abl.")),
+        "{} names no effect: {:?}",
+        world.subject,
+        world.answer
+    );
+}
+
+// FR-KESSEL-025 c7: hidden earnables are listed.
+
+#[given("a build where an encounter script raises an achievement event no quest step names")]
+fn encounter_event(world: &mut World) {
+    // A Dynamic Encounter script raising an event from a root handler (not an
+    // On Custom handler a quest step could send), counted by an achievement.
+    let (script, handler, name): (String, String, String) = spice(world)
+        .query_row(
+            "SELECT a.script_fqn, a.handler, a.value FROM script_actions a \
+             WHERE a.action = 'Achievement Event' AND a.script_fqn LIKE 'hyd.dynamic_events.%' \
+               AND a.handler NOT LIKE 'On Custom%' \
+               AND EXISTS (SELECT 1 FROM achievement_task_counts c WHERE c.event_name = a.value) \
+             ORDER BY a.script_fqn, a.handler, a.value LIMIT 1",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .expect("a Dynamic Encounter script raising a counted event from a root handler");
+    world.subject = format!("{script}|{handler}|{name}");
+}
+
+#[when("kessel's agent asks for hidden earnables")]
+fn ask_hidden(world: &mut World) {
+    let subject = world.subject.clone();
+    let mut stmt = spice(world)
+        .prepare(
+            "SELECT script_fqn, handler, event_name, trigger, credits, achievement_fqn \
+             FROM hidden_earnables ORDER BY script_fqn, handler, event_name",
+        )
+        .expect("hidden query");
+    let rows: Vec<String> = stmt
+        .query_map([], |r| {
+            Ok(format!(
+                "{}|{}|{} trigger {} credits {} achievement {}",
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, Option<String>>(4)?.unwrap_or_default(),
+                r.get::<_, Option<String>>(5)?.unwrap_or_default(),
+            ))
+        })
+        .expect("hidden rows")
+        .map(|r| r.expect("hidden row"))
+        .collect();
+    drop(stmt);
+    println!(
+        "c7 {} hidden earnables; {subject}: {:#?}",
+        rows.len(),
+        rows.iter()
+            .filter(|r| r.starts_with(&subject))
+            .collect::<Vec<_>>()
+    );
+    world.answer = rows;
+}
+
+#[then("that event is listed with its script, its trigger and its achievement")]
+fn hidden_listed(world: &World) {
+    let prefix = format!("{} trigger On ", world.subject);
+    assert!(
+        world
+            .answer
+            .iter()
+            .any(|a| a.starts_with(&prefix) && a.contains(" achievement ach.")),
+        "{} is not listed with a trigger and an achievement",
+        world.subject
+    );
+}
+
 scenarios!(
     "tests",
-    tags = "@smoke or @criterion-FR-KESSEL-025-c4 or @criterion-FR-KESSEL-025-c5 \
+    tags = "@smoke or @criterion-FR-KESSEL-025-c1 or @criterion-FR-KESSEL-025-c2 \
+            or @criterion-FR-KESSEL-025-c3 or @criterion-FR-KESSEL-025-c4 \
+            or @criterion-FR-KESSEL-025-c5 or @criterion-FR-KESSEL-025-c7 \
             or @criterion-FR-KESSEL-025-c10",
     fixtures = [world: World]
 );

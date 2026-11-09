@@ -390,6 +390,21 @@ const HYD_HANDLERS: u32 = 0xe389_e2e3;
 const HYD_ACTION_LIST: u32 = 0xe534_715a;
 const HYD_ACTION: u32 = 0xe534_6fa0;
 const HYD_VALUE: u32 = 0xe534_6faf;
+// hydObject, hydQueueObject: signed FNV-1a 64 of a selector name.
+const HYD_OBJECT: u32 = 0xed10_e6a4;
+const HYD_QUEUE_OBJECT: u32 = 0x9756_f193;
+/// The selectors an action credits, by name.
+const HYD_SELECTORS: [&str; 9] = [
+    "INSTIGATOR",
+    "PHASE OCCUPANTS",
+    "OBJECT SELF",
+    "EFFECT TARGET",
+    "PHASE OWNER",
+    "INSTIGATOR GROUP",
+    "TEAMA PLAYERS",
+    "TEAMB PLAYERS",
+    "PET MASTER",
+];
 
 impl Database {
     /// Populate the world tables (FR-KESSEL-025 c5, c10): `area_log_ids`
@@ -778,6 +793,23 @@ struct ScriptAction {
     action: String,
     target_fqn: Option<String>,
     value: Option<String>,
+    selector: Option<String>,
+}
+
+/// The selector an action's hydObject (else hydQueueObject) names, or the raw
+/// id when it is none of the known selectors.
+fn action_selector(action: &crate::gom_reader::GomValue) -> Option<String> {
+    let id = [HYD_OBJECT, HYD_QUEUE_OBJECT].iter().find_map(|f| {
+        action
+            .embedded_field(*f)
+            .and_then(crate::gom_reader::GomValue::as_i64)
+    })?;
+    Some(
+        HYD_SELECTORS
+            .iter()
+            .find(|n| crate::hash::fnv1a64(n) as i64 == id)
+            .map_or_else(|| id.to_string(), |n| (*n).to_string()),
+    )
 }
 
 /// Every action of every handler in a hydra script. Actions are the entries
@@ -801,6 +833,7 @@ fn script_actions(obj: &crate::gom_reader::GomValue) -> Vec<ScriptAction> {
                                     action,
                                     target_fqn: value.clone().filter(|v| names_object(v)),
                                     value,
+                                    selector: action_selector(a),
                                 });
                             }
                         }
@@ -843,15 +876,23 @@ fn names_object(value: &str) -> bool {
 fn insert_script_actions(tx: &Transaction) -> Result<u64> {
     let mut insert = tx.prepare(
         "INSERT OR REPLACE INTO script_actions \
-           (script_fqn, handler, ordinal, action, target_fqn, value) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+           (script_fqn, handler, ordinal, action, target_fqn, value, selector) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     )?;
     let mut written = 0;
     for (fqn, obj) in decoded_objects(tx, "Hydra")? {
         let mut ordinal: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
         for a in script_actions(&obj) {
             let n = ordinal.entry(a.handler.clone()).or_default();
-            insert.execute(params![fqn, a.handler, *n, a.action, a.target_fqn, a.value])?;
+            insert.execute(params![
+                fqn,
+                a.handler,
+                *n,
+                a.action,
+                a.target_fqn,
+                a.value,
+                a.selector
+            ])?;
             *n += 1;
             written += 1;
         }
@@ -1035,7 +1076,10 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
             CREATE INDEX IF NOT EXISTS idx_trigger_volumes_script ON trigger_volumes(script_fqn);
             -- Every hydra handler's actions in order. target_fqn is the
             -- value when it names an object (Grant Codex cdx.*); value is
-            -- the action's value as written (an event name, a title id).
+            -- the action's value as written (an event name, a title id);
+            -- selector the object it acts on or credits (hydObject, else
+            -- hydQueueObject: INSTIGATOR, PHASE OCCUPANTS ...), the raw id
+            -- when no known selector hashes to it.
             CREATE TABLE IF NOT EXISTS script_actions (
                 script_fqn  TEXT NOT NULL,
                 handler     TEXT NOT NULL,
@@ -1043,6 +1087,7 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
                 action      TEXT NOT NULL,
                 target_fqn  TEXT,
                 value       TEXT,
+                selector    TEXT,
                 PRIMARY KEY (script_fqn, handler, ordinal)
             );
             CREATE INDEX IF NOT EXISTS idx_script_actions_target ON script_actions(target_fqn);
@@ -1163,6 +1208,10 @@ mod tests {
             obj(vec![
                 (HYD_ACTION, G::Str(name.into())),
                 (HYD_VALUE, G::Str(value.into())),
+                (
+                    HYD_OBJECT,
+                    G::I64(crate::hash::fnv1a64("INSTIGATOR") as i64),
+                ),
             ])
         };
         let handler = |actions: Vec<G>| {
@@ -1202,6 +1251,7 @@ mod tests {
             action: a.into(),
             target_fqn: t.map(Into::into),
             value: Some(v.into()),
+            selector: Some("INSTIGATOR".into()),
         };
         assert_eq!(
             got,
@@ -1216,6 +1266,18 @@ mod tests {
                 row("On Custom:Found Willpower", "Grant Title", None, "671"),
             ]
         );
+    }
+
+    #[test]
+    fn action_selector_names_known_selectors_else_the_raw_id() {
+        let sel = |f: u32, id: i64| obj(vec![(f, G::I64(id))]);
+        let target = crate::hash::fnv1a64("EFFECT TARGET") as i64;
+        assert_eq!(
+            action_selector(&sel(HYD_QUEUE_OBJECT, target)).as_deref(),
+            Some("EFFECT TARGET")
+        );
+        assert_eq!(action_selector(&sel(HYD_OBJECT, 5)).as_deref(), Some("5"));
+        assert_eq!(action_selector(&obj(vec![])), None);
     }
 
     #[test]
