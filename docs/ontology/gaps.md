@@ -610,3 +610,43 @@ One row per field, grouped as above; unsettled first, then constants, then likel
 | `400000414895e067` | decoded-likely | 4 | singleton:mtxDiscountPrototype | Paid permission that qualifies for this discount. | [827] on both records, whose debug strings end .subscriber; index 827 is paid_permission.premium.discounts. |
 | `4000004ec6eb9d5a` | decoded-likely | 3 | singleton:ccsBoostLevelDataPrototype | Crew skill level given to a boosted character. | 500,550,600 for boost levels 60,65,70. Fits hint; rises with the boost. |
 | `40000040c3935eb4` | decoded-likely | 2 | singleton:mtxCurrencyLimitModifiersPrototype | Credit cap for this modifier. | 4294617295 and 800000 on @itm.cash_drop, named CurrencyLimitModifier parents. The caps themselves were not observed in game. Fits hint. |
+
+## Status against the ledger (2026-11-09, RESEARCH 01a1c37a-f07f, #429 criterion 8)
+
+Each work item above is settled, server-side (proved not determinable from the client) or open. Ledger ids (S, N, F, G, O) are entries of the ledger RESEARCH document.
+
+| # | Status | Where |
+|---|---|---|
+| A1 | settled | 01a1c27b-2797; residue N12, NAMEn slot-to-discipline map not decoded (open, criterion 1/2) |
+| A2 | settled | 01a1c272-3bdf, 01a1c2f6-bd28 (op 15 by worked value); N8 |
+| A3 | settled | 01a1c27b-e018, 01a1c30d-9b55 (all 47 hook names); the branch of a multi-branch ON END is player state |
+| A4 | settled | 01a1c26d-3f4a, 01a1c2b9-b2b8, 01a1c317-41c1; N7, N9 |
+| A5 | settled | 01a1c26d-3f4a, 01a1c2f6-a868; N3 |
+| A6 | settled, partly server-side | 01a1c27b-e018, 01a1c30d-9b55; N1, N2, S17, G5 |
+| A7 | settled | 01a1c27b-e018, 01a1c30d-9b55; N4, N5 |
+| A8 | settled | 01a1c274-7763, 01a1c317-41c1; G7 |
+| A9 | settled, partly server-side | 01a1c274-7763; S15, S16 |
+| A10 | server-side | 01a1c27a-8233; S1, S2 |
+| A11 | server-side | 01a1c27a-8293; S3 |
+| A12 | settled, partly server-side | 01a1c276-198b; S13, G8 |
+| A13 | settled, partly server-side | 01a1c272-3c4b, 01a1c2f6-bd28; S9 |
+| A14 | settled | 01a1c27a-82e9 |
+| A15 | settled | 01a1c27a-8368 |
+| A16 | settled | 01a1c274-7763, 01a1c317-41c1; N11; hide timing O5 |
+| A17 | settled, partly not in client | 01a1c273-7695; N13; chassis O1 |
+| B1 | settled except one table | 01a1c274-6ac6, 01a1c30d-73cd; cbtStandardRatingInfo O3 |
+| B2 | settled, bases server-side | 01a1c274-6ac6, 01a1c30f-29f2; S7; Valkorion O2 |
+| B3 | settled, partly server-side | 01a1c274-edd7, 01a1c0ce-44dd; N10 |
+| B4 | server-side | 01a1c27b-2833; S5 |
+| B5 | needs in-game test | 01a1c274-edd7; G1, G2 |
+| B6 | server-side | 01a1c274-edd7; S12 |
+| B7 | server-side | 01a1c276-cbce; S6 |
+| B8 | server-side (chrPaidPermissionId proved) | 01a1c276-cbce; S6, N6 |
+| B9 | settled (0x400, 0x800); 0x100 and 0x1000 not determinable | 01a1c30d-9cc9; F1, F2 |
+| B10 | server-side (7551a394); a9eaf0f2 needs in-game test | 01a1c274-edd7; S11, G3 |
+| C1 | settled by enum | 01a1c0ce-447e (achDiscovery = achVisibilityEnum, 0 mismatches) |
+| C2 | settled | 01a1c272-3ca6 |
+| C3 | settled | Hydra objects decode through gom_reader with zero errors (01a1527d: all 34,445 hyd objects then); script_actions is built from that reader |
+| C4 | settled | 9,463 Quest objects in the unfiltered extract |
+| C5 | server-side | 01a1c274-7763; S10 |
+| C6 | server-side | S12; positions come from room .dat placements |
