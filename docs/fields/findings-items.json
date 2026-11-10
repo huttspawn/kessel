@@ -63,5 +63,15 @@
   "meaning": "ablDescriptionTokenMultiplier: factor applied to the effect's value for the displayed number (Duration: multiplier x effDuration).",
   "evidence": "1.0 on every relic Duration token, whose values match the logs; Healing Resonance's Healing token has 4.0 over a 3 s heal-over-time, which fits a total over ticks but is not shown.",
   "confidence": "likely"
+ },
+ "4000004ec802b2a8": {
+  "meaning": "The NPC's own ability packages (apn), a list of AnimationPackage refs. With its class's package (1d72ea3a) they carry the NPC's passives, including boss health passives and per-mode passives (abl.exp.seasons.multi.difficulty_modes.*).",
+  "evidence": "Walking these packages' ablPackageAbilitiesList (f4787f5b) reaches the health passive of every boss tested: npc.exp.seasons.02.ep_09.story.valkorion lists apn.exp.seasons.02.ep_09.bosses.valkorion, whose passive adds 9,566,190 to the 506,305 base for his logged 10,072,495; Shae Vizla, Sairisi, Ortuno, Stivastin, Master Oric Traless and Mentor reproduce their logged max HP from the 2,952,392 base. RESEARCH 01a1c30f-29f2 rev 3; tool npc_health_walk.py.",
+  "confidence": "proved"
+ },
+ "4000000a1d72ea3a": {
+  "meaning": "The class's ability package (apn), given to every NPC of the class; the second source of an NPC's passives besides the NPC's own list (c802b2a8).",
+  "evidence": "class.npc.humanoid.boss.flashpoint.raid.eternity_vault.difficulty_3.boss_soa -> apn.npc.combat.flashpoint.raid.eternity_vault.difficulty_3.boss_soa. Its 2,094 values reference AnimationPackage rows. The walk through both sources reproduces logged boss max HP (RESEARCH 01a1c30f-29f2).",
+  "confidence": "proved"
  }
 }

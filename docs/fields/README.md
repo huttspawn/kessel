@@ -5,9 +5,9 @@
 | Status | Fields | How it was settled |
 |---|---:|---|
 | `named` | 3,096 | A name proved by its hash in `client.gom` |
-| `decoded-proved` | 347 | The data shows it: a join resolves or values match a known quantity. `evidence` says how |
+| `decoded-proved` | 349 | The data shows it: a join resolves or values match a known quantity. `evidence` says how |
 | `decoded-likely` | 191 | The values fit, but nothing excludes another reading |
-| `points-at` | 130 | Its values reference objects of a known kind |
+| `points-at` | 128 | Its values reference objects of a known kind |
 | `container` | 34 | It holds other fields, which have their own lines |
 | `unsettled` | 280 | The data cannot settle it. `reason` says why and what would |
 
