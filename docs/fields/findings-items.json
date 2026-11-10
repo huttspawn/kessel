@@ -10,18 +10,18 @@
   "confidence": "proved"
  },
  "400000249d4ed5c3": {
-  "meaning": "itmModPkgAttributePercentages: STAT -> permille of the item budget. A stat's value is item_budget_table(quality, item level - 1, permille).",
-  "evidence": "313 fixed-stat itm.eq items (item_stats) are reproduced exactly, every stat, by one package at list index item_level-1, and all 313 lie inside that package variant's itmModPkgMinLevel..MaxLevel. Controls: index item_level gives 31, item_level-2 gives 1, item_level-5 gives 5. Example itm.eq.cc.yuun.waist.medium.premium.cc_07x1 (level 48): package 492 endurance 180, mastery 300, power 20 -> 37, 56, 5 = item_stats.",
+  "meaning": "itmModPkgAttributePercentages: one variant's STAT -> permille of the item budget. A package's 1 to 3 variants are the components of one piece and are summed: each stat is the sum over variants of item_budget_table(quality, item level - 1, permille).",
+  "evidence": "313 fixed-stat itm.eq items (item_stats) are reproduced exactly, every stat, by one package at list index item_level-1, and all 313 lie inside that package variant's itmModPkgMinLevel..MaxLevel. Controls: index item_level gives 31, item_level-2 gives 1, item_level-5 gives 5. Example itm.eq.cc.yuun.waist.medium.premium.cc_07x1 (level 48): package 492 endurance 180, mastery 300, power 20 -> 37, 56, 5 = item_stats. Summed variants reproduce 1,482 more fixed items exactly (206 at item level, 204 at level - 2), e.g. itm.gen.synthweaving.tank.ilvl_0032.prototype.armor_head = package 1249's three variants -> 41 / 30 / 17 / 16.",
   "confidence": "proved"
  },
  "40000004d73288ae": {
-  "meaning": "itmModPkgMinLevel: lowest item level at which this variant of a modifier package applies; a package holds 1 to 3 level-ranged variants.",
-  "evidence": "All 313 itm.eq items reproduced by a package sit inside its MinLevel..MaxLevel. 1,172 packages have one variant, 40 two, 100 three. item_modifier_packages keys on (mod_id, stat_index) and keeps one variant only.",
+  "meaning": "itmModPkgMinLevel: lowest item level at which this package may roll for an item of a modifier set; the same on every variant of the package.",
+  "evidence": "Every one of the 4,856 items with a resolving itmModdableSetId has a package whose range covers its level, and for 2,707 the range admits a strict subset of the set (itm.eq.random.wrists.medium.premium.level_024_force: packages in 1-20, 18-36, 28-70, 71-90; level 24 admits only 18-36). All variants of a package share the range (140 of 140), and the 1,482 fixed items built from summed variants lie outside it, so it gates rolls and does not choose a variant. RESEARCH 01a1c30d-73cd rev 2; tool items_package_variants.py.",
   "confidence": "proved"
  },
  "40000004d73288b0": {
-  "meaning": "itmModPkgMaxLevel: highest item level at which this variant of a modifier package applies.",
-  "evidence": "See itmModPkgMinLevel 40000004d73288ae.",
+  "meaning": "itmModPkgMaxLevel: highest item level at which this package may roll for an item of a modifier set.",
+  "evidence": "Every one of the 4,856 items with a resolving itmModdableSetId has a package whose range covers its level, and for 2,707 the range admits a strict subset of the set (itm.eq.random.wrists.medium.premium.level_024_force: packages in 1-20, 18-36, 28-70, 71-90; level 24 admits only 18-36). All variants of a package share the range (140 of 140), and the 1,482 fixed items built from summed variants lie outside it, so it gates rolls and does not choose a variant. RESEARCH 01a1c30d-73cd rev 2; tool items_package_variants.py.",
   "confidence": "proved"
  },
  "400000249d4ed5c1": {
@@ -50,9 +50,9 @@
   "confidence": "proved"
  },
  "4000002f55809161": {
-  "meaning": "itmEnhancementDefaults: the mod item pre-slotted in each position of itmEnhancementSlots (0 = empty). A moddable shell's stats are the sum of these mods' itmEquipModStats.",
-  "evidence": "Parallel to itmEnhancementSlots on 85,551 items. 23,604 items have default mods and no stats of their own, so their stats exist only through the defaults; 1,219 have own stats plus a default colour crystal. The sum was not checked against a tooltip.",
-  "confidence": "likely"
+  "meaning": "itmEnhancementDefaults: the mod item pre-slotted in each position of itmEnhancementSlots (0 = empty). A moddable shell's displayed stats are the sum of its slotted mods' itmEquipModStats.",
+  "evidence": "In game, slotted mod stats add to the item: Sean's 340 Fearless Victor implant shows 1223 / 1594 / 1084 / 722 = its itmEquipModStats 1223 / 1450 / 940 / 614 + augments 144 / 144 / 108 (reflection 019e7b20). 23,604 items have defaults and no own stats; Onderonian Eliminator's Offhand Blaster's three defaults (Versatile Barrel 74, Lethal Mod 74A, Nimble Enhancement 74, as Jedipedia lists) sum to 672 / 610 / 341 / 284. RESEARCH 01a1c30d-73cd rev 2.",
+  "confidence": "proved"
  },
  "4000000ba38ca337": {
   "meaning": "ablDescriptionTokenEffect: the effect a description token <<N>> reads, as its effNumber (2efdc39f) among the effect variants of the same ability.",
@@ -60,9 +60,9 @@
   "confidence": "proved"
  },
  "4000000a384b793c": {
-  "meaning": "ablDescriptionTokenMultiplier: factor applied to the effect's value for the displayed number (Duration: multiplier x effDuration).",
-  "evidence": "1.0 on every relic Duration token, whose values match the logs; Healing Resonance's Healing token has 4.0 over a 3 s heal-over-time, which fits a total over ticks but is not shown.",
-  "confidence": "likely"
+  "meaning": "ablDescriptionTokenMultiplier: the count the effect's value is multiplied by for the displayed number (Duration: multiplier x effDuration; a heal-over-time: ticks x heal).",
+  "evidence": "1.0 on every relic Duration token, whose values match the logs. Healing Resonance's Healing token has 4.0 on a 3 s heal-over-time, and 176 of 178 procs in Sean's logs heal exactly 4 times. RESEARCH 01a1c30d-7541 rev 2.",
+  "confidence": "proved"
  },
  "4000004ec802b2a8": {
   "meaning": "The NPC's own ability packages (apn), a list of AnimationPackage refs. With its class's package (1d72ea3a) they carry the NPC's passives, including boss health passives and per-mode passives (abl.exp.seasons.multi.difficulty_modes.*).",

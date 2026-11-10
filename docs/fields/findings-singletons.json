@@ -51,7 +51,7 @@
   "meaning": "Timer value in the EFFECT_EVENT engine singleton, default-initialised."
  },
  "40000004d73288a8": {
-  "reason": "1 on 4,331 rows, 2 on 247, absent on 20, per package in an item modifier set. Rows with 2 appear in whole-set runs ([2,2,2]) as well as mixed, so a relative weight is possible but not shown. Rolling many items, or a server loot source, would settle it."
+  "reason": "Weight of a package within an item modifier set: 1 on 4,331 rows, 2 on 247, absent on 20. Read as a roll weight, it is not determinable from the client: the roll happens on the server and no client file records a drop. Counting the rolled stat splits over many drops of one itm.eq.random item would settle it."
  },
  "4000000820e3e28e": {
   "confidence": "proved",
@@ -1054,19 +1054,13 @@
   "reason": "Single value 8 in utlTweakableInfoPrototype. Adjacent ids do not show a purpose; single constant only."
  },
  "40000044dcbfd721": {
-  "meaning": "cbtStandardRatingInfo, the first of three standard-rating curves indexed by item rating 0..417: the scale that modStatType_StandardRatingPercent amounts multiply (the 16 abl.itm.relic.*.scales_with_item_rating procs).",
-  "evidence": "The only StandardRatingPercent users are those 16 relic abilities (ModifyStat StatModType 9 at 4.0/3.5/1.8, SpellDamage 1.0/0.75, Heal 1.35, AbsorbDamage 5.5), named scales_with_item_rating, the same naming as StandardHealthPercent -> cbtStandardHealingInfo. 418 entries cover live ratings (to 344) and 8.0 (370). Datuh Healing Resonance tick 4,524 (158 ticks, no variance) = 1.35 x third column at index 336; other players ticks fit no single column, so the index, column and any bonus term are not proved. Tool: relic_proc_values.py.",
-  "confidence": "likely"
+  "reason": "cbtStandardRatingInfo, the first of three 418-entry float curves (index 0-417, 1 to 2150 / 4945 / 7310). Not determinable from the client what reads it: the only StandardRatingPercent users are the 16 abl.itm.relic.*.scales_with_item_rating abilities, and no field names the table, index or column they scale, so the lookup lives in compiled code; logs print no stat-proc amount and heal ticks include bonus healing. Settled by one tooltip: Rakata Relic of Serendipitous Assault (rating 344, item level 160), read N in 'grant N Power'; 4.0 x this column at index 344 or 160 (or 0.04 x) matching N names the table, index and column. RESEARCH 01a1c30d-7541 rev 2."
  },
  "40000044dcbfd722": {
-  "meaning": "cbtStandardRatingInfo, the second (2.3x the first) of three standard-rating curves indexed by item rating 0..417: the scale that modStatType_StandardRatingPercent amounts multiply (the 16 abl.itm.relic.*.scales_with_item_rating procs).",
-  "evidence": "The only StandardRatingPercent users are those 16 relic abilities (ModifyStat StatModType 9 at 4.0/3.5/1.8, SpellDamage 1.0/0.75, Heal 1.35, AbsorbDamage 5.5), named scales_with_item_rating, the same naming as StandardHealthPercent -> cbtStandardHealingInfo. 418 entries cover live ratings (to 344) and 8.0 (370). Datuh Healing Resonance tick 4,524 (158 ticks, no variance) = 1.35 x third column at index 336; other players ticks fit no single column, so the index, column and any bonus term are not proved. Tool: relic_proc_values.py.",
-  "confidence": "likely"
+  "reason": "cbtStandardRatingInfo, the second, 2.3x the first of three 418-entry float curves (index 0-417, 1 to 2150 / 4945 / 7310). Not determinable from the client what reads it: the only StandardRatingPercent users are the 16 abl.itm.relic.*.scales_with_item_rating abilities, and no field names the table, index or column they scale, so the lookup lives in compiled code; logs print no stat-proc amount and heal ticks include bonus healing. Settled by one tooltip: Rakata Relic of Serendipitous Assault (rating 344, item level 160), read N in 'grant N Power'; 4.0 x this column at index 344 or 160 (or 0.04 x) matching N names the table, index and column. RESEARCH 01a1c30d-7541 rev 2."
  },
  "40000044dcbfd723": {
-  "meaning": "cbtStandardRatingInfo, the third (3.4x the first) of three standard-rating curves indexed by item rating 0..417: the scale that modStatType_StandardRatingPercent amounts multiply (the 16 abl.itm.relic.*.scales_with_item_rating procs).",
-  "evidence": "The only StandardRatingPercent users are those 16 relic abilities (ModifyStat StatModType 9 at 4.0/3.5/1.8, SpellDamage 1.0/0.75, Heal 1.35, AbsorbDamage 5.5), named scales_with_item_rating, the same naming as StandardHealthPercent -> cbtStandardHealingInfo. 418 entries cover live ratings (to 344) and 8.0 (370). Datuh Healing Resonance tick 4,524 (158 ticks, no variance) = 1.35 x third column at index 336; other players ticks fit no single column, so the index, column and any bonus term are not proved. Tool: relic_proc_values.py.",
-  "confidence": "likely"
+  "reason": "cbtStandardRatingInfo, the third, 3.4x the first of three 418-entry float curves (index 0-417, 1 to 2150 / 4945 / 7310). Not determinable from the client what reads it: the only StandardRatingPercent users are the 16 abl.itm.relic.*.scales_with_item_rating abilities, and no field names the table, index or column they scale, so the lookup lives in compiled code; logs print no stat-proc amount and heal ticks include bonus healing. Settled by one tooltip: Rakata Relic of Serendipitous Assault (rating 344, item level 160), read N in 'grant N Power'; 4.0 x this column at index 344 or 160 (or 0.04 x) matching N names the table, index and column. RESEARCH 01a1c30d-7541 rev 2."
  },
  "400000455d382d30": {
   "confidence": "proved",
