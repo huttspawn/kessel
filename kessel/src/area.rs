@@ -458,4 +458,15 @@ mod tests {
         assert!(close(lo, [-30.0, -10.0, -20.0]), "{lo:?}");
         assert!(close(hi, [30.0, 10.0, 20.0]), "{hi:?}");
     }
+
+    #[test]
+    fn is_area_dat_reads_the_signature() {
+        let mut d = Vec::new();
+        len_str(&mut d, "AREA_DAT_BINARY_FORMAT_");
+        assert!(is_area_dat(&d));
+        let mut room = Vec::new();
+        len_str(&mut room, "ROOM_DAT_BINARY_FORMAT_");
+        assert!(!is_area_dat(&room));
+        assert!(!is_area_dat(&[0xff, 0xff, 0xff, 0xff]));
+    }
 }

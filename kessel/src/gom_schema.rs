@@ -331,4 +331,23 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn declared_tags_reads_property_records_and_skips_classes() {
+        let mut data = vec![0u8; 8];
+        let mut prop = vec![0u8; 40];
+        prop[0] = 33;
+        prop[4..12].copy_from_slice(&0xDFFE_8783_52BA_8A26u64.to_le_bytes());
+        prop[0x12] = 0x20;
+        prop[0x20] = 0x06;
+        data.extend_from_slice(&prop);
+        let mut class = vec![0u8; 0x40];
+        class[0] = 0x40;
+        class[0x12] = 0x34;
+        data.extend_from_slice(&class);
+        let tags = declared_tags(&data).unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags.get(&0xDFFE_8783), Some(&0x06));
+        assert!(declared_tags(&[0u8; 8]).is_err());
+    }
 }

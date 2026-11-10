@@ -653,4 +653,33 @@ mod tests {
         assert_eq!(GomValue::U64(7).as_i64(), Some(7));
         assert_eq!(GomValue::Str("x".into()).as_i64(), None);
     }
+
+    #[test]
+    fn field_tags_gives_each_field_its_wire_tag_at_any_depth() {
+        let mut header = [0u8; 42];
+        header[32] = 1;
+        // Two fields: 5 a number, 7 an embedded object holding field 9, a string.
+        let payload = [
+            0x00,
+            0x02,
+            0x05,
+            tag::UINT64,
+            0x03,
+            0x02,
+            tag::EMBEDDED,
+            0x00,
+            0x01,
+            0x09,
+            tag::STRING,
+            0x01,
+            b'a',
+        ];
+        assert_eq!(
+            field_tags(&header, &payload, false),
+            Some(vec![(5, tag::UINT64), (7, tag::EMBEDDED), (9, tag::STRING)])
+        );
+        assert_eq!(field_tags(&header, &payload[..5], false), None);
+        header[32] = 0;
+        assert_eq!(field_tags(&header, &payload, false), Some(Vec::new()));
+    }
 }
