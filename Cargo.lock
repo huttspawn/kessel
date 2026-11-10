@@ -1384,6 +1384,7 @@ dependencies = [
  "clap",
  "flate2",
  "hex",
+ "image_dds",
  "indicatif",
  "kessel",
  "regex",
