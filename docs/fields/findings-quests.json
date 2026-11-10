@@ -445,13 +445,13 @@
  },
  "4000004e04ee5c20": {
   "confidence": "proved",
-  "evidence": "Over 39,890 clauses in 20,153 Conditions, every type's populated fields are the fields named for it: 27 carries only cndAchievementId (570/570), 34 only cndDisciplineId, 117/118 only cndConditionalId pointing at qst.*, 8 cndOfClassClasses, 43 cndAreaId, 129 cndConditionalInteger with cndTargetQuestEraState. The 19 clauses with no type field carry only cndForceAlignmentComparison/Value (type 0).",
-  "meaning": "Clause type of one Condition clause: an index into enum cndConditionType (137 members, gom_enums.json hash 7C7B7B6804EE5C1F), e.g. 3 GlobalVariable (quest variable), 4 HasItems, 19 NestedConditional, 27 HasAchievement, 34 IsDiscipline, 117 IsOnQuest, 118 HasCompletedQuest, 129 IsQuestEraInState. Absent means 0 (ForceAlignment). Value 137 (2 clauses, cnd.alliance.legacy_reborn.is_in_space_game) is past the enum's end."
+  "meaning": "Clause type of one Condition clause: an index into enum cndConditionType, 138 members in the live client.gom (kessel/resources/gom_enums.json holds only 137 and lacks the last). E.g. 2 Influence, 3 GlobalVariable, 4 HasItems, 19 NestedConditional, 26 IsLevel, 27 HasAchievement, 34 IsDiscipline, 117 IsOnQuest, 118 HasCompletedQuest, 129 IsQuestEraInState, 137 IsOnTaxi. Absent means 0 (ForceAlignment).",
+  "evidence": "Over 39,890 clauses in 20,153 Conditions, every type's populated fields are the fields named for it (27 only cndAchievementId 570/570, 34 only cndDisciplineId, 117/118 cndConditionalId on qst.*, 2 cndInfluenceContactId/Value/Comparison). Type 137: the live client.gom's cndConditionType ends ..._IsOnMount, _IsClientLanguageSelected, _IsOnTaxi (138 names); its 2 clauses (cnd.alliance.legacy_reborn.is_in_space_game, OR) carry cndConditionalInteger 400003d2f2be2131 = keys of spnVehicleProtoData (the taxi vehicle table, 4000001cc29b7480), which resolve to veh.alliance.legacy_reborn.player_trooper and player_sith with ability abl.space_combat.player.blaster(_sith)."
  },
  "4000004e0c0f2895": {
   "confidence": "proved",
-  "evidence": "5,197 of 5,209 ids resolve their high 32 bits to a Quest's string_id (12 to no extracted object); 2,676 of 2,737 non-builtin ids equal a qstVariableGUID exactly. FQN words split by n: 'on_quest'/'is_on' take n=1 (197 vs 13 at n=2), 'complete'/'completed' take n=2 (430 vs 11 at n=1).",
-  "meaning": "Quest variable a GlobalVariable clause tests: (quest string_id << 32) | n. n = 1 is the quest's ACTIVE state, n = 2 COMPLETE, n = 4 ELIGIBLE (likely; see 4000001ce4ee1382); any other n equals a qstVariableGUID (400000002c1fe390) in that quest's variable lists, i.e. a named quest variable."
+  "meaning": "Quest variable a GlobalVariable clause tests: (quest string_id << 32) | n. n = 1 ACTIVE, 2 COMPLETE, 4 ELIGIBLE (the quest can be taken now); any other n equals a qstVariableGUID (400000002c1fe390), a named quest variable. 3 and 5 also occur (13 and 222 reads in conversations) and are unsettled.",
+  "evidence": "5,197 of 5,209 ids resolve to a Quest's string_id; 2,676 of 2,737 non-builtin ids equal a qstVariableGUID. 'on_quest'/'is_on' names take n=1 197 vs 13; 'complete' names take n=2 430 vs 11. n = 4: conversation nodes that grant quest Q gate on Q#4 == 1 3,974 times (vs 260 Q#1 == 0), see 40000034bc126755."
  },
  "400000429d291241": {
   "confidence": "proved",
@@ -469,19 +469,19 @@
   "meaning": "Bitset (64-bit words) of every clause type the Condition uses, transitively: bit t set for type t."
  },
  "400000429e352b11": {
-  "confidence": "likely",
-  "evidence": "Absent on 7,055, 1 on 13,094, 2 on 4. cnd.exp.04.systems.mod.mod_quest_pro_336_complete (OR over the imp and rep 336 quests) has 1; the bulk of OR use is the HasItems pair 'has item' / 'has item equipped'. Not checked against a game outcome.",
-  "meaning": "How the clauses combine: enum cndLogicEnum, 0 (absent) AND, 1 OR, 2 XOR."
+  "confidence": "proved",
+  "meaning": "cndLogic: how a Condition combines its clauses, enum cndLogicEnum (client.gom: And, Or, Xor): absent AND, 1 OR, 2 XOR.",
+  "evidence": "Enum names from client.gom cndLogicEnum (hash AAAE07379E352B10, beside this field). Data: all 60 Conditions holding two or more different non-negated IsDiscipline clauses (cnd.classes.is_jedi_knight_guardian, cnd.trp.discipline.is_op_scou) are 1, none absent, so 1 is OR; all 293 Conditions with two IsLevel clauses are absent, e.g. cnd.metrics.is_level_30_40 = IsLevel >= 30 (cndComparison 4) and IsLevel <= 40 (2), which as OR would always hold, so absent is AND. Name words agree: _and_ 266 absent vs 18 OR, _or_ 346 OR vs 97 absent. XOR (2) is on 4 Conditions: 3 single-clause spring_festival cage visibility checks (XOR of one clause is the clause) and cnd.test.qa.emulkey.complex_001; no shipped content depends on it."
  },
  "40000034bc126755": {
   "confidence": "proved",
-  "evidence": "All 3,134 expressions evaluate to exactly one value on the stack; 6,317 of 6,344 variable tokens resolve to a quest. Jedi Knight chapter 1 decodes to the known order: Coruscant introduction <= Tython seeking_darkness#COMPLETE; act_1 thedefector <= taris the_rescue#COMPLETE AND nar_shaddaa showdownwithlordsardic#COMPLETE; Sith Warrior Korriban arm_yourself > judge_executioner > slaying_the_beast > a_new_master > sith_arithmetic > the_final_trial > leaving_korriban.",
-  "meaning": "A quest's requirement expression in postfix: token 8 = AND, 9 = OR (binary), 10 = NOT (unary); every other token is a quest variable id (prefix48 << 16 | n) where prefix48 = the owning quest's qstAlternateEndingVariableID >> 16 and n = 1 ACTIVE, 2 COMPLETE, 4 ELIGIBLE (likely), else a named variable (qstVariableFqnId 40000034b21e56a4)."
+  "meaning": "qstReqExpression: a quest's requirement in postfix: 8 AND, 9 OR (binary), 10 NOT (unary); every other token is a quest variable (prefix48 << 16 | n), prefix48 = the owning quest's qstAlternateEndingVariableID >> 16, n = 1 ACTIVE, 2 COMPLETE, 4 ELIGIBLE, else a named variable (qstVariableFqnId 40000034b21e56a4). No comparison ops (3-7, 11, 12) occur in any of the 3,134 expressions.",
+  "evidence": "All 3,134 evaluate to one stack value; 6,317/6,344 variable tokens resolve. Tokens below 4096 are only 8 (2,438), 9 (772) and 10 (1,323). Class story order decodes (Coruscant introduction <= Tython seeking_darkness#2; act_1 thedefector <= taris the_rescue#2 AND nar_shaddaa showdownwithlordsardic#2). n = 4 ELIGIBLE: of the quest-state reads a conversation node makes of a quest it grants, 3,974 are Q#4 == 1 against 260 Q#1 == 0 and 14 Q#1 == 1; 787 of 789 ending nodes that read Q#4 also grant Q (instant grant+end). The offer gate is the can-take state, qstEligibilityEligible in client.gom."
  },
  "40000034bc126754": {
   "confidence": "proved",
-  "evidence": "Over 622,641 gated nodes in 10,752 conversations, 622,277 evaluate to one value with 8/9/11/12 binary and 10 unary; 887,391 of 905,411 variable tokens equal a qstVariableFqnId, e.g. 10549456612798496869..876 = qst.utility.class is_jedi_knight .. is_spy (the class gates on 470,350 '== 1' tests). Conversation decode (RESEARCH 01a1c272): 622,641 nodes; 193,408 are [1,1,8] (true AND true). The commonest forms read 1 1 <is_jedi_knight> 1 11 <is_jedi_wizard> 9 <is_trooper> 9 ... 8 8: class flags ORed (9) after an equality test (11), ANDed (8) into the leading true. 12 compares int variables to const ids (glb_broonmark_status 12 const_broonmark_recruited). 3,235 of the 5,278 variables conversation actions set are tested by some conversation condition. Op 10 is unary NOT (as in qstReqExpression 40000034bc126755); op 3 is rare and its exact comparison is unproved.",
-  "meaning": "A conversation node's compiled gate in the same postfix language as qstReqExpression, plus literals 0 and 1 and comparisons: 11 = variable == literal (var, literal, 11), 12 = variable == variable (int var vs const var); 3-7 are integer comparisons (5 seen as count >= tier constant; exact op per code unproved). The wrapper [1, 1, ..., 8, 8] ANDs two TRUE constants; [1, 1, 8] is an ungated node. (cnvConditionCompiled; the same code as cnvActionExpressionCompiled.)"
+  "meaning": "cnvConditionCompiled: a conversation node gate in postfix. Literals 0/1 and variable ids push; 8 AND, 9 OR; comparisons 3 != , 4 > , 5 >= , 6 < , 7 <= (binary, var-or-literal operands), 11 == literal, 12 == variable/const. Op 10 (NOT) never occurs here. The wrapper [1, 1, ..., 8, 8] ANDs two TRUE constants; [1, 1, 8] is an ungated node.",
+  "evidence": "With 3-7 read as binary comparisons all 622,641 gated nodes are stack-valid (the 364 that failed before are exactly the nodes using 3-7). 3 = !=: companion_summoned 0 3 (a companion is out), and qst...a_failure_to_communicate complex_mako = companion == mako AND companion 0 3, complex_mako_lockout = companion mako 3. 5 = >=: troopercompaniontracker cplx_elara_dorne_romance_and_romancecurrent_at_least_marriage = romancecurrent marriage17 5; feedback tiers count_warzones_completed const_tier 5. 6 = <: qst.utility.companion cc_is_badly_injured = cc_health 25_percent 6 AND pc_health 75_percent 5; both_are_badly_injured = both 25_percent 6. 4 = > (strict): has_non_generic_cc = companion_summoned 0 4 AND companion_summoned 50 6; hoth_chiss_in_good_standing = affection 0 4. 7 = <=: complex_low_approval_or_bomb = approval 1 7 OR gave_bomb. Complement pairs on one (lhs, rhs) in sibling nodes: 5/6 in 6 conversations (tatooine vette 15/18, taris sergeant_dorne 15/18), 4/7 in 2 (voss senator_evran 560/561), 3/12 in 57. Census: 3 129, 4 53, 5 99, 6 50, 7 33, 10 none."
  },
  "4000001ce4ee1382": {
   "confidence": "proved",
@@ -567,5 +567,15 @@
   "confidence": "proved",
   "meaning": "achType: which system an achievement belongs to. Client enum lgcAchievementType: 0 Standard (absent), 1 Conquest, 2 GalacticSeasons, 3 PvPSeasons, 4 Ventures.",
   "evidence": "The client.gom enum record lists lgcAchievementTypeStandard, Conquest, GalacticSeasons, PvPSeasons, Ventures in that order. Zero-based index proved by FQN family on all 1,221 uses: 1 on 397 ach.conquests.*; 2 on 570 ach.galactic_seasons.* and 42 ach.conquests.galactic_seasons.priority_objectives.*; 3 on 36 ach.pvp_seasons.*; 4 on 176 ach.ventures.*; no exception. Every conquest objective a conquest event lists carries it; 367 ach.conquests.* that no event lists lack it (live 7.x)."
+ },
+ "40000034bc126751": {
+  "confidence": "proved",
+  "meaning": "qstComplexVariableExpressionCompiled: the postfix expression a complex (derived boolean) quest variable evaluates, in the cnvConditionCompiled language: 8 AND, 9 OR, 11/12 equals, 3 != , 4 > , 5 >= , 6 < , 7 <= (binary, var-or-literal operands), 11 == literal, 12 == variable/const.",
+  "evidence": "Ops seen: 12 781, 3 28, 5 13, 6 8, 4 4, 7 3. Names agree with the op table: qst.utility.companion neither_are_badly_injured = cc_health 75_percent 5 AND pc_health 75_percent 5; cplx_elara_dorne_romance_and_romancecurrent_at_least_marriage uses 5 (>=); cplx_quinn_lost = companion quinn 3 AND companion 0 3."
+ },
+ "400003d2f2be2131": {
+  "confidence": "proved",
+  "meaning": "cndConditionalInteger: the integer argument of a Condition clause; its meaning follows the clause type: era index for 129 IsQuestEraInState, the taxi vehicle (a spnVehicleProtoData key) for 137 IsOnTaxi.",
+  "evidence": "On type 129 the era indexes 1-9 (RESEARCH 01a15266 story eras). On type 137 (cnd.alliance.legacy_reborn.is_in_space_game) the two values -8486540994454471246 and -5696467459679243329 are keys of spnVehicleProtoData resolving to veh.alliance.legacy_reborn.player_trooper / player_sith."
  }
 }

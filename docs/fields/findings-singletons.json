@@ -1659,19 +1659,19 @@
   "meaning": "chrCompanionInfo_gift_interest_romanced_map: the gift interests that change once the companion is romanced, same coding."
  },
  "4000000854bd7f1a": {
-  "confidence": "likely",
-  "evidence": "Keys are chrCompanionGiftInterest values used in the companion maps; how the multiplier enters the gift formula is not proved.",
-  "meaning": "itmGiftCategoryInterestMap: influence multiplier per gift interest: neutral (1) 0, like (3) 4, favorite (4) 9, love (5) 16."
+  "confidence": "proved",
+  "meaning": "itmGiftCategoryInterestMap: per-interest factor of gift influence: neutral (1) 0, like (3) 4, favorite (4) 9, love (5) 16. Multiplies; a neutral gift gives 0.",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts)."
  },
  "4000000854bd7f19": {
-  "confidence": "likely",
-  "evidence": "7 rows keyed by quality enum; the gift item ranks in fqn (standard, premium, prototype, artifact, legendary) are the likely keys.",
-  "meaning": "itmGiftQualityMap: influence multiplier per gift quality: 0.5, 1, 8, 16, 32, 80, 81."
+  "confidence": "proved",
+  "meaning": "itmGiftQualityMap: per-quality factor of gift influence, keyed by item quality: 0 0.5, 1 1, 2 premium 8, 3 prototype 16, 4 artifact 32, 5 legendary 80, 6 81. It is the base: there is no separate base amount.",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts)."
  },
  "4000000854bd7f1b": {
-  "confidence": "likely",
-  "evidence": "19 rows keyed -9..9.",
-  "meaning": "itmGiftDeltaRankMap: influence multiplier by gift rank minus companion rank: 0 -> 1.0, +1 1.2, +2 1.4, +3 and up 1.6, -1 0.8, -2 0.6, -3 0.4, -4 0.2, -5 and below 0.1."
+  "confidence": "proved",
+  "meaning": "itmGiftDeltaRankMap: factor by (gift's itmGiftAffectionRank, rank minus one) minus the companion's affection rank: 0 1.0, +1 1.2, +2 1.4, +3 and up 1.6, -1 0.8, -2 0.6, -3 0.4, -4 0.2, -5 and below 0.1.",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts). Using gift rank (not rank minus one) matches only 30 of 164."
  },
  "400000428b61fc20": {
   "confidence": "proved",
@@ -1679,9 +1679,9 @@
   "meaning": "chrAllianceContactInfluenceLevels: influence needed for each companion influence rank: rank r -> r+1 costs (r+1)^2 x 100 (400, 900, ... 260,100 for 50 ranks)."
  },
  "40000008623c15ef": {
-  "confidence": "likely",
-  "evidence": "9 rows keyed by chrCompanionAffectionRank; not used by 7.x influence ranks.",
-  "meaning": "chrCompanionAffectionValueToRankMap: the pre-4.0 affection value at each affection rank (-1,000, 3,600, 10,000, 22,500, 40,000, 90,000, 160,000, 250,000, 360,000)."
+  "confidence": "proved",
+  "meaning": "chrCompanionAffectionValueToRankMap: influence points at which a companion's gift rank steps (-1,000, 3,600, 10,000, 22,500, 40,000, 90,000, 160,000, 250,000, 360,000 = influence levels 6, 10, 15, 20, 30, 40, 50, 60). Still used in 7.x: it is the companion rank the gift delta-rank factor compares against, and the community's gift brackets (1, 6, 10, 15, 20, 30, 40, 50).",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts)."
  },
  "4000004c320bb353": {
   "confidence": "likely",
