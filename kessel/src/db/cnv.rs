@@ -871,7 +871,7 @@ impl Database {
 ///
 /// Inverse of `stb::extract_fqn_from_path`: a conversation FQN
 /// `cnv.location.taris.x` maps to `/resources/en-us/str/cnv/location/taris/x.stb`.
-fn conversation_stb_path(cnv_fqn: &str) -> String {
+pub(super) fn conversation_stb_path(cnv_fqn: &str) -> String {
     format!("/resources/en-us/str/{}.stb", cnv_fqn.replace('.', "/"))
 }
 

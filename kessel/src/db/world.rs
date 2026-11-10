@@ -650,7 +650,10 @@ impl ArchiveFiles {
 /// objects `world.areas.<id>.mapdata`.
 pub(super) fn map_area_dirs(tx: &Transaction) -> Result<std::collections::BTreeSet<u64>> {
     let mut dirs: std::collections::BTreeSet<u64> = match load_singleton(tx, "mapAreasDataProto")? {
-        Some(proto) => area_log_pairs(&proto).into_iter().map(|(_, dir)| dir).collect(),
+        Some(proto) => area_log_pairs(&proto)
+            .into_iter()
+            .map(|(_, dir)| dir)
+            .collect(),
         None => Default::default(),
     };
     dirs.extend(mapdata_dirs(tx)?);

@@ -21,5 +21,6 @@ pub mod quest;
 pub mod schema;
 pub mod scpt;
 pub mod stb;
+pub mod unknowns;
 pub mod xml_parser;
 pub mod xml_utf16;

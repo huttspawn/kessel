@@ -69,6 +69,11 @@ struct Args {
     /// Only versioned FQNs (`/major/minor`) are left out
     #[arg(long)]
     unfiltered: bool,
+
+    /// An earlier extraction whose field facts this run's are compared against
+    /// (FR-KESSEL-026); the report says the comparison could not run without one
+    #[arg(long)]
+    previous: Option<PathBuf>,
 }
 
 fn main() -> Result<()> {
@@ -179,6 +184,8 @@ fn main() -> Result<()> {
     // skipped, except under --unfiltered, which inserts every variant. A SQL
     // dedup pass after extraction marks the best row per FQN canonical.
     let mut versioned_seen: HashMap<String, u64> = HashMap::new();
+    // What the sweep sees that the report of unknowns reads (FR-KESSEL-026).
+    let mut build = unknowns::BuildFacts::default();
 
     let sweep_start = Instant::now();
     for tor_path in &tor_files {
@@ -205,6 +212,7 @@ fn main() -> Result<()> {
 
             for (i, entry) in entries.iter().enumerate() {
                 seen_hashes.insert(entry.filename_hash);
+                build.entries.insert(entry.filename_hash);
 
                 // Show entry progress bar if archive takes >20s
                 if entry_pb.is_none() && archive_start.elapsed() > Duration::from_secs(20) {
@@ -251,11 +259,13 @@ fn main() -> Result<()> {
                 if entry.filename_hash == registry_hash {
                     registry = Some(prototypes_info::parse(&data));
                 }
+                build.note_entry(&filename, entry.filename_hash, &data);
 
                 // Process STB files
                 if let Some(path) = stb_path {
                     if let Ok(stb_file) = stb::parse(&data, path) {
                         let _ = db.insert_stb(&stb_file);
+                        build.tables_read.insert(entry.filename_hash);
                     }
                 }
                 // Process PBUK/DBLB files, found by their magic
@@ -267,6 +277,7 @@ fn main() -> Result<()> {
                         icon_overrides.as_ref(),
                         &mut versioned_seen,
                         &mut dropped,
+                        &mut build,
                     ) {
                         total_objects += count;
                     }
@@ -290,6 +301,7 @@ fn main() -> Result<()> {
                             if !accept_variant(&mut versioned_seen, &fqn, &game_obj)
                                 && !args.unfiltered
                             {
+                                build.note_fields(&game_obj.kind, &obj.header, &obj.payload);
                                 dropped.insert(
                                     game_obj.guid.clone(),
                                     prototypes_info::REASON_SUPERSEDED,
@@ -303,6 +315,12 @@ fn main() -> Result<()> {
                                     total_objects += 1;
                                 }
                             } else {
+                                build.note_left_out(
+                                    &game_obj.kind,
+                                    &game_obj.fqn,
+                                    &obj.header,
+                                    &obj.payload,
+                                );
                                 dropped.insert(
                                     game_obj.guid.clone(),
                                     prototypes_info::REASON_FILTERED,
@@ -533,6 +551,9 @@ fn main() -> Result<()> {
         ),
     };
 
+    // Report what the extraction did not read (FR-KESSEL-026).
+    db.write_unknowns_report(&build, &hash_dict, args.previous.as_deref())?;
+
     // Print summary
     let stats = db.stats()?;
     println!("\nExtraction complete!");
@@ -592,6 +613,7 @@ fn main() -> Result<()> {
     println!();
     println!("  Strings: {}", stats.strings);
     println!("  Registry: {registry_line}");
+    println!("  Not read: see the unknowns and field_facts tables");
     if args.icons {
         println!();
         println!("  Icons: {} (deduplicated)", total_icons);
@@ -898,6 +920,7 @@ fn process_pbuk(
     overrides: Option<&icon_overrides::IconOverrides>,
     versioned_seen: &mut HashMap<String, u64>,
     dropped: &mut HashMap<String, &'static str>,
+    build: &mut unknowns::BuildFacts,
 ) -> Result<usize> {
     let objects = pbuk::parse(data)?;
     let mut count = 0;
@@ -919,6 +942,7 @@ fn process_pbuk(
 
         let game_obj = schema::GameObject::from_gom_with_overrides(&obj, overrides);
         if !accept_variant(versioned_seen, &fqn, &game_obj) && !unfiltered {
+            build.note_fields(&game_obj.kind, &obj.header, &obj.payload);
             dropped.insert(game_obj.guid.clone(), prototypes_info::REASON_SUPERSEDED);
             continue;
         }
@@ -926,6 +950,7 @@ fn process_pbuk(
             db.insert_object(&game_obj)?;
             count += 1;
         } else {
+            build.note_left_out(&game_obj.kind, &game_obj.fqn, &obj.header, &obj.payload);
             dropped.insert(game_obj.guid.clone(), prototypes_info::REASON_FILTERED);
             capture_string_ref(db, &game_obj);
         }

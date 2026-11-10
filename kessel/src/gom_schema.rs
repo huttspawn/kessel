@@ -216,7 +216,10 @@ pub fn declared_tags(data: &[u8]) -> anyhow::Result<HashMap<u32, u8>> {
             break;
         };
         if body.len() > 0x20 && u16_at(body, 0x12) == 0x20 {
-            tags.insert(u32::from_le_bytes([body[8], body[9], body[10], body[11]]), body[0x20]);
+            tags.insert(
+                u32::from_le_bytes([body[8], body[9], body[10], body[11]]),
+                body[0x20],
+            );
         }
         pos = (pos + size).next_multiple_of(8);
     }

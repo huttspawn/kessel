@@ -26,6 +26,7 @@ mod schema;
 mod schematic;
 mod stats_systems;
 mod title;
+mod unknowns;
 mod world;
 pub(crate) use world::find_planet_code_after_cc;
 #[cfg(test)]
@@ -203,6 +204,7 @@ impl Database {
             ability::create_tables(&tx)?;
             item::create_tables(&tx)?;
             quest::create_tables(&tx)?;
+            unknowns::create_tables(&tx)?;
             tx.commit()?;
         }
         self.migrate_quest_typed_columns()?;
