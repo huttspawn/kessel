@@ -10,11 +10,13 @@ use rusqlite::{params, Connection, OpenFlags, Transaction};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 
-/// One finding: what it is about, what was found, and a count where one applies.
+/// One finding: what it is about, what was found, and a count where one applies. A failed
+/// finding is a part of a check that could not run, beside the parts that did.
 struct Finding {
     subject: String,
     detail: String,
     count: Option<u64>,
+    failed: bool,
 }
 
 impl Finding {
@@ -23,6 +25,7 @@ impl Finding {
             subject: subject.into(),
             detail: detail.into(),
             count,
+            failed: false,
         }
     }
 }
@@ -34,6 +37,7 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
     tx.execute_batch(
         "CREATE TABLE IF NOT EXISTS field_facts (
             field_id     TEXT NOT NULL,
+            declared_read INTEGER NOT NULL,
             declared_tag INTEGER,
             read_tag     INTEGER NOT NULL,
             count        INTEGER NOT NULL,
@@ -63,13 +67,16 @@ impl Database {
         self.with_tx(|tx| {
             tx.execute_batch("DELETE FROM field_facts; DELETE FROM unknowns;")?;
             let fields = field_facts(tx, facts)?;
+            // declared_read 0: client.gom was not read, so declared_tag says nothing; it is
+            // not "none declared".
+            let read = matches!(facts.declared, Some(Ok(_)));
             let mut insert = tx.prepare(
-                "INSERT INTO field_facts (field_id, declared_tag, read_tag, count) \
-                 VALUES (?1, ?2, ?3, ?4)",
+                "INSERT INTO field_facts (field_id, declared_read, declared_tag, read_tag, count) \
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
             )?;
             for (id, (declared, tags)) in &fields {
                 for (tag, n) in tags {
-                    insert.execute(params![id, declared, tag, n])?;
+                    insert.execute(params![id, read, declared, tag, n])?;
                 }
             }
             drop(insert);
@@ -83,7 +90,10 @@ impl Database {
             };
             let checks: [(&str, Result<Vec<Finding>>); 6] = [
                 ("field_facts", recorded(declared.clone())),
-                ("field_changes", field_changes(&fields, previous)),
+                (
+                    "field_changes",
+                    field_changes(&fields, declared.is_ok(), previous),
+                ),
                 ("declared_tag", declared_tag(&fields, declared.is_ok())),
                 ("string_tables", string_tables(tx, facts, hashes)),
                 ("left_out", Ok(left_out(facts))),
@@ -106,7 +116,8 @@ impl Database {
                     }
                     Ok(found) => {
                         for f in found {
-                            row.execute(params![check, "found", f.subject, f.detail, f.count])?;
+                            let status = if f.failed { "failed" } else { "found" };
+                            row.execute(params![check, status, f.subject, f.detail, f.count])?;
                         }
                     }
                     Err(e) => {
@@ -187,8 +198,13 @@ fn tags(tags: impl IntoIterator<Item = u8>) -> String {
 }
 
 /// New and gone field ids, changed declared tags and appeared or disappeared wire tags,
-/// against the field facts of an earlier extraction.
-fn field_changes(fields: &Facts, previous: Option<&Path>) -> Result<Vec<Finding>> {
+/// against the field facts of an earlier extraction. Declared tags are compared only when both
+/// runs read them; otherwise that part is a failed finding saying which run did not.
+fn field_changes(
+    fields: &Facts,
+    declared_read: bool,
+    previous: Option<&Path>,
+) -> Result<Vec<Finding>> {
     let Some(path) = previous else {
         bail!("no previous extraction named (--previous)");
     };
@@ -196,30 +212,60 @@ fn field_changes(fields: &Facts, previous: Option<&Path>) -> Result<Vec<Finding>
         .with_context(|| format!("open {}", path.display()))?;
     let mut before = Facts::new();
     let mut stmt = conn
-        .prepare("SELECT field_id, declared_tag, read_tag, count FROM field_facts")
+        .prepare("SELECT field_id, declared_read, declared_tag, read_tag, count FROM field_facts")
         .with_context(|| format!("{} holds no field facts", path.display()))?;
     let mut rows = stmt.query([])?;
+    let mut prev_read = true;
     while let Some(r) = rows.next()? {
+        prev_read &= r.get::<_, bool>(1)?;
         let entry = before
             .entry(r.get(0)?)
-            .or_insert((r.get(1)?, BTreeMap::new()));
-        entry.1.insert(r.get(2)?, r.get(3)?);
+            .or_insert((r.get(2)?, BTreeMap::new()));
+        entry.1.insert(r.get(3)?, r.get(4)?);
     }
     let mut found = Vec::new();
+    let unread: Vec<&str> = [
+        (declared_read, "this extraction"),
+        (prev_read, "the previous one"),
+    ]
+    .into_iter()
+    .filter_map(|(read, run)| (!read).then_some(run))
+    .collect();
+    let compare_declared = unread.is_empty();
+    if !compare_declared {
+        found.push(Finding {
+            failed: true,
+            ..Finding::new(
+                "declared tags",
+                format!(
+                    "not compared: {} did not read client.gom",
+                    unread.join(" and ")
+                ),
+                None,
+            )
+        });
+    }
+    let declared_of = |read: bool, tag: Option<u8>| {
+        if read {
+            tags(tag)
+        } else {
+            "not read".to_string()
+        }
+    };
     for (id, (declared, read)) in fields {
         let Some((was, read_before)) = before.get(id) else {
             found.push(Finding::new(
                 id,
                 format!(
                     "new field: declared {}, read {}",
-                    tags(*declared),
+                    declared_of(declared_read, *declared),
                     tags(read.keys().copied())
                 ),
                 None,
             ));
             continue;
         };
-        if was != declared {
+        if compare_declared && was != declared {
             found.push(Finding::new(
                 id,
                 format!("declared tag {} became {}", tags(*was), tags(*declared)),
@@ -247,7 +293,7 @@ fn field_changes(fields: &Facts, previous: Option<&Path>) -> Result<Vec<Finding>
                 id,
                 format!(
                     "gone field: declared {}, read {}",
-                    tags(*was),
+                    declared_of(prev_read, *was),
                     tags(read_before.keys().copied())
                 ),
                 None,
@@ -360,4 +406,57 @@ fn area_files(
         ));
     }
     Ok(found)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One field: its declared tag, read once under tag 0x06.
+    fn one_field(declared: Option<u8>) -> Facts {
+        Facts::from([(
+            "0000000000000001".to_string(),
+            (declared, BTreeMap::from([(6, 1)])),
+        )])
+    }
+
+    fn previous(declared_read: bool, declared: Option<u8>) -> std::path::PathBuf {
+        let path = crate::db::testutil::temp_db_path("previous_facts");
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE field_facts (field_id TEXT, declared_read INTEGER, declared_tag INTEGER, \
+             read_tag INTEGER, count INTEGER)",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO field_facts VALUES ('0000000000000001', ?1, ?2, 6, 1)",
+            params![declared_read, declared],
+        )
+        .unwrap();
+        path
+    }
+
+    #[test]
+    fn an_unread_client_gom_is_never_a_declared_tag_change() {
+        // This run did not read client.gom; the previous one declared 0x06.
+        let found = field_changes(&one_field(None), false, Some(&previous(true, Some(6)))).unwrap();
+        assert_eq!(found.len(), 1, "only the failed comparison");
+        assert!(found[0].failed);
+        assert!(found[0]
+            .detail
+            .contains("this extraction did not read client.gom"));
+        // The next good run, against the run that did not read it.
+        let found = field_changes(&one_field(Some(6)), true, Some(&previous(false, None))).unwrap();
+        assert_eq!(found.len(), 1);
+        assert!(found[0].failed);
+        assert!(found[0]
+            .detail
+            .contains("the previous one did not read client.gom"));
+        // Both read: a real change is reported.
+        let found =
+            field_changes(&one_field(Some(4)), true, Some(&previous(true, Some(6)))).unwrap();
+        assert_eq!(found.len(), 1);
+        assert!(!found[0].failed);
+        assert_eq!(found[0].detail, "declared tag 0x06 became 0x04");
+    }
 }

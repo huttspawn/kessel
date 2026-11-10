@@ -1643,8 +1643,8 @@ fn previous_extraction(world: &mut World) {
     let path = temp_path("previous");
     let conn = Connection::open(&path).expect("previous");
     conn.execute_batch(&format!(
-        "CREATE TABLE field_facts (field_id TEXT, declared_tag INTEGER, read_tag INTEGER, count INTEGER);
-         INSERT INTO field_facts VALUES ('{FIELD_A:016x}', 4, 4, 3), ('{FIELD_C:016x}', NULL, 1, 2);"
+        "CREATE TABLE field_facts (field_id TEXT, declared_read INTEGER, declared_tag INTEGER, read_tag INTEGER, count INTEGER);
+         INSERT INTO field_facts VALUES ('{FIELD_A:016x}', 1, 4, 4, 3), ('{FIELD_C:016x}', 1, NULL, 1, 2);"
     ))
     .expect("previous facts");
     world.build.previous = Some(path);
