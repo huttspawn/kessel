@@ -70,7 +70,11 @@ fn lstr(d: &[u8], p: &mut usize) -> Option<String> {
     let n = u32::from_le_bytes(d.get(*p..*p + 4)?.try_into().ok()?) as usize;
     let s = d.get(*p + 4..*p + 4 + n)?;
     *p += 4 + n;
-    Some(String::from_utf8_lossy(s).trim_end_matches('\0').to_string())
+    Some(
+        String::from_utf8_lossy(s)
+            .trim_end_matches('\0')
+            .to_string(),
+    )
 }
 
 /// Rooms and asset count; None unless the asset table ends exactly at the
@@ -100,7 +104,10 @@ fn parse_area(d: &[u8]) -> Option<(Vec<String>, usize, bool)> {
 
 fn scan(assets: &str, out: &str) -> Result<()> {
     let mut w = std::io::BufWriter::new(File::create(out)?);
-    writeln!(w, "archive\thash\tsize\trooms\tassets\tends_at_section2\tfirst_rooms")?;
+    writeln!(
+        w,
+        "archive\thash\tsize\trooms\tassets\tends_at_section2\tfirst_rooms"
+    )?;
     let (mut total, mut sig_hits, mut parsed) = (0u64, 0u64, 0u64);
     let mut tors: Vec<_> = std::fs::read_dir(assets)?
         .filter_map(|e| e.ok().map(|e| e.path()))
@@ -108,19 +115,28 @@ fn scan(assets: &str, out: &str) -> Result<()> {
         .collect();
     tors.sort();
     for tor in tors {
-        let Ok(mut a) = Archive::open(&tor) else { continue };
+        let Ok(mut a) = Archive::open(&tor) else {
+            continue;
+        };
         let entries: Vec<FileEntry> = a.entries()?.cloned().collect();
         let mut f = File::open(&tor)?;
-        let name = tor.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = tor
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         for e in &entries {
             total += 1;
-            let Ok(h) = head(&mut f, e, 4 + SIG.len()) else { continue };
+            let Ok(h) = head(&mut f, e, 4 + SIG.len()) else {
+                continue;
+            };
             if h.len() < 4 + SIG.len() || &h[4..4 + SIG.len()] != SIG {
                 continue;
             }
             sig_hits += 1;
             let data = a.read_entry(e).context("read area.dat")?;
-            let Some((rooms, na, ends)) = parse_area(&data) else { continue };
+            let Some((rooms, na, ends)) = parse_area(&data) else {
+                continue;
+            };
             parsed += 1;
             let first: Vec<&str> = rooms.iter().take(6).map(|s| s.as_str()).collect();
             writeln!(
@@ -181,14 +197,22 @@ fn midstate(k: &[u8; 51]) -> (u32, u32, u32) {
     let init = 0xdeadbeef_u32.wrapping_add(51);
     let (mut a, mut b, mut c) = (init, init, init);
     for o in [0, 12] {
-        (a, b, c) = mix(a.wrapping_add(w(k, o)), b.wrapping_add(w(k, o + 4)), c.wrapping_add(w(k, o + 8)));
+        (a, b, c) = mix(
+            a.wrapping_add(w(k, o)),
+            b.wrapping_add(w(k, o + 4)),
+            c.wrapping_add(w(k, o + 8)),
+        );
     }
     (a, b, c)
 }
 
 fn fast_key_hash(k: &[u8; 51], (mut a, mut b, mut c): (u32, u32, u32)) -> u64 {
     for o in [24, 36] {
-        (a, b, c) = mix(a.wrapping_add(w(k, o)), b.wrapping_add(w(k, o + 4)), c.wrapping_add(w(k, o + 8)));
+        (a, b, c) = mix(
+            a.wrapping_add(w(k, o)),
+            b.wrapping_add(w(k, o + 4)),
+            c.wrapping_add(w(k, o + 8)),
+        );
     }
     a = a.wrapping_add(k[48] as u32 | (k[49] as u32) << 8 | (k[50] as u32) << 16);
     let (ph, sh) = final_mix(a, b, c);
@@ -213,17 +237,32 @@ fn name(scan_tsv: &str, known: &str, out: &str, bands: &[(u64, u64)]) -> Result<
             named.insert(h, (*id, "known"));
         }
     }
-    println!("area.dat entries {}  named by known ids {}", targets.len(), named.len());
-    let open: Arc<Vec<u64>> =
-        Arc::new(targets.keys().filter(|h| !named.contains_key(h)).copied().collect());
+    println!(
+        "area.dat entries {}  named by known ids {}",
+        targets.len(),
+        named.len()
+    );
+    let open: Arc<Vec<u64>> = Arc::new(
+        targets
+            .keys()
+            .filter(|h| !named.contains_key(h))
+            .copied()
+            .collect(),
+    );
     // The fast path must agree with kessel's hash on every 19-digit id.
     let probe = *b"/resources/world/areas/4611686043810670011/area.dat";
     let mid = midstate(&probe);
     anyhow::ensure!(fast_key_hash(&probe, mid) == key_hash(4611686043810670011));
-    anyhow::ensure!(bands.iter().all(|&(lo, hi)| lo >= 4_000_000_000_000_000_000
-        && hi <= 4_999_999_999_999_999_999), "bands must be 19-digit ids starting with 4");
+    anyhow::ensure!(
+        bands
+            .iter()
+            .all(|&(lo, hi)| lo >= 4_000_000_000_000_000_000 && hi <= 4_999_999_999_999_999_999),
+        "bands must be 19-digit ids starting with 4"
+    );
     let found: Arc<Mutex<Vec<(u64, u64)>>> = Arc::new(Mutex::new(Vec::new()));
-    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4) as u64;
+    let threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4) as u64;
     for &(lo, hi) in bands {
         let next = Arc::new(AtomicU64::new(lo));
         const CHUNK: u64 = 1 << 24;
@@ -272,13 +311,19 @@ fn name(scan_tsv: &str, known: &str, out: &str, bands: &[(u64, u64)]) -> Result<
         for h in hs {
             h.join().ok();
         }
-        println!("band {lo}..{hi} done, found so far {}", found.lock().map(|f| f.len()).unwrap_or(0));
+        println!(
+            "band {lo}..{hi} done, found so far {}",
+            found.lock().map(|f| f.len()).unwrap_or(0)
+        );
     }
     for (h, id) in found.lock().map(|f| f.clone()).unwrap_or_default() {
         named.insert(h, (id, "brute"));
     }
     let mut w = std::io::BufWriter::new(File::create(out)?);
-    writeln!(w, "area_id\thow\tarchive\thash\tsize\trooms\tassets\tends_at_section2\tfirst_rooms")?;
+    writeln!(
+        w,
+        "area_id\thow\tarchive\thash\tsize\trooms\tassets\tends_at_section2\tfirst_rooms"
+    )?;
     let mut rows: Vec<_> = targets.iter().collect();
     rows.sort_by_key(|(h, _)| named.get(h).map(|x| x.0).unwrap_or(0));
     let mut unnamed = 0;
