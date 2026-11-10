@@ -1,7 +1,10 @@
-"""Print the 'bowdaar influence' handler of the arena controller and the influence-check script, with their branch structure."""
+"""Print the 'bowdaar influence' handler of the arena controller and the influence-check script, with their branch structure.
+
+usage: python3 -I hydra_handler_dump.py <hyd.jsonl> <hydra fqn> [hydra fqn ...]  (prints handlers whose name contains "influence")
+"""
 import json, sys
-S = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/hyd.jsonl'
-want = sys.argv[1:]
+S = sys.argv[1]
+want = sys.argv[2:]
 for line in open(S):
     o = json.loads(line)
     f = o.get('fqn') or o.get('_fqn') or ''

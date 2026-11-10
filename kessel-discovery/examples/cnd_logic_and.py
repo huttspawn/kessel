@@ -1,7 +1,12 @@
-"""AND side of cndLogic: multi-clause conditions by name word, and level-range conditions."""
-import json, collections, re
-D = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/dec-conditions/'
-enums = json.load(open('/home/sean/projects/huttspawn/kessel/.claude/worktrees/agent-ab8be80fbd53ff57a/kessel/resources/gom_enums.json'))
+"""AND side of cndLogic: multi-clause conditions by name word, and level-range conditions.
+
+usage: python3 -I cnd_logic_and.py <cnd.jsonl> [gom_enums.json]  (default: kessel/resources/gom_enums.json in this repo)
+"""
+import json, collections, re, sys
+CND = sys.argv[1]
+import os
+ENUMS = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'kessel', 'resources', 'gom_enums.json')
+enums = json.load(open(ENUMS))
 CT = next(e for e in enums if e['hash'] == '7C7B7B6804EE5C1F')['members']
 def logic(v):
     x = v.get('9e352b11'); return x['enum'] if isinstance(x, dict) else 0
@@ -9,7 +14,7 @@ def ctype(c):
     x = c.get('04ee5c20'); return x['enum'] if isinstance(x, dict) else 0
 word = collections.Counter(); ex = collections.defaultdict(list)
 lvl = collections.Counter(); lvlex = []
-for line in open(D + 'cnd.jsonl'):
+for line in open(CND):
     o = json.loads(line); v = o['v']; cl = v.get('04ee5c1e') or []
     if len(cl) < 2: continue
     L = logic(v); toks = set(re.split(r'[._]', o['fqn']))

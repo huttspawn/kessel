@@ -1,9 +1,12 @@
 """Quest-state codes n in compiled conditions: for nodes that grant / end / progress quest Q,
-which state codes of Q does the node's own condition read, and with what literal and op."""
-import json, collections
-S = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/'
+which state codes of Q does the node's own condition read, and with what literal and op.
+
+usage: python3 -I quest_state_codes.py <qst.jsonl> <nodes.jsonl>
+"""
+import json, collections, sys
+QST, NODES = sys.argv[1], sys.argv[2]
 prefix = {}
-for line in open(S + 'dec-conditions/qst.jsonl'):
+for line in open(QST):
     o = json.loads(line); b = o['v'].get('e4ee1382')
     if isinstance(b, int): prefix[(b % (1 << 64)) >> 16] = o['fqn']
 def qref(t):
@@ -13,7 +16,7 @@ def qref(t):
 role_read = collections.Counter()      # (role, n, literal, op)
 any_read = collections.Counter()
 ops_seen = collections.Counter()
-for line in open(S + 'dec-conversation/nodes.jsonl'):
+for line in open(NODES):
     o = json.loads(line); f = o['f']; toks = f.get('bc126754') or []
     if len(toks) <= 3: continue
     roles = {}

@@ -1,6 +1,9 @@
-"""Stack validity with 3-7 as binary comparisons, and the complement pairs (4,7) (5,6) (3,12)."""
-import json, collections
-S = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/'
+"""Stack validity with 3-7 as binary comparisons, and the complement pairs (4,7) (5,6) (3,12).
+
+usage: python3 -I compiled_cmp_check.py <nodes.jsonl>
+"""
+import json, sys, collections
+NODES = sys.argv[1]
 BIN = {3, 4, 5, 6, 7, 8, 9, 11, 12}
 def valid(toks):
     st = 0
@@ -15,7 +18,7 @@ def valid(toks):
     return st == 1
 ok = bad = 0; badex = []
 pairs = collections.defaultdict(lambda: collections.defaultdict(list))
-for line in open(S + 'dec-conversation/nodes.jsonl'):
+for line in open(NODES):
     o = json.loads(line); toks = o['f'].get('bc126754') or []
     if not toks: continue
     if valid(toks): ok += 1

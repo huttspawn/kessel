@@ -1,7 +1,10 @@
 """Name every operand of ops 3-7 (conversation conditions and quest complex variables) and
-collect sibling comparisons of one (lhs, rhs) pair inside one conversation."""
-import json, collections
-S = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/'
+collect sibling comparisons of one (lhs, rhs) pair inside one conversation.
+
+usage: python3 -I compiled_cmp_ops.py <qst.jsonl> <nodes.jsonl>
+"""
+import json, collections, sys
+QST, NODES = sys.argv[1], sys.argv[2]
 var = {}; prefix = {}
 LIST_TYPE = {}
 def walk(v, q, lst=None):
@@ -12,7 +15,7 @@ def walk(v, q, lst=None):
     elif isinstance(v, list):
         for x in v: walk(x, q, lst)
 cplx = []
-for line in open(S + 'dec-conditions/qst.jsonl'):
+for line in open(QST):
     o = json.loads(line); walk(o['v'], o['fqn'])
     b = o['v'].get('e4ee1382')
     if isinstance(b, int): prefix[(b % (1 << 64)) >> 16] = o['fqn']
@@ -37,7 +40,7 @@ for fqn, n, toks in cplx:
         if u in CMP or u in (10, 12, 14, 15):
             cplx_ops[u] += 1
             if u in CMP and len(out[('cplx', u)]) < 15: out[('cplx', u)].append((fqn, n, [name(x) for x in toks]))
-for line in open(S + 'dec-conversation/nodes.jsonl'):
+for line in open(NODES):
     o = json.loads(line); toks = o['f'].get('bc126754') or []
     for i, t in enumerate(toks):
         u = t % (1 << 64)

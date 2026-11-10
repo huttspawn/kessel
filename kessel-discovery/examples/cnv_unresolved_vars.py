@@ -1,6 +1,9 @@
-"""The action-expression variables that resolve to no quest variable: where do they point?"""
-import json, collections
-S = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/'
+"""The action-expression variables that resolve to no quest variable: where do they point?
+
+usage: python3 -I cnv_unresolved_vars.py <qst.jsonl> <nodes.jsonl> <out unres_rows.json>
+"""
+import json, collections, sys
+QST, NODES, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 var = {}; prefix = {}; qfqn = set(); qprefix_of = {}; maxn = collections.defaultdict(int)
 def walk(v, q):
     if isinstance(v, dict):
@@ -8,13 +11,13 @@ def walk(v, q):
         for x in v.values(): walk(x, q)
     elif isinstance(v, list):
         for x in v: walk(x, q)
-for line in open(S + 'dec-conditions/qst.jsonl'):
+for line in open(QST):
     o = json.loads(line); qfqn.add(o['fqn']); walk(o['v'], o['fqn'])
     b = o['v'].get('e4ee1382')
     if isinstance(b, int): prefix[(b % (1 << 64)) >> 16] = o['fqn']; qprefix_of[o['fqn']] = (b % (1 << 64)) >> 16
 for u, (q, n) in var.items(): maxn[u >> 16] = max(maxn[u >> 16], u & 0xffff)
 C = collections.Counter(); rows = []
-for line in open(S + 'dec-conversation/nodes.jsonl'):
+for line in open(NODES):
     o = json.loads(line); f = o['f']; e = f.get('bc126752') or []
     if not e: continue
     a, b, op = e; ua = a % (1 << 64)
@@ -29,4 +32,4 @@ for line in open(S + 'dec-conversation/nodes.jsonl'):
     rows.append((o['fqn'], o['node'], qn, hook, kind, p, ua & 0xffff, b, op))
 print(C.most_common())
 for r in rows[:40]: print(r)
-json.dump(rows, open(S + 'dec-logic/unres_rows.json', 'w'))
+json.dump(rows, open(OUT, 'w'))

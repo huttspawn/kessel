@@ -1,8 +1,13 @@
 """cndLogic proof: clauses that cannot hold together (two different classes, two different
-disciplines, two different quest-states of one quest...) never sit under AND; and the XOR / type-137 cases."""
-import json, collections
-D = '/home/sean/.claude/tmp/claude-1000/-home-sean-projects-huttspawn-kessel/1753a034-d040-4309-83e8-0c4f3c34307a/scratchpad/dec-conditions/'
-enums = json.load(open('/home/sean/projects/huttspawn/kessel/.claude/worktrees/agent-ab8be80fbd53ff57a/kessel/resources/gom_enums.json'))
+disciplines, two different quest-states of one quest...) never sit under AND; and the XOR / type-137 cases.
+
+usage: python3 -I cnd_logic_or.py <cnd.jsonl> [gom_enums.json]  (default: kessel/resources/gom_enums.json in this repo)
+"""
+import json, collections, sys
+CND = sys.argv[1]
+import os
+ENUMS = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'kessel', 'resources', 'gom_enums.json')
+enums = json.load(open(ENUMS))
 CT = next(e for e in enums if e['hash'] == '7C7B7B6804EE5C1F')['members']
 def logic(v):
     x = v.get('9e352b11'); return x['enum'] if isinstance(x, dict) else 0
@@ -11,7 +16,7 @@ def ctype(c):
 cnt = collections.Counter(); excl = collections.Counter(); examples = collections.defaultdict(list)
 types_by_logic = collections.defaultdict(collections.Counter)
 xor = []; t137 = []; single = collections.Counter()
-for line in open(D + 'cnd.jsonl'):
+for line in open(CND):
     o = json.loads(line); v = o['v']; L = logic(v); cl = v.get('04ee5c1e') or []
     cnt[L] += 1
     if len(cl) == 1: single[L] += 1

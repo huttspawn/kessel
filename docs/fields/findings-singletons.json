@@ -1730,5 +1730,10 @@
   "meaning": "String ref (id1 only, table lgc/unlocks.stb id2 656577): title of a legacy unlock. For datacron unlocks it names the planet and the stat (Mastery, Endurance, Presence; old Willpower/Strength/Aim/Cunning datacrons now read Mastery).",
   "evidence": "249 rows. qst.location.tython.data_holocron.tyt_willpower_i (9ca4acd0) -> 740 'Tython Purple Mastery Datacron'; hot_cunningiii -> 709 'Hoth Orange Mastery Datacron'; tar2_willpoweriii -> 734 'Taris (Imperial) Purple Mastery Datacron'. 89 datacron rows (icon datacron_*), all with requirement 759 'Discover the location of the datacron to unlock.' and none with an effect text (74cafaa2) or an amount field.",
   "confidence": "proved"
+ },
+ "4000000ddd1e5927": {
+  "confidence": "proved",
+  "evidence": "1.0 on all 189 companions in chrCompanionInfo_Prototype (live 7.x); beside chrCompanionInfo_starting/minimum/maximum_affection (10,000 / -1,000 / 10,000). Influence scaling that does vary lives in player stats instead: stat_affection_conversation (Legacy of Persuasion), stat_affection_gift (Legacy of Altruism), stat_influence_accrual_rate (amplifier amp.companions.influential). RESEARCH 01a1c2f6-bd28 rev 2.",
+  "meaning": "chrCompanionInfo_affectionMultiplier: per-companion multiplier on influence gained; 1.0 for every companion, so it changes nothing in 7.x."
  }
 }
