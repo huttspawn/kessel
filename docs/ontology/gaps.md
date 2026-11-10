@@ -613,7 +613,7 @@ One row per field, grouped as above; unsettled first, then constants, then likel
 
 ## Status against the ledger (2026-11-09, RESEARCH 01a1c37a-f07f, #429 criterion 8)
 
-Each work item above is settled, server-side (proved not determinable from the client) or open. Ledger ids (S, N, F, G, O) are entries of the ledger RESEARCH document.
+Each work item above is settled, server-side (proved not determinable from the client) or open. Ledger ids (S, N, F, G, X, O) are entries of the ledger RESEARCH document.
 
 | # | Status | Where |
 |---|---|---|
@@ -625,20 +625,20 @@ Each work item above is settled, server-side (proved not determinable from the c
 | A6 | settled, partly server-side | 01a1c27b-e018, 01a1c30d-9b55; N1, N2, S17, G5 |
 | A7 | settled | 01a1c27b-e018, 01a1c30d-9b55; N4, N5 |
 | A8 | settled | 01a1c274-7763, 01a1c317-41c1; G7 |
-| A9 | settled, partly server-side | 01a1c274-7763; S15, S16 |
+| A9 | settled, partly server-side | 01a1c274-7763 and this document (damage profiles join environmental abilities); S16 |
 | A10 | server-side | 01a1c27a-8233; S1, S2 |
-| A11 | server-side | 01a1c27a-8293; S3 |
-| A12 | settled, partly server-side | 01a1c276-198b; S13, G8 |
+| A11 | not in client; community lists partial | 01a1c27a-8293; X1 |
+| A12 | settled, partly server-side or published | 01a1c276-198b; X4 |
 | A13 | settled, partly server-side | 01a1c272-3c4b, 01a1c2f6-bd28; S9 |
 | A14 | settled | 01a1c27a-82e9 |
 | A15 | settled | 01a1c27a-8368 |
 | A16 | settled | 01a1c274-7763, 01a1c317-41c1; N11; hide timing O5 |
-| A17 | settled, partly not in client | 01a1c273-7695; N13; chassis O1 |
+| A17 | settled | 01a1c273-7695 and this document (chassis stats in pkg.spvp.*); N13 |
 | B1 | settled except one table | 01a1c274-6ac6, 01a1c30d-73cd; cbtStandardRatingInfo O3 |
 | B2 | settled, bases server-side | 01a1c274-6ac6, 01a1c30f-29f2; S7; Valkorion O2 |
 | B3 | settled, partly server-side | 01a1c274-edd7, 01a1c0ce-44dd; N10 |
-| B4 | server-side | 01a1c27b-2833; S5 |
-| B5 | needs in-game test | 01a1c274-edd7; G1, G2 |
+| B4 | not in client; community-measured | 01a1c27b-2833; X3 |
+| B5 | c788046b settled; XP formula needs in-game test | 01a1c274-edd7 and this document; G2 |
 | B6 | server-side | 01a1c274-edd7; S12 |
 | B7 | server-side | 01a1c276-cbce; S6 |
 | B8 | server-side (chrPaidPermissionId proved) | 01a1c276-cbce; S6, N6 |

@@ -1755,5 +1755,15 @@
   "confidence": "proved",
   "meaning": "qstErasOrderMap: era order 1..9 -> the era spec ids at that order (8 class specs at 1, one or two faction specs after).",
   "evidence": "Keys 1-9 hold 8, 2, 2, 2, 1, 1, 2, 2, 2 spec ids, each a key of qstErasMap 400000459584dda3; qstEraHighestOrder 400003d349602b50 = 9. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "4000004ce133970b": {
+  "confidence": "proved",
+  "evidence": "All 40 scFFShipsDataPrototype ship records name one of the 5 class packages (scout 8, striker 8, gunship 10, bomber 8, infiltrator 6); the 25 drone records and the 1 vehicle record name pkg.spvp.drone.*. The packages are the only pkg objects besides the 13 profession trainers. RESEARCH 01a1c37a-f07f rev 2.",
+  "meaning": "scFFShipStatPackage: the stat package a GSF ship, drone or vehicle draws its base stats from (@pkg.spvp.<class>)."
+ },
+ "4000004ce133970d": {
+  "confidence": "proved",
+  "evidence": "On the 20 pkg.spvp.* packages: STAT_cbt_health_max (hull) scout 1,050, striker 1,525, gunship 1,250, infiltrator 1,350, bomber 2,000; stat_spc_power_shields_max (shield capacity) 2,600, 4,250, 3,400, 3,000, 3,000; STAT_spc_power_shieldsregenrate 130-198; stat_spc_power_blasters_max and engines_max 90-125; sensor ranges, defense, damage reduction and power-management factors (44 STAT keys). Component talents (tal.spvp.minor_armor.hull_strength.*) are percentages on top. Keys are the STAT enum (gom_enums.json). Tool kessel-discovery/examples/gsf_ship_stats.py; RESEARCH 01a1c37a-f07f rev 2.",
+  "meaning": "scFFShipStatPackageStats: STAT enum -> base value map of a GSF stat package: the chassis hull, shield capacity and regen, power pools, sensors and handling."
  }
 }
