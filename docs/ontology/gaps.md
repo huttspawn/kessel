@@ -620,11 +620,11 @@ Each work item above is settled, server-side (proved not determinable from the c
 | A1 | settled | 01a1c27b-2797; residue N12, NAMEn slot-to-discipline map not decoded (open, criterion 1/2) |
 | A2 | settled | 01a1c272-3bdf, 01a1c2f6-bd28 (op 15 by worked value); N8 |
 | A3 | settled | 01a1c27b-e018, 01a1c30d-9b55 (all 47 hook names); the branch of a multi-branch ON END is player state |
-| A4 | settled | 01a1c26d-3f4a, 01a1c2b9-b2b8, 01a1c317-41c1; N7, N9 |
+| A4 | settled | 01a1c26d-3f4a, 01a1c2b9-b2b8, 01a1c317-41c1; N7; 10 bonus-mission starters not in the client (N9) |
 | A5 | settled | 01a1c26d-3f4a, 01a1c2f6-a868; N3 |
-| A6 | settled, partly server-side | 01a1c27b-e018, 01a1c30d-9b55; N1, N2, S17, G5 |
+| A6 | settled, partly server-side | 01a1c27b-e018, 01a1c30d-9b55; N1, N2, S17; counter keys settled by consumer text (this document) |
 | A7 | settled | 01a1c27b-e018, 01a1c30d-9b55; N4, N5 |
-| A8 | settled | 01a1c274-7763, 01a1c317-41c1; G7 |
+| A8 | settled | 01a1c274-7763, 01a1c317-41c1; the 'Space' log area is settled (this document) |
 | A9 | settled, partly server-side | 01a1c274-7763 and this document (damage profiles join environmental abilities); S16 |
 | A10 | server-side | 01a1c27a-8233; S1, S2 |
 | A11 | not in client; community lists partial | 01a1c27a-8293; X1 |
@@ -632,7 +632,7 @@ Each work item above is settled, server-side (proved not determinable from the c
 | A13 | settled, partly server-side | 01a1c272-3c4b, 01a1c2f6-bd28; S9 |
 | A14 | settled | 01a1c27a-82e9 |
 | A15 | settled | 01a1c27a-8368 |
-| A16 | settled | 01a1c274-7763, 01a1c317-41c1; N11; hide timing O5 |
+| A16 | settled | 01a1c274-7763, 01a1c317-41c1; N11; hide timing O5; the 203 map-data areas with no area file are explained (RESEARCH 01a1c393-10f8: dev greyboxes 86, stubs 71, the cut first-expansion class story 24, pre-release copies 13, phases 6, placeholder keys 2, Ord Mantell Station 1) |
 | A17 | settled | 01a1c273-7695 and this document (chassis stats in pkg.spvp.*); N13 |
 | B1 | settled except one table | 01a1c274-6ac6, 01a1c30d-73cd; cbtStandardRatingInfo O3 |
 | B2 | settled, bases server-side | 01a1c274-6ac6, 01a1c30f-29f2; S7; Valkorion O2 |
@@ -650,3 +650,5 @@ Each work item above is settled, server-side (proved not determinable from the c
 | C4 | settled | 9,463 Quest objects in the unfiltered extract |
 | C5 | server-side | 01a1c274-7763; S10 |
 | C6 | server-side | S12; positions come from room .dat placements |
+
+The 203 areas the map data names with no area file are explained (RESEARCH 01a1c393-10f8): dev greyboxes 86, stubs 71, the cut first-expansion class story 24, pre-release copies 13, phases 6, placeholder keys 2, Ord Mantell Station 1.
