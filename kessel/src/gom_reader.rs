@@ -139,12 +139,18 @@ impl GomValue {
 pub struct Reader<'a> {
     buf: &'a [u8],
     pos: usize,
+    /// When set, every embedded field read: its id and the type tag the wire gives it.
+    field_tags: Option<Vec<(u64, u8)>>,
 }
 
 impl<'a> Reader<'a> {
     /// A reader positioned at `pos` within `buf`.
     pub fn new(buf: &'a [u8], pos: usize) -> Self {
-        Reader { buf, pos }
+        Reader {
+            buf,
+            pos,
+            field_tags: None,
+        }
     }
 
     /// Current cursor position within the payload.
@@ -367,7 +373,11 @@ impl<'a> Reader<'a> {
         let mut field_id: u64 = 0;
         for _ in 0..num_fields {
             field_id = field_id.wrapping_add(self.read_number()?);
-            let value = self.read_tagged()?;
+            let tag = self.read_u8()?;
+            if let Some(tags) = &mut self.field_tags {
+                tags.push((field_id, tag));
+            }
+            let value = self.read_value(tag)?;
             fields.push((field_id, value));
         }
         Ok(GomValue::Embedded(fields))
@@ -435,6 +445,28 @@ pub fn read_framed_object(header: &[u8], payload: &[u8]) -> Result<(GomValue, us
     let mut reader = Reader::new(payload, start);
     let value = reader.read_object()?;
     Ok((value, reader.pos()))
+}
+
+/// Every embedded field in a stream, at any depth, with the type tag the wire gives its value,
+/// in read order. A framed object when `graph` is false; a conversation's node graph, the
+/// object after the payload's 33-byte preamble, when it is true. `None` when the stream does
+/// not read to its end (a graph) or cannot be read.
+pub fn field_tags(header: &[u8], payload: &[u8], graph: bool) -> Option<Vec<(u64, u8)>> {
+    let start = if graph {
+        33
+    } else {
+        if header.get(32..36) == Some(&[0, 0, 0, 0]) {
+            return Some(Vec::new());
+        }
+        field_stream_start(header, payload.len())?
+    };
+    let mut reader = Reader::new(payload, start);
+    reader.field_tags = Some(Vec::new());
+    reader.read_object().ok()?;
+    if graph && reader.pos != payload.len() {
+        return None;
+    }
+    reader.field_tags
 }
 
 #[cfg(test)]
@@ -620,5 +652,34 @@ mod tests {
         assert_eq!(GomValue::I64(-5).as_i64(), Some(-5));
         assert_eq!(GomValue::U64(7).as_i64(), Some(7));
         assert_eq!(GomValue::Str("x".into()).as_i64(), None);
+    }
+
+    #[test]
+    fn field_tags_gives_each_field_its_wire_tag_at_any_depth() {
+        let mut header = [0u8; 42];
+        header[32] = 1;
+        // Two fields: 5 a number, 7 an embedded object holding field 9, a string.
+        let payload = [
+            0x00,
+            0x02,
+            0x05,
+            tag::UINT64,
+            0x03,
+            0x02,
+            tag::EMBEDDED,
+            0x00,
+            0x01,
+            0x09,
+            tag::STRING,
+            0x01,
+            b'a',
+        ];
+        assert_eq!(
+            field_tags(&header, &payload, false),
+            Some(vec![(5, tag::UINT64), (7, tag::EMBEDDED), (9, tag::STRING)])
+        );
+        assert_eq!(field_tags(&header, &payload[..5], false), None);
+        header[32] = 0;
+        assert_eq!(field_tags(&header, &payload, false), Some(Vec::new()));
     }
 }

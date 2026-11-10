@@ -92,13 +92,15 @@ impl<'a> Cursor<'a> {
     }
 }
 
+/// True when `data` begins with an area.dat's signature.
+pub fn is_area_dat(data: &[u8]) -> bool {
+    data.get(4..26) == Some(b"AREA_DAT_BINARY_FORMAT")
+}
+
 /// Read an area.dat's room names and asset table.
 pub fn read_area(data: &[u8]) -> Result<AreaDat> {
+    ensure!(is_area_dat(data), "not an area.dat");
     let mut c = Cursor { data, pos: 0 };
-    ensure!(
-        c.len_string()?.starts_with("AREA_DAT_BINARY_FORMAT"),
-        "not an area.dat"
-    );
     c.pos = ROOM_LIST_OFFSET;
     let rooms = (0..c.u32()?)
         .map(|_| c.len_string())
@@ -453,5 +455,16 @@ mod tests {
         let close = |a: [f64; 3], b: [f64; 3]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-4);
         assert!(close(lo, [-30.0, -10.0, -20.0]), "{lo:?}");
         assert!(close(hi, [30.0, 10.0, 20.0]), "{hi:?}");
+    }
+
+    #[test]
+    fn is_area_dat_reads_the_signature() {
+        let mut d = Vec::new();
+        len_str(&mut d, "AREA_DAT_BINARY_FORMAT_");
+        assert!(is_area_dat(&d));
+        let mut room = Vec::new();
+        len_str(&mut room, "ROOM_DAT_BINARY_FORMAT_");
+        assert!(!is_area_dat(&room));
+        assert!(!is_area_dat(&[0xff, 0xff, 0xff, 0xff]));
     }
 }

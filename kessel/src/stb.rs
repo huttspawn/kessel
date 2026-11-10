@@ -144,6 +144,36 @@ pub fn parse(data: &[u8], path: &str) -> Result<StbFile> {
     })
 }
 
+/// True when `data` reads as a whole string table: the 0x01 version, two zero bytes, a count
+/// whose entries fit, and every entry's text inside the data and after the entries; with no
+/// entries, nothing after the header.
+pub fn is_stb(data: &[u8]) -> bool {
+    if data.len() < HEADER_SIZE || data[..3] != [0x01, 0, 0] {
+        return false;
+    }
+    let count = u32::from_le_bytes([data[3], data[4], data[5], data[6]]) as usize;
+    let Some(end) = count
+        .checked_mul(ENTRY_SIZE)
+        .and_then(|n| n.checked_add(HEADER_SIZE))
+        .filter(|end| *end <= data.len())
+    else {
+        return false;
+    };
+    // An empty table is the header alone; audio banks begin like one and go on.
+    if count == 0 {
+        return data.len() == HEADER_SIZE;
+    }
+    data[HEADER_SIZE..end]
+        .as_chunks::<ENTRY_SIZE>()
+        .0
+        .iter()
+        .all(|e| {
+            let len = u32::from_le_bytes([e[14], e[15], e[16], e[17]]) as usize;
+            let offset = u32::from_le_bytes([e[18], e[19], e[20], e[21]]) as usize;
+            len == 0 || (offset >= end && offset.checked_add(len).is_some_and(|x| x <= data.len()))
+        })
+}
+
 /// The kind of a second entry of an (id1, id2) key, from its flags' low
 /// byte: 0x50 is a dialogue option's wheel text, 0x46 a female variant.
 pub fn variant_kind(flags: u16) -> &'static str {
@@ -667,5 +697,22 @@ mod tests {
         for (path, ph, sh) in cases {
             assert_eq!(derived.get(&combine_hash(*ph, *sh)), Some(path));
         }
+    }
+
+    #[test]
+    fn is_stb_takes_whole_tables_and_not_audio_banks() {
+        let mut table = vec![0x01, 0, 0, 1, 0, 0, 0];
+        let mut entry = [0u8; 26];
+        entry[14] = 2;
+        entry[18] = 33;
+        table.extend_from_slice(&entry);
+        table.extend_from_slice(b"hi");
+        assert!(is_stb(&table));
+        assert!(is_stb(&[0x01, 0, 0, 0, 0, 0, 0]));
+        // An .acb audio bank: a zero count, then its name.
+        assert!(!is_stb(b"\x01\x00\x00\x00\x00\x00\x00\x00cnv_location"));
+        table[7 + 18] = 200;
+        assert!(!is_stb(&table), "text past the end");
+        assert!(!is_stb(b"PBUK\x00\x00\x00"));
     }
 }
