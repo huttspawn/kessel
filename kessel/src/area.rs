@@ -94,9 +94,7 @@ impl<'a> Cursor<'a> {
 
 /// True when `data` begins with an area.dat's signature.
 pub fn is_area_dat(data: &[u8]) -> bool {
-    Cursor { data, pos: 0 }
-        .len_string()
-        .is_ok_and(|s| s.starts_with("AREA_DAT_BINARY_FORMAT"))
+    data.get(4..26) == Some(b"AREA_DAT_BINARY_FORMAT")
 }
 
 /// Read an area.dat's room names and asset table.
