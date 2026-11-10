@@ -82,7 +82,7 @@
   "meaning": "Reference to the crew skill's basic crafting table: key of prfCraftingTableSpecMap."
  },
  "40000009af9f120f": {
-  "reason": "Distinct id per area on 59 of 253, mostly main planets (Tatooine, Coruscant, Dromund Kaas, Hutta...). Resolves to no object, string, or other field. Hint says loot package, which nothing shows. Server loot data would settle it."
+  "reason": "Distinct id per area on 59 of 253, mostly main planets (Tatooine, Coruscant, Dromund Kaas, Hutta...). Resolves to no object, string, or other field. Hint says loot package, which nothing shows. Server loot data would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000000a8d28eff9": {
   "reason": "Int on all 334 space ships: 3000 x316, 1000 x16, 5000 x2. The 1000s include player-class engines (sc_engine_bountyhunter, smuggler, sith, trooper) with 1800 or 1500 hit points. Possibly ms or a range, the data cannot tell; flying the space mission against one would."
@@ -101,7 +101,7 @@
   "reason": "Value 100 on all 3,174 mission-result rows, one row per result enum. A constant in a one-row list cannot show whether it is a weight (the hint) or a percentage. A mission result list with two rows, or server code, would settle it."
  },
  "4000000bc36d0a85": {
-  "reason": "One id per crew-mission result row, 1,313 distinct, 86 of 968 on result 0 and always on results 1 and 2, so it plausibly picks a treasure package as the hint says. The ids match no object, stable id, string or other singleton field, including all object payloads. A decoded server treasure table would settle it."
+  "reason": "One id per crew-mission result row, 1,313 distinct, 86 of 968 on result 0 and always on results 1 and 2, so it plausibly picks a treasure package as the hint says. The ids match no object, stable id, string or other singleton field, including all object payloads. A decoded server treasure table would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000000d37e9a07e": {
   "reason": "Single 2 in PvP settings. Hint 'shutdown imbalance' and the 37e9a0xx run; no value test possible; an early warzone shutdown check would settle it."
@@ -394,7 +394,7 @@
   "reason": "Integer 1-250 on 447 of 448 macrobinocular targets (2 x144, 1 x56, 5 x55). Reads as a priority or rank but no sibling or target property orders by it; hint says mouse selection. Scanning overlapping targets in game would test it."
  },
  "40000040b6a43670": {
-  "reason": "Not in the client. A 64-bit FNV-1a name hash on 9 boost rows, the same kind as 40000040c28dfca0 (see there). No client string, object FQN, STB text or permission-name variant hashes to any of the 9 values; it is not another row's chrPaidPermissionId. The named thing is server-side."
+  "reason": "Not in the client. A 64-bit FNV-1a name hash on 9 boost rows, the same kind as 40000040c28dfca0 (see there). No client string, object FQN, STB text or permission-name variant hashes to any of the 9 values; it is not another row's chrPaidPermissionId. The named thing is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "40000040b6a43671": {
   "confidence": "proved",
@@ -402,7 +402,7 @@
   "meaning": "Index list of the paid permissions that carry c28dfca0 or b6a43670."
  },
  "40000040c28dfca0": {
-  "reason": "Not in the client. A 64-bit name hash on 12 boost rows (prf.criticals, prf.research, xp.undebuff and _2 to _5, valor.undebuff, the three prf.skill increase_chance rows, rep.bonus_gain_rate). The values are FNV-1a 64 hashes, like chrPaidPermissionId: for xp.undebuff_2 to _5, multiplying each by the inverse of the FNV prime leaves values that differ only in the low byte, by exactly '2' xor '3' = 1, '2' xor '4' = 6, '2' xor '5' = 7, so the four names differ only in a last character 2, 3, 4, 5. No client string, object FQN, STB text or permission name (with common prefixes and suffixes) hashes to any of them (8.5 million candidates), so the named thing (likely a server stat or tweakable) is server-side."
+  "reason": "Not in the client. A 64-bit name hash on 12 boost rows (prf.criticals, prf.research, xp.undebuff and _2 to _5, valor.undebuff, the three prf.skill increase_chance rows, rep.bonus_gain_rate). The values are FNV-1a 64 hashes, like chrPaidPermissionId: for xp.undebuff_2 to _5, multiplying each by the inverse of the FNV prime leaves values that differ only in the low byte, by exactly '2' xor '3' = 1, '2' xor '4' = 6, '2' xor '5' = 7, so the four names differ only in a last character 2, 3, 4, 5. No client string, object FQN, STB text or permission name (with common prefixes and suffixes) hashes to any of them (8.5 million candidates), so the named thing (likely a server stat or tweakable) is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "40000040c3935eb2": {
   "confidence": "proved",
@@ -800,7 +800,9 @@
   "meaning": "Default exit of a flagship area: key into that area's gldFlagshipAreaExitMap."
  },
  "400000420902e502": {
-  "reason": "3 achievement-event-like E000 ids per decoration subcategory. 6 of 63 are keys of lgcAchievementEvents, and those fire @ach.strongholds.decorations.collect_* (e.g. Biological -> collect_environmental_1/2/3). The other 57 resolve nowhere, one on 64 rows. So it is probably 'event fired when you collect decorations in this subcategory' but most values are unconfirmed; acquiring a decoration while logging events would settle it."
+  "confidence": "likely",
+  "meaning": "The three achievement event codes a stronghold decoration subcategory raises: [its own code, its category's code, the all-decorations root code].",
+  "evidence": "decSubCategoriesTable: 62 subcategory rows (key = FNV-1a 64 of the subcategory's gui/auctionhouse.stb name on 51 of 62: Decals, Biological, Couches, ...), each list [own, parent, root]. The third is E0007154E1FE6065 on all 62; the second takes 12 values, 11 of which are the own code of a category row whose list is [X, X, root] (the 'All' rows), and the row's 8da19698 is the category key that e56994ec lists it under on 62 of 62. 6 of the 63 codes are keys of lgcAchievementEvents and fire ach.strongholds.decorations.collect_* (Biological -> collect_environmental_1/2/3). The codes are 0xE000 event codes (fold of an event name); none of the 63 is the fold or FNV-1a 64 of any dec.* FQN prefix, subcategory name or other client string (registry pass sweep, 73M variants), so the event names are server-side or built at run time. Acquiring a decoration while an achievement counts would prove it."
  },
  "400000420c879ea0": {
   "confidence": "proved",
@@ -823,23 +825,23 @@
   "meaning": "Level cap."
  },
  "4000004273335770": {
-  "reason": "Constant 8463396652490197606 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it."
+  "reason": "Constant 8463396652490197606 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004273335771": {
-  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it."
+  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004273335772": {
-  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it."
+  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "400000427f381fb0": {
-  "confidence": "likely",
-  "evidence": "Each value has one paired level (4217349595677118970 with 70, 4215506814188615784 with 50, 4221144010305318231 with 37 or 33), except 3 areas with no level. 9922612179959598498 on stronghold_rishi_pirate also appears as mmsMatchmaker 558f7b72. The id resolves to nothing, so its exact role is not shown.",
-  "meaning": "Id of the level-sync setting paired with 7f381fb1."
+  "confidence": "proved",
+  "meaning": "Level-sync setting of an area: FNV-1a 64 of a fixed prefix plus the sync level (paired level in 7f381fb1).",
+  "evidence": "Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). 94 of 95 values decode to a level, and it equals the paired 7f381fb1 on 91; 2 have no paired level and 1 encodes 37 beside 33. The one unresolved value, 0x89b433349674cda2 on stronghold_rishi_pirate, is also mmsMatchmakers 2558f7b72 on 8 of 10 queues. Phase field 44ab8218d0 holds values from the same family."
  },
  "400000427f381fb1": {
-  "confidence": "likely",
-  "evidence": "hut_main, tython_blockout, ord_resize, kor_rebuild_test 10; ald_main 33; dan_main, ossus_main, iokath 70; meksha_main, onderon_main 75. Higher on later worlds. Fits the hint; the sync was not observed in game.",
-  "meaning": "Level to which this area syncs characters."
+  "confidence": "proved",
+  "meaning": "Level to which this area syncs characters.",
+  "evidence": "Equals the level encoded in the area's own level-sync setting name (7f381fb0, FNV-1a 64 of a fixed prefix plus the level) on 91 of 92 rows; the exception pairs 33 with a setting named for 37. hut_main, tython_blockout, ord_resize, kor_rebuild_test 10; ald_main 33; dan_main, ossus_main, iokath 70; meksha_main, onderon_main 75. The sync itself was not observed in game."
  },
  "400000429bb759d0": {
   "confidence": "proved",
@@ -1310,9 +1312,9 @@
   "reason": "Single value 2000 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
  "4000004d572d4fd1": {
-  "confidence": "likely",
-  "evidence": "11 of 17 skirmishes [0]; TDM ones list -1776755446276976708 etc., which join sndAudioRegions, phsInstance names and load screens. Exact list rule not shown.",
-  "meaning": "Skirmish's map variants or areas: list of area-related ids, 0 for none."
+  "confidence": "proved",
+  "meaning": "The space maps a GSF skirmish runs on: a list of FNV-1a 64 hashes of uppercased map names, [0] for none.",
+  "evidence": "All 4 distinct non-zero values (7 uses) are FNV-1a 64 of map names: spvp_001 (e757b255d3eb8fbc), spvp_002 (e757b555d3eb94d5), spvp_003 (e757b455d3eb9322) and test (0ed8a7fa7d902e25); 11 of 17 skirmishes hold [0]. The spvp_* names are the GSF space areas (sysAreaInfoTable spvp_* rows). Found by kessel-discovery/examples/registry_hash_match.py."
  },
  "4000004d57caef38": {
   "reason": "Single value 10 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
@@ -1397,7 +1399,7 @@
   "meaning": "Command points needed to complete each Galactic Command rank."
  },
  "4000004ec1cae6b2": {
-  "reason": "One constant 17422568960780474198 on all 999 ranks. Resolves to no object, string or other singleton field. A rank with a different reward or an in-game rank-up inspection may settle it."
+  "reason": "One constant 17422568960780474198 on all 999 ranks. Resolves to no object, string or other singleton field. A rank with a different reward or an in-game rank-up inspection may settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004ec4e32328": {
   "confidence": "likely",
@@ -1481,10 +1483,10 @@
   "reason": "Single 240000 in a run of 5: 480000, 0.1, 0.1, 240000, 240000. The large ones look like 8 and 4 minutes in ms, with two factors, but their subject is not in the data."
  },
  "4000004eed05cbac": {
-  "reason": "Single id 4089735489459046769. Resolves to no object, string, or singleton field. A client lookup table would settle it."
+  "reason": "Single id 4089735489459046769. Resolves to no object, string, or singleton field. A client lookup table would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004eed05cbad": {
-  "reason": "Single id -2326155948441634526. Resolves to no object, string, or singleton field. A client lookup table would settle it."
+  "reason": "Single id -2326155948441634526. Resolves to no object, string, or singleton field. A client lookup table would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004ef01cf6b9": {
   "reason": "True on one area, iokath_daily. One use cannot show what is special; compare Iokath daily area with others."
@@ -1542,8 +1544,8 @@
  },
  "400003d2558f7b72": {
   "confidence": "likely",
-  "evidence": "8 of 10 queues share -8524131893749953118, which as u64 is 9922612179959598498, the 7f381fb0 of stronghold_rishi_pirate. That is its only other use; the id itself resolves nowhere.",
-  "meaning": "Level-sync setting id for a matchmaking queue, the same kind as sysArea 7f381fb0."
+  "meaning": "Level-sync setting id for a matchmaking queue, the same kind as sysArea 7f381fb0.",
+  "evidence": "8 of 10 queues share 0x89b433349674cda2 (-8524131893749953118), the 7f381fb0 of stronghold_rishi_pirate and its only other use. The other 94 sysArea settings are FNV-1a 64 of one prefix plus the sync level; this value is not that prefix plus any 1-4 character suffix, so it is a differently named setting (plausibly no sync), not shown."
  },
  "400003d257e04946": {
   "confidence": "proved",
@@ -1556,10 +1558,10 @@
   "meaning": "Class's starting fleet area name."
  },
  "400003d257e440e0": {
-  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it."
+  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "400003d257e440e1": {
-  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it."
+  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "400003d26f1f36c0": {
   "confidence": "likely",
@@ -1591,8 +1593,8 @@
  },
  "400003d320920091": {
   "confidence": "likely",
-  "evidence": "chrFactionPackagesPrototype. republic -> [republic], empire -> [empire], republic_no_defend -> [republic], and coalition_* lists republic and -9109750429590205317; 34 of 69 are empty. Hint chrCurrentAnimSpeedType does not fit and is rejected.",
-  "meaning": "Factions this faction counts as belonging to or aligned with: list of faction ids."
+  "meaning": "Factions this faction counts as belonging to or aligned with: list of faction ids, each FNV-1a 64 of an uppercased faction name.",
+  "evidence": "chrFactionPackagesPrototype keys are FNV-1a 64 of the faction's own name field f2f87997 on 69 of 69 rows, and 35 of the 50 list members are such keys: republic -> [republic], empire -> [empire], empire_utility_npc -> [empire]. The other 15 are two names held by no row: -9109750429590205317 always beside republic (coalition_*, friendly_all, PvP_Pets, player_friendly_scripted_hostile_a/b) and -7295637456547716065 beside empire (friendly, neutralguard, defend_players_real_damage), plausibly the two player sides; 91 faction-name tokens in 1-3 word combinations match neither. 34 of 69 lists are empty. That the list means allegiance is read from these pairings, not observed."
  },
  "400003d326fc002d": {
   "confidence": "proved",

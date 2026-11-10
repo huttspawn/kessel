@@ -25,9 +25,9 @@
   "meaning": "qstXpLevel: the quest's level for XP and credit rewards; indexes the curves in qstExperiencePerLevel and qstRewardsPerLevelData."
  },
  "40000000b0e9baf2": {
-  "confidence": "likely",
-  "evidence": "Value 3 on Droid Repossession, which TORCommunity mission UdMKxSB ([HEROIC 2+] Droid Repossession; TORCommunity data is a 2020 snapshot) calls qstDifficultyNormal; the XP multiplier at index 3 is exactly 1.0 and the credit scale rows in the same name order give Normal = 1. Only value 3 is checked against a published name; the other indices follow the order of qstrewardscreditsdifficultyscale.",
-  "meaning": "qstDifficulty, 0-based: 0 NoExp, 1 ChainStep, 2 Easy, 3 Normal, 4 Hard, 5 VeryHard, 6 SeasonOne, 7 SeasonTwo, 8 LotS. Selects the XP multiplier (qstExperienceMultiplierPrototype) and the credit scale (qstrewardscreditsdifficultyscale, whose own index for the same names is 1-based)."
+  "confidence": "proved",
+  "meaning": "qstDifficulty, 0-based: 0 NoExp, 1 ChainStep, 2 Easy, 3 Normal, 4 Hard, 5 VeryHard, 6 SeasonOne, 7 SeasonTwo, 8 LotS. Selects the XP multiplier (qstExperienceMultiplierPrototype) and the credit scale (qstrewardscreditsdifficultyscale, whose own index for the same names is 1-based).",
+  "evidence": "Value 3 on Droid Repossession, which TORCommunity mission UdMKxSB calls qstDifficultyNormal, and the XP multiplier at index 3 is exactly 1.0. The era indices match the content they sit on (kessel-discovery/examples/registry_quest_difficulty.py, unfiltered extract): 6 SeasonOne on 15 qst.exp.seasons.01 chapters (KotFE, Season One) and on no other expansion content except the seasons.02 prologue ep_00; 7 SeasonTwo on 9 qst.exp.seasons.02 chapters (KotET, Season Two) and 21 qst.exp.03 (Onslaught) quests; 8 LotS on 22 qst.exp.04 (Legacy of the Sith) quests and one Ord Mantell daily, none elsewhere. Title tags do not separate 2 to 5 ([HEROIC] occurs on 3, 4 and 5), so those follow the name order of qstrewardscreditsdifficultyscale."
  },
  "40000001c65955ed": {
   "reason": "Always true on 12 branches (7 location, 4 test, 1 dynamic event), e.g. waylaid_double_negative branch 3, contract_negotiations 2 to 4. Unlike qstBranchIsAlternateEnding, it shows no link to a named field. Playing one of these branches through would be needed."
@@ -228,8 +228,8 @@
  },
  "400000437a802070": {
   "confidence": "likely",
-  "evidence": "Keys are area ids in the same form as mapLinkAreaId: 885 of 953 keys occur as a qstTaskMapLink area in the same quest; values are all true. What the game does with the list (tracker, map, phase handling) is not shown.",
-  "meaning": "Map of area ids to true listing the areas associated with a quest step."
+  "meaning": "Map of area ids (or FNV-1a 64 hashed area/room names) to true listing the areas associated with a quest step.",
+  "evidence": "Keys are area ids in the same form as mapLinkAreaId: 885 of 953 keys occur as a qstTaskMapLink area in the same quest; values are all true. Registry pass 2026-11-09: 9 of the 9 keys that are not 0x4000... area ids (25 uses) are FNV-1a 64 of uppercased area or room names held as strings elsewhere, e.g. ruhnuk_story_arena on qst.daily_area.ruhnuk.story.shared.mission_4, ossus_daily_world_jedi_library on qst.daily_area.ossus.imperial.crit_path.mission_4, ode_flashpoint_hub_control_room on the umbara and copero wrappers. What the game does with the list (tracker, map, phase handling) is not shown."
  },
  "40000043fdef4852": {
   "confidence": "proved",
