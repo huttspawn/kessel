@@ -35,9 +35,9 @@
     "confidence": "proved"
   },
   "4000004623267ec7": {
-    "meaning": "A ladder's checkpoints: list of (item rating, quality), with quality one above itmBaseQuality (premium 3, prototype 4, artifact 5, legendary 6).",
-    "evidence": "On the Kalikoran chain, 354 is the last premium rung, 356 the first prototype, 372 the first artifact and 380 the ceiling. Rakata artifact rows carry 5, legendary implants and Ventures legendary gear carry 6. What the UI does with a checkpoint is not seen.",
-    "confidence": "likely"
+    "meaning": "A ladder's checkpoints: a list of (item rating, n). Every rating is a rung of the chains that use the ladder; n is the upgrade window's tier number for that checkpoint. On 81 of 83 pairs n equals the rung item's itmBaseQuality + 1. The two expertise-augment checkpoints (276, 286) carry 6 on prototype and artifact items, so n is not item quality. Which window state n selects is not determinable from the client.",
+    "evidence": "Ratings: 83 of 83 ladder ratings are ratings of rung items on the chains whose rules carry that ladder key (itmUpgradesPrototype, all 11 ladders). n: 81 of 83 equal itmBaseQuality + 1. The exceptions are ladder 400530874688443973 (Combative augments ilvl 130-131, prototype and artifact, n = 6 at both). Why n is not determinable: no static object or singleton reads the ladder. Its only consumer is the compiled x86-64 upgrade-window UI script (scripts table, the script with 'onChangedUpgradeItem' and 'guiIsItemUpgradeWindowEnabled'). The UI strings next to it are 'Requires Artifact Authorization' and 'Item reached maximum upgrade without Artifact Authorization or Subscription' (str.gui.itemenhancement 311, 312). What would determine it: disassembling that script, or an in-game test, upgrading a Kalikoran piece through 354, 356, 372 and 380 and an augment through 276 and 286 on a Preferred account, to see where the window stops.",
+    "confidence": "proved"
   },
   "4000004623267ecb": {
     "meaning": "An upgrade rule's ladder key, into 23267ec8.",
@@ -95,7 +95,7 @@
     "confidence": "proved"
   },
   "400003d41a7c1f00": {
-    "reason": "A list present on all 18,895 8.0 reward rows and empty on every one, and no other object or singleton uses it. Its client.gom record (hash 6F03C59C, unnamed; no candidate name hashes to it) references no class or enum, so the client does not say what the list would hold. The data cannot settle it until a build puts a value in it."
+    "reason": "Not determinable from the client. It is a list on all 18,895 8.0 reward rows, empty on every one, and used by no other object or singleton. Its client.gom record (hash 6F03C59C) has no plain name, no candidate name hashes to it (the name search over the qst reward vocabulary found none), and it references no class or enum, so the client does not say what the list would hold. legion consult and the web (8.0 gearing posts) say nothing about a second reward condition list. What would determine it: a build that puts values in it."
   },
   "400000462dbe4982": {
     "meaning": "Condition clause: character type to test, a chrCharacterType value (enum 38D54163: 0 chrCharacterTypeStandard, 1 chrCharacterTypeDifficultyChallenge).",
@@ -118,29 +118,29 @@
     "confidence": "proved"
   },
   "400003d40f3d17c6": {
-    "meaning": "Quest objectives on upgrading an item: a list of {qstVariableDefinition fields, qstMaxCount 2afe250d, 0f3d17c1 rating, 0f3d17c2 and 0f3d17c5 comparisons (cndComparisonEnum), 0f3d17c4 item quality (itmQualityType)}.",
-    "evidence": "Only on the two gear_quest missions, hook hook_item_upgrade_275, with values 316, comparison 4, quality 2 and comparison 4. The record references cndComparisonEnum twice and itmQualityType once.",
-    "confidence": "likely"
+    "meaning": "Quest objective 'upgrade a piece of Kalikoran gear': a list of {qstVariableDefinition fields (hook hook_item_upgrade_275), qstMaxCount 1, 0f3d17c1 item rating, 0f3d17c2 rating comparison, 0f3d17c4 item quality, 0f3d17c5 quality comparison}. It is met when an upgraded item has rating >= 316 and quality >= Premium.",
+    "evidence": "Only on qst.exp.05.systems.progression.gear_quest and gear_quest_imp. Journal slot 276 reads 'Upgrade a piece of Kalikoran gear'. In the PTS client.gom, enum cndComparisonEnum (4000004e0c0f288a) lists NotEqualTo, LessThan, LessThanOrEqualTo, EqualTo, GreaterThanOrEqualTo, GreaterThan; itmQuality (400000002e2c1bfc) lists Cheap, Standard, Premium, ... Read 0-based, value 4 = GreaterThanOrEqualTo and 2 = Premium. The 0-based reading is the only one the objective can satisfy: 1-based, 4 is EqualTo, and no Kalikoran rung has rating 316 (the rungs run 352-380).",
+    "confidence": "proved"
   },
   "400003d40f3d17c1": {
-    "meaning": "The item-rating operand of an upgrade objective.",
-    "evidence": "Value 316 on hook_item_upgrade_275 of both gear_quest missions. Which side of the comparison it sits on is not settled.",
-    "confidence": "likely"
+    "meaning": "Upgrade objective item rating: 316, compared by 0f3d17c2 (>=).",
+    "evidence": "Value 316 on hook_item_upgrade_275 of both gear quests; see 400003d40f3d17c6.",
+    "confidence": "proved"
   },
   "400003d40f3d17c2": {
-    "meaning": "Upgrade-objective comparison (cndComparisonEnum), probably for the rating.",
-    "evidence": "Value 4 on both gear quests; its record references cndComparisonEnum.",
-    "confidence": "likely"
+    "meaning": "Upgrade objective rating comparison (cndComparisonEnum, 0-based): 4 = GreaterThanOrEqualTo.",
+    "evidence": "Enum names are plain text in client.gom; the reading is proved by elimination (see 400003d40f3d17c6).",
+    "confidence": "proved"
   },
   "400003d40f3d17c4": {
-    "meaning": "Upgrade-objective item quality (itmQualityType).",
-    "evidence": "Value 2 on both gear quests; its record references itmQualityType.",
-    "confidence": "likely"
+    "meaning": "Upgrade objective item quality (itmQuality, 0-based): 2 = Premium.",
+    "evidence": "Its record references itmQualityType; the enum members are plain text in client.gom: Cheap 0, Standard 1, Premium 2, Prototype 3, Artifact 4, Legendary 5, ...",
+    "confidence": "proved"
   },
   "400003d40f3d17c5": {
-    "meaning": "Upgrade-objective comparison (cndComparisonEnum), probably for the quality.",
-    "evidence": "Value 4 on both gear quests; its record references cndComparisonEnum.",
-    "confidence": "likely"
+    "meaning": "Upgrade objective quality comparison (cndComparisonEnum): 4 = GreaterThanOrEqualTo.",
+    "evidence": "As 400003d40f3d17c2.",
+    "confidence": "proved"
   },
   "400003d432934414": {
     "meaning": "lgcLegendaryStatusMap (hash E145639A): Legendary Status tiers, tier key -> {1ECBF9B1 key, 32934418, 32934419 and 33c7f380 string-like ids, 3293441e story indices, 33c7f381 entry keys}.",
@@ -188,14 +188,14 @@
     "confidence": "proved"
   },
   "400003d433c7f382": {
-    "meaning": "A Legendary Status entry's class name string.",
-    "evidence": "24 lowercase class names (smuggler, trooper, sithsorcerer, bountyhunter, ...). They do not always match the story in 3293441c (master.sith_inquisitor_story carries 'smuggler'), so this may be an icon or display key.",
-    "confidence": "likely"
+    "meaning": "A Legendary Status entry's story class: a key of chrCharacterStoryClassPrototype (field 57e04944: spy, bountyhunter, sithsorcerer, sithwarrior, smuggler, trooper, jediconsular, jediknight).",
+    "evidence": "24 of 24 values are story-class keys in chrCharacterStoryClassPrototype. They run in the same order in every tier: spy, bountyhunter, sithsorcerer, sithwarrior, smuggler, trooper, jediconsular, jediknight. In tier 1 they match each slot's achievement (ach.location.general.story.chapter_3.<agent|bounty_hunter|...>). Tiers 2 and 3 list their achievements in alphabetical order (agent, bounty_hunter, jedi_consular, jedi_knight, ...), so from slot 11 on the class key and the achievement name differ (slot 11: jedi_consular_story with sithsorcerer). This is a property of the PTS data, recorded as it is.",
+    "confidence": "proved"
   },
   "400003d433c7f383": {
-    "meaning": "Legendary Status tier order.",
-    "evidence": "A list of the 3 tier keys.",
-    "confidence": "likely"
+    "meaning": "Legendary Status tier order: the 3 tier keys in display order.",
+    "evidence": "The list is [tier with stories 1-8 'Legendary Player' / 'Origin Status', tier 9-16 'Classic Legendary Player' / 'Veteran Status', tier 17-24 'Expert Legendary Player' / 'Master Status']. That matches the tiers' story indices and the str.gui.tooltips id order 714 < 814 < 815.",
+    "confidence": "proved"
   },
   "400003d432934418": {
     "meaning": "A Legendary Status tier's player flair: FNV-1a 64 of the flair name, a key of chrPlayerFlairTablePrototype.",
@@ -228,9 +228,9 @@
     "confidence": "proved"
   },
   "400003d3faef2fb6": {
-    "meaning": "lgcVentureDisplayIndex (hash DDCD4C8E): a venture's display order.",
-    "evidence": "17 ventures carry values 1-8.",
-    "confidence": "likely"
+    "meaning": "lgcVentureDisplayIndex: a venture's position in its mode, 1-8 in class order Jedi Knight, Jedi Consular, Smuggler, Trooper, Sith Warrior, Sith Inquisitor, Agent, Bounty Hunter (Basilisk Prototype 1).",
+    "evidence": "On all 17 ventures the value equals the venture's 1-based position in its mode's list (faef2fb8): 17 of 17. kessel's production ventures table already carries it as class_index, and it agrees row by row.",
+    "confidence": "proved"
   },
   "400003d3faef2fb7": {
     "meaning": "A Venture mode's name, a string id into str.gui.legacy (id2 627063).",
@@ -263,19 +263,19 @@
     "confidence": "proved"
   },
   "400003d3f83036c0": {
-    "meaning": "ccsStageDetailMarks (hash B561DECB): character-creator stage marks per state; replaces ccsStageDetailMarksPerState 4000001004aad84b.",
-    "evidence": "24 uses in ccsStagesPrototype holding chrGenderEnum-keyed maps of camera and NPC marks.",
-    "confidence": "likely"
+    "meaning": "ccsStageDetailMarks: per chrGenderEnum value (0, 1), the camera and mark keys a creator stage uses, {e3a3e625 camera, e3a3e624 close-up camera, e3a3e626 mark}. Replaces ccsStageDetailMarksPerState (4000001004aad84b).",
+    "evidence": "24 uses, each a 2-entry map keyed by gender enum 0/1 (the record references chrGenderEnum). Every value resolves in the stage object it belongs to (stg.charselect.create_grey_backdrop[_republic|_imperial]): camera keys in its ac0a2391 camera map, mark keys in its ac0a2392 mark map.",
+    "confidence": "proved"
   },
   "400003d3e3a3e624": {
-    "meaning": "A creator stage's second camera mark, used only in ccsState 3.",
-    "evidence": "Present only in state 3, per gender: CAM3 (gender 0) and CAM4 (gender 1), next to ccsStageCamera CAM2/CAM5 and ccsStageMark NPC3/NPC4. States 0-2 have one camera and one mark. What the second camera is for is shown in the stage, not in the data.",
-    "confidence": "likely"
+    "meaning": "Close-up camera of a creator stage: a key of the stage's camera map whose shot type is CLOSE_UP.",
+    "evidence": "Present only in ccsState 3: CAM3 (gender 0) and CAM4 (gender 1). In stg.charselect.create_grey_backdrop_republic and _imperial, CAM3 and CAM4 are the two cameras with shot type c44ac696 = CLOSE_UP. All the others (CAM1, CAM2, CAM5) are CUSTOM.",
+    "confidence": "proved"
   },
   "400003d3e3a3e625": {
-    "meaning": "ccsStageCamera (hash 9F09BE3D): a creator stage's camera mark name.",
-    "evidence": "Values CAM1, CAM2, CAM5.",
-    "confidence": "likely"
+    "meaning": "Main camera of a creator stage: a key of the stage's camera map (shot type CUSTOM).",
+    "evidence": "Values CAM1, CAM2 and CAM5, each a CUSTOM camera key in the referenced stage's ac0a2391.",
+    "confidence": "proved"
   },
   "400003d3e3a3e626": {
     "meaning": "ccsStageMark (hash E2ED6D1F): a creator stage's mark name.",
@@ -293,20 +293,20 @@
     "confidence": "proved"
   },
   "400003d40c444a20": {
-    "meaning": "Legacy level cap (likely): a new utlTweakable scalar, 60.",
-    "evidence": "The 8.0 announcements raise the legacy cap from 50 to 60. In the same build, lgcPerkReqLgcLvl (400001069a9119a9) goes from a maximum of 40 to 60, so perks now require legacy levels up to 60. The record (hash E8EC7B15) has no name, and no candidate hashes to it; utlTweakable_DisLootDisciplineSelectionLevel is also 60, so the value alone does not prove the role.",
-    "confidence": "likely"
+    "meaning": "Legacy level cap: 60.",
+    "evidence": "Three independent sources agree. (1) Official 8.0 news (swtor.com 2026-08-20) and the Vulkk recap of the August 25 livestream say 8.0 adds 10 legacy levels, cap 50 -> 60. (2) In the same PTS build, lgcPerkReqLgcLvl (400001069a9119a9) rises from a maximum of 40 to 60, and the new perks (Medical Probe Affinity, Improved Rest and Recharge) need legacy level 52+. (3) This is the only scalar utlTweakable gains in 8.0, and its value is 60. The other 60 in the table, utlTweakable_DisLootDisciplineSelectionLevel, is 60 on live as well.",
+    "confidence": "proved"
   },
   "4000004631d0c4d6": {
-    "reason": "Not in either client.gom, so there is no name or type. In 8.0 it is 3.0 on exactly the 32 open-world planet areas (ald_main .. zio_main), the same areas that carry 4000004631d1aee0, the overworld Difficulty Mode faction list. 3.0 matches the three modes (Story/Veteran/Master), but a constant on every area it appears on has no variation to test a reading against, so the data cannot settle it."
+    "reason": "Not determinable from the client. The id has no client.gom record (no name, no type) in live or PTS. In 8.0 it is the float 3.0 on exactly the 32 open-world planet areas that carry the NPC faction list 4000004631d1aee0, and on no other area. One constant on every holder gives nothing to test a reading against: 3 Difficulty Modes, a scaling tier and a multiplier all fit. Memory (legion consult) and the web (8.0 news, Vulkk, swtor.com) describe the overworld modes but give no number to match. What would determine it: a build where the value differs between planets, or an in-game test, comparing NPC damage and health on a planet in Story, Veteran and Master against the same NPC in an instance."
   },
   "4000004631d1aee0": {
-    "meaning": "An open-world planet's NPC factions, a list of faction keys (chrFactionPackages keys, FNV-1a 64 of the faction name), on the areas that 8.0's overworld Difficulty Mode applies to.",
-    "evidence": "Non-empty on the same 32 open-world planet areas as 4000004631d0c4d6 and empty on all 228 others. Every value resolves through chrFactionPackagesPrototype's f2f87997 name: hostile1 (32), wildlife_predator (32), neutral (32), hostile2 (29), empire (5, on the Republic-side areas bal2_main, coruscant_main, ord_resize, tar_main, tython_blockout) and republic (3, on the Imperial-side areas bal_main, dro_main, tar2_main). Tying the list to the Difficulty Mode is inference from the 8.0 feature; the faction join itself is proved.",
-    "confidence": "likely"
+    "meaning": "An open-world planet area's NPC faction list: chrFactionPackages keys (FNV-1a 64 of the faction name).",
+    "evidence": "Non-empty on exactly 32 areas (ald_main .. zio_main), all open-world planets, and empty on the other 228. Every value resolves through chrFactionPackagesPrototype's f2f87997 name: hostile1 (32), wildlife_predator (32), neutral (32), hostile2 (29), empire (5: bal2_main, coruscant_main, ord_resize, tar_main, tython_blockout) and republic (3: bal_main, dro_main, tar2_main).",
+    "confidence": "proved"
   },
   "400003d33b455452": {
-    "reason": "Not in either client.gom. 93 instanced areas carry the same value, 1445174518347708194: flashpoints (mini_flashpoint_*, story_flashpoint_*, nathema, directive7), operations (raid_*), uprisings (uprising_*), arenas (pvp_arena_*), warzones (pvp_*) and GSF (spvp_*). None of the 32 open-world planets carries it. The value is not a chrFactionPackages key, an object GUID or a string id, and it is not FNV-1a 64 of any of 610,874 candidate strings (every string in all 930 decoded singletons, every short str.gui text, every ventures FQN). One constant that resolves to nothing cannot be named from data."
+    "reason": "Membership proved, value not determinable from the client. 93 areas carry the same i64, 1445174518347708194: every flashpoint, operation (raid_*), uprising, arena, warzone and GSF area in the table (84 of 88 group-instance areas). The 4 without it are test or disabled areas (ald_pvp, ald_pvp_test, nmennen_pvp_qa_test) and the KotFE solo flashpoint_zakuul_arena. No open-world planet, class-story instance or fleet carries it. So it marks group content, the complement of the 32 overworld planets that carry 4000004631d0c4d6. The value has no client.gom record. It is not a faction key, a GUID or a string id, and it is not FNV-1a 64 of any of 657,603 candidate strings (every enum and record name in client.gom, every singleton string, every str.gui text, area and phase FQNs, and area-type word pairs). It appears nowhere else in the client. What would determine its name: a second value in a later build, or a server-side list. The purpose (presumably exempting group content from overworld Difficulty Modes) is testable in game."
   },
   "4000004f1191b8d8": {
     "meaning": "grpFinderContentMinItemRating (name in names.json): the minimum item rating to queue for an activity-finder content.",
@@ -314,9 +314,9 @@
     "confidence": "proved"
   },
   "400003d3ac639ca0": {
-    "meaning": "decAllowStateSave (name in names.json): the decoration keeps its state when placed (8.0 decoration persistence).",
-    "evidence": "True on 125 decorations and absent on the other 4,619; no other decoration field correlates with it. They are decorations with switchable states: cadera_normal_to_burned banners, fleet doorways, the Nar Nights music stage, fireworks, taxidermy. The sibling record 400003d3ac639ca1 is aptDecorationState.",
-    "confidence": "likely"
+    "meaning": "decAllowStateSave: the decoration's state is saved, which is the 8.0 decoration persistence feature.",
+    "evidence": "The name is hash-proved in names.json. It is true on 125 decorations and absent on the other 4,619, and nothing else in a decoration correlates with it. The holders are decorations with switchable states (burned/unburned banners, fleet doorways, the Nar Nights music stage, fireworks). The sibling record 400003d3ac639ca1 is aptDecorationState. The 8.0 announcements list decoration persistence among the QoL changes (RESEARCH 01a14305 sources).",
+    "confidence": "proved"
   },
   "400003d3acf26f20": {
     "meaning": "aptHookAllowsDecorationYTranslation (name in names.json): the hook type lets a decoration move vertically.",
