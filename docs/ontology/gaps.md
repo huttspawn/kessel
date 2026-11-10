@@ -636,9 +636,9 @@ Each work item above is settled, server-side (proved not determinable from the c
 | A17 | settled | 01a1c273-7695 and this document (chassis stats in pkg.spvp.*); N13 |
 | B1 | settled except one table | 01a1c274-6ac6, 01a1c30d-73cd; cbtStandardRatingInfo O3 |
 | B2 | settled, bases server-side | 01a1c274-6ac6, 01a1c30f-29f2; S7; Valkorion O2 |
-| B3 | settled, partly server-side | 01a1c274-edd7, 01a1c0ce-44dd; N10 |
+| B3 | settled; residue explained by outside sources | 01a1c274-edd7, 01a1c0ce-44dd; X6 |
 | B4 | not in client; community-measured | 01a1c27b-2833; X3 |
-| B5 | c788046b settled; XP formula needs in-game test | 01a1c274-edd7 and this document; G2 |
+| B5 | c788046b settled; XP formula has an in-game test | 01a1c274-edd7 and this document; G2 |
 | B6 | server-side | 01a1c274-edd7; S12 |
 | B7 | server-side | 01a1c276-cbce; S6 |
 | B8 | server-side (chrPaidPermissionId proved) | 01a1c276-cbce; S6, N6 |
