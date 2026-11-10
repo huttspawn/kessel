@@ -620,7 +620,7 @@ Each work item above is settled, server-side (proved not determinable from the c
 | A1 | settled | 01a1c27b-2797; residue N12, NAMEn slot-to-discipline map not decoded (open, criterion 1/2) |
 | A2 | settled | 01a1c272-3bdf, 01a1c2f6-bd28 (op 15 by worked value); N8 |
 | A3 | settled | 01a1c27b-e018, 01a1c30d-9b55 (all 47 hook names); the branch of a multi-branch ON END is player state |
-| A4 | settled | 01a1c26d-3f4a, 01a1c2b9-b2b8, 01a1c317-41c1; N7; 10 bonus-mission starters not in the client (N9) |
+| A4 | settled | 01a1c26d-3f4a, 01a1c2b9-b2b8, 01a1c317-41c1; N7; what starts 10 bonus missions is not determinable from the client (N9; Sean asked) |
 | A5 | settled | 01a1c26d-3f4a, 01a1c2f6-a868; N3 |
 | A6 | settled, partly server-side | 01a1c27b-e018, 01a1c30d-9b55; N1, N2, S17; counter keys settled by consumer text (this document) |
 | A7 | settled | 01a1c27b-e018, 01a1c30d-9b55; N4, N5 |
