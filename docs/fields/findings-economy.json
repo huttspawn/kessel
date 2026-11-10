@@ -16,8 +16,8 @@
   },
   "40000003b981a0ad": {
     "meaning": "taxRouteCost: the credit price of one taxi route.",
-    "evidence": "On 616 of 862 route entries, values 2 to 1,500, constant within a planet tier (Makeb 150, Mek-Sha 1000, Belsavis 300), and the client strings 'taxRouteCost'/'guiTaxiCostNetwork' name it. Absent on free story routes. Not checked against an in-game taxi screen.",
-    "confidence": "likely"
+    "evidence": "Name proved: the client strings 'taxRouteCost'/'guiTaxiCostNetwork' name it, and the field's hash matches. On 616 of 862 route entries, values 2 to 1,500, constant within a planet tier (Makeb 150, Mek-Sha 1000, Belsavis 300), absent on free story routes.",
+    "confidence": "proved"
   },
   "40000003b981a0af": {
     "meaning": "taxRouteDestination: the terminal a taxi route flies to.",
@@ -35,9 +35,9 @@
     "confidence": "proved"
   },
   "40000009ae2f555b": {
-    "meaning": "plcdynLootPackage: the loot package a lootable placeable rolls, a hash in the same id space as the item's 407c89a3 (FNV-1a 64 of an uppercased trp.* name).",
-    "evidence": "638 placeables, 233 distinct hashes; 3 resolve by FNV-1a 64 to trp.* names (none of the 233 is an existing node). Same space as item 407c89a3, where 547 of 3,540 resolve to trp.<item fqn tail> names. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
-    "confidence": "likely"
+    "meaning": "plcdynLootPackage: the loot package a lootable placeable rolls, as FNV-1a 64 of the uppercased trp.* package name.",
+    "evidence": "Name proved by its client.gom hash. 638 placeables, 233 distinct hashes, in the id space of item 407c89a3 and NPC 956d8c70 (loot packages, RESEARCH 01a1c27a-8233). 3 resolve to trp.* names (trp.empty, trp.daily_area.ord_mantell.world.shared.datacron.access_card, trp.alliance.old_wounds.achievement.discarded_steak). Not determinable from the client: the other 230 package names and every package's contents; loot packages are server-side (no trp.* name folds to a shipped object, RESEARCH 01a1c27a-8233). object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events. Using an object that carries the value beside one that does not, in game, or the executable's handler for it, would determine it.",
+    "confidence": "proved"
   },
   "400000410344aaf8": {
     "meaning": "colMtxItemIdToCollectionItem: the collection entries, keyed by the entry id the Collections window and scripts use.",

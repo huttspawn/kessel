@@ -1,31 +1,25 @@
 {
  "4000004932daa370": {
-  "reason": "Every one of the 81,329 Spawns holds the identical map {1:true,2:true,3:true,4:true,5:true}, so the data has no variation to read. Keys might be difficulty or group tiers, unproven. A build where one differs, or a server-side read, would settle it."
+  "reason": "Every one of the 81,329 Spawns holds the identical map {1:true,2:true,3:true,4:true,5:true}, so the data has no variation to read. Keys might be difficulty or group tiers, unproven. A build where one differs, or a server-side read, would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "40000002996ed537": {
-  "meaning": "Per-tier cap on how many of this spawner's entities live at once, with 4 tiers that the data suggests follow group size; 0 usually means unused.",
-  "evidence": "Count (ed567) <= this in 6,152 of 6,169 non-empty slot pairs; 75,784 of 81,329 Spawns are all zero; 4,870 are [1,0,0,0]; warzone factory sml4repattackdroids has 100 here with count 1. List of 4 slots on all 81,329 Spawns; slots rise on some spawns, e.g. [3,5,7,9] taris rakghoul_infester_factory_3, [3,4,5,6] tatooine assault_droid. Tier-to-group-size mapping is from the hint spnMaxLivePerGroupSize, not shown by data.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Per-tier cap on how many of this spawner's entities live at once, with 4 tiers that the data suggests follow group size; 0 usually means unused. Count (ed567) <= this in 6,152 of 6,169 non-empty slot pairs; 75,784 of 81,329 Spawns are all zero; 4,870 are [1,0,0,0]; warzone factory sml4repattackdroids has 100 here with count 1. List of 4 slots on all 81,329 Spawns; slots rise on some spawns, e.g. [3,5,7,9] taris rakghoul_infester_factory_3, [3,4,5,6] tatooine assault_droid. Tier-to-group-size mapping is from the hint spnMaxLivePerGroupSize, not shown by data. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "40000002996ed567": {
-  "meaning": "Per-tier number of entities produced at each dispense (4 tiers, apparently by group size).",
-  "evidence": "List of 4; e.g. spn...imperial_soldier_factory_short max [2,4,6,8], this [2,3,4,5], limit [6,8,10,12]; warzone sml4repattackdroids this [1,0,0,0] with max 100. Fits hint spnCountPerGroupSize; 'per dispense' is inferred from crefac examples.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Per-tier number of entities produced at each dispense (4 tiers, apparently by group size). List of 4; e.g. spn...imperial_soldier_factory_short max [2,4,6,8], this [2,3,4,5], limit [6,8,10,12]; warzone sml4repattackdroids this [1,0,0,0] with max 100. Fits hint spnCountPerGroupSize; 'per dispense' is inferred from crefac examples. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "40000002996ed56b": {
-  "meaning": "Per-tier total limit of entities a spawner may produce (4 tiers, apparently by group size); 0 appears to mean no limit.",
-  "evidence": "Largest of the three lists on factories: [6,8,10,12] vs max [2,4,6,8]; [12,18,24,30] vs [3,4,5,6]. 0 occurs with max [1,0,0,0] on 4,870 ordinary spawns. Fits hint spnLimitPerGroupSize.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Per-tier total limit of entities a spawner may produce (4 tiers, apparently by group size); 0 appears to mean no limit. Largest of the three lists on factories: [6,8,10,12] vs max [2,4,6,8]; [12,18,24,30] vs [3,4,5,6]. 0 occurs with max [1,0,0,0] on 4,870 ordinary spawns. Fits hint spnLimitPerGroupSize. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000000b15aa9dbb": {
-  "meaning": "Per-tier dispense timer: a list of 4 hashed timer preset names, one per tier.",
-  "evidence": "Decoded by hash match: 325,277 of 325,316 values resolve: '0' 249,879, SPN_DEFAULT 55,080, '999' 12,770, CRF_DEFAULT 1,529, '5' 1,418, CRE_DEFAULT 811, PLC_DEFAULT 581, SPN_n, CRF_n, ENC_n. Prefix follows spawner type: crefac (spnSpawnerType) most often CRF_DEFAULT (158) and CRF_n; creature SPN_DEFAULT 41,226; placeable SPN_DEFAULT 13,764 and PLC_DEFAULT 501. No client table mapping these names to durations was found; timerDatatable keys are e000 ids that do not join. Hash proved; 'dispense' role from hint spnDispenseTimerPerGroupSize and crefac usage.",
-  "confidence": "likely"
+  "meaning": "A per-tier list of 4 timer preset names (FNV-1a 64), one per tier.",
+  "evidence": "325,277 of 325,316 values resolve as FNV-1a 64 of uppercased preset names: '0' 249,879, SPN_DEFAULT 55,080, '999' 12,770, CRF_DEFAULT 1,529, '5' 1,418, CRE_DEFAULT 811, PLC_DEFAULT 581, SPN_n, CRF_n, ENC_n. The family follows spawner type (crefac CRF_*, creature SPN_*, placeable PLC_*/SPN_*). SPN_n are durations (proved on 4000000b15aa9dbc). Not determinable from the client: the dispense role (from the community hint spnDispenseTimerPerGroupSize), what the tiers stand for, and the durations of the CRF, CRE and PLC presets. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "4000000b15ac2499": {
-  "meaning": "Per-tier secondary dispense timer: a list of 4 hashed timer preset names.",
-  "evidence": "All 325,316 values resolve (FNV-1a 64 of the uppercased string (signed i64)): '0' 317,764, '1' 5,330, SEC_DEFAULT 2,170, '999' 44, SEC_2. Crefac spawners use SEC_DEFAULT (531 of 557 first slots). On creature/placeable, '1' occurs almost only with 9eebcf39='spent' (4,982 of 4,985). 'Secondary' role from the hint spnSecondaryDispenseTimerPerGroupSize and the SEC_ prefix.",
-  "confidence": "likely"
+  "meaning": "A per-tier list of 4 timer preset names (FNV-1a 64), from the SEC_ family on crefacs.",
+  "evidence": "All 325,316 values resolve: '0' 317,764, '1' 5,330, SEC_DEFAULT 2,170, '999' 44, SEC_2. Crefacs use SEC_DEFAULT (531 of 557 first slots); on creature and placeable spawns, '1' occurs almost only with 9eebcf39 = 'spent' (4,982 of 4,985). Not determinable from the client: the secondary-dispense role and the SEC durations. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "4000000e5c3db5f1": {
   "meaning": "Weights for choosing among a spawner's entities, one per entity in 40000002aa610ec0; also used inside chance lists.",
@@ -48,12 +42,10 @@
   "confidence": "proved"
  },
  "40000003e56c4d97": {
-  "meaning": "Per encounter slot: true marks a slot held back until the encounter aggros.",
-  "evidence": "Map keys equal the slot keys of 40000003d9a52ab9 on 12,201 of 12,201 Encounters. Joining slot to spawner FQN: 'aggro/agro' in the spawn's name on 3,585 of 4,661 true slots versus 848 of 44,612 false slots. Behaviour itself not observed; needs an in-game check.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Per encounter slot: true marks a slot held back until the encounter aggros. Map keys equal the slot keys of 40000003d9a52ab9 on 12,201 of 12,201 Encounters. Joining slot to spawner FQN: 'aggro/agro' in the spawn's name on 3,585 of 4,661 true slots versus 848 of 44,612 false slots. Behaviour itself not observed; needs an in-game check. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "40000042d5344ce3": {
-  "reason": "Per-slot boolean with the same keys as the slot map (12,201 of 12,201), true on 63 of 49,273 slots. Token and spawner-type joins show no pattern (true: creature 54, crefac 9). The community label is only 'UnkBool'. Comparing true and false slots in one encounter in game would settle it."
+  "reason": "Per-slot boolean with the same keys as the slot map (12,201 of 12,201), true on 63 of 49,273 slots. Token and spawner-type joins show no pattern (true: creature 54, crefac 9). The community label is only 'UnkBool'. Comparing true and false slots in one encounter in game would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "400000098a308cf7": {
   "meaning": "NPC creature-type tag set: a map of hashed npcCreatureType names to true, used for category behaviour.",
@@ -61,25 +53,23 @@
   "confidence": "proved"
  },
  "4000000031d37b8f": {
-  "reason": "Constant true on all 81,329 Spawns and no community name. A constant cannot be read; only a Spawn lacking or varying it, or server code, would show its role."
+  "reason": "Constant true on all 81,329 Spawns and no community name. A constant cannot be read; only a Spawn lacking or varying it, or server code, would show its role. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "400000029eebcf39": {
-  "meaning": "Spawn's secondary dispense trigger, one of 'timer' or 'spent'; 'spent' appears to mean firing once the first batch is used up.",
-  "evidence": "81,329 Spawns: 'timer' and 'spent' only. 15ac2499 first slot is '1' on 4,982 'spent' creature/placeable spawns and 3 'timer' ones, and SEC_DEFAULT on crefacs of either value. Meaning of 'spent' is inferred from the word; timing not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Spawn's secondary dispense trigger, one of 'timer' or 'spent'; 'spent' appears to mean firing once the first batch is used up. 81,329 Spawns: 'timer' and 'spent' only. 15ac2499 first slot is '1' on 4,982 'spent' creature/placeable spawns and 3 'timer' ones, and SEC_DEFAULT on crefacs of either value. Meaning of 'spent' is inferred from the word; timing not observed. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000000b15aa9dbc": {
-  "meaning": "Delay before a spawn appears, as a hashed timer preset name; SPN_n presets are fixed durations.",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64): 81,280 of 81,315 resolve, '0' on 80,538. Spawn FQNs naming a time agree: SPN_5 = 1s (18/18), SPN_6 = 2s (19/20), SPN_7 = 3s (29/29), SPN_8 = 4s (6/6), '5' = 5s (16/16), SPN_25 = 8s (7/7), SPN_11 = 10s (7/7), SPN_27 = 15s (4/4), SPN_12 = 20s (4/4), SPN_4 = 30s (2/2), SPN_23 = 6s, SPN_24 = 7s, SPN_26 = 9s (1 each). Durations were read from names like skytrooper_standard_jetpack_08sec; the seconds are read this way, not from a table. 'Delay before appearing' fits the names but is not observed.",
-  "confidence": "likely"
+  "meaning": "The delay before a spawn appears, as FNV-1a 64 of a timer preset name; SPN_n presets are fixed durations.",
+  "evidence": "81,280 of 81,315 values resolve as FNV-1a 64 of an uppercased preset name, '0' on 80,538. The durations match the times designers wrote into spawn FQNs (skytrooper_standard_jetpack_08sec): SPN_5 = 1 s (18/18), SPN_6 = 2 s (19/20), SPN_7 = 3 s (29/29), SPN_8 = 4 s (6/6), '5' = 5 s (16/16), SPN_25 = 8 s (7/7), SPN_11 = 10 s (7/7), SPN_27 = 15 s (4/4), SPN_12 = 20 s (4/4), SPN_4 = 30 s (2/2). Not determinable from the client: the durations of presets no spawn name states. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "4000000b15ac2498": {
-  "meaning": "A hashed timer preset on Spawns; the role is unproven and one default covers nearly all.",
-  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not. Residue pass 2026-11-09: 0xe23ddc377cb394ab is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
-  "confidence": "likely"
+  "meaning": "A timer preset name (FNV-1a 64) on Spawns; one unnamed default covers nearly all.",
+  "evidence": "100 of the 103 non-default uses resolve as named presets ('0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'); 80,800 of 80,903 hold the default 0xe23ddc377cb394ab, which no client string hashes or folds to (RESEARCH 01a1c274-edd7, 01a1c301-8a20). Not determinable from the client: its role (the community hint says aggro respawn) and the default's name, which is not a string the client holds. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "40000005da8c9272": {
-  "reason": "Enum on a spawner's entity entry: 1 on 674, 2 on 79,861. The hint says path speed, but with a path 386 have 1 and 1,215 have 2; words in spawn names do not separate them ('run' 582 on 2, 4 on 1; 'walk' 52 on 2, 10 on 1), and no client enum name is attached. Watching one patrol of each value in game would settle it."
+  "reason": "Enum on a spawner's entity entry: 1 on 674, 2 on 79,861. The hint says path speed, but with a path 386 have 1 and 1,215 have 2; words in spawn names do not separate them ('run' 582 on 2, 4 on 1; 'walk' 52 on 2, 10 on 1), and no client enum name is attached. Watching one patrol of each value in game would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "4000000027bda14b": {
   "meaning": "NPC minimum level.",
@@ -92,10 +82,10 @@
   "confidence": "proved"
  },
  "400000082cfbe218": {
-  "reason": "Constant true on all 54,464 NPCs, each of which also has npcVisualDataList. The hint npcHasVisualData cannot be distinguished from any other always-true flag; an NPC lacking it would be needed."
+  "reason": "Constant true on all 54,464 NPCs, each of which also has npcVisualDataList. The hint npcHasVisualData cannot be distinguished from any other always-true flag; an NPC lacking it would be needed. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "40000043e13c7b10": {
-  "reason": "True on 11,952 of 13,698 Dynamics inside dynObjectDataList, spread evenly over name tokens (lift about 1.1). Absent cases show no pattern, and collision (hint dynIsCollidable) cannot be observed from data. Walk into one object with and one without it in game."
+  "reason": "True on 11,952 of 13,698 Dynamics inside dynObjectDataList, spread evenly over name tokens (lift about 1.1). Absent cases show no pattern, and collision (hint dynIsCollidable) cannot be observed from data. Walk into one object with and one without it in game. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events."
  },
  "40000005618ec27c": {
   "meaning": "NPC toughness (rank): a cbtToughness enum value.",
@@ -108,7 +98,7 @@
   "confidence": "proved"
  },
  "4000004053270141": {
-  "reason": "Constant 1 on 52,004 Spawns, whatever the entity count (1-5 entities all hold 1). No variation to read; the community label is only 'UnknownEntityIndex'."
+  "reason": "Constant 1 on 52,004 Spawns, whatever the entity count (1-5 entities all hold 1). No variation to read; the community label is only 'UnknownEntityIndex'. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "4000004ec802b2aa": {
   "meaning": "Galactic Command points value of the NPC, set by its rank.",
@@ -131,41 +121,35 @@
   "confidence": "proved"
  },
  "40000004566bea5a": {
-  "reason": "Constant string '0' on all 12,201 Encounters. Nothing varies, so nothing can be read from it."
+  "reason": "Constant string '0' on all 12,201 Encounters. Nothing varies, so nothing can be read from it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "4000000966271637": {
-  "reason": "Constant true on all 12,201 Encounters. Nothing varies, so nothing can be read from it."
+  "reason": "Constant true on all 12,201 Encounters. Nothing varies, so nothing can be read from it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "4000000b15ac249a": {
-  "meaning": "Encounter-level timer as a hashed preset name; the role is unproven (the hint says refill).",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64): 12,191 of 12,201 resolve: '999' 6,864, ENC_DEFAULT 3,811, ENC_1..6 764, SPN_DEFAULT 180, '0' 162. Open-world spawn groups (_sf01 names) take ENC_DEFAULT 1,985 versus 621 for '999'; other names take '999' 5,966. No client table of these names was found. Whether it refills, and whether 999 means never, needs an in-game timing.",
-  "confidence": "likely"
+  "meaning": "An encounter-level timer preset name (FNV-1a 64).",
+  "evidence": "12,191 of 12,201 values resolve: '999' 6,864, ENC_DEFAULT 3,811, ENC_1..6 764, SPN_DEFAULT 180, '0' 162. Open-world groups (_sf01 names) take ENC_DEFAULT 1,985 times against 621 for '999'. Not determinable from the client: its role (the hint says refill), whether 999 means never, and the ENC durations. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "4000000b1f264a19": {
-  "reason": "Enum of 1-10, value 2 on 12,173 of 12,201; values 5, 8, 9, 10 occur, matching cbtToughness's range. Its neighbours 1f264a1a/1b are 0.2 / 0.8 on nearly all rows and rows with other values do not explain them: (2,0.2,0.8) 11,868, (1,0.2,0.8) 6, (3,0.8,1.2) 6, (3,0.2,0.8) 5. Too few non-default rows to read. A debug timing of aggro per rank would settle it."
+  "reason": "Enum of 1-10, value 2 on 12,173 of 12,201; values 5, 8, 9, 10 occur, matching cbtToughness's range. Its neighbours 1f264a1a/1b are 0.2 / 0.8 on nearly all rows and rows with other values do not explain them: (2,0.2,0.8) 11,868, (1,0.2,0.8) 6, (3,0.8,1.2) 6, (3,0.2,0.8) 5. Too few non-default rows to read. A debug timing of aggro per rank would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "4000000b15ac249b": {
-  "meaning": "A second encounter-level timer as a hashed preset name; the role is unproven (the hint says survive).",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only. Residue pass 2026-11-09: 0x270299ed9a3cea3e is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
-  "confidence": "likely"
+  "meaning": "A second encounter-level timer preset name (FNV-1a 64); one unnamed default covers most.",
+  "evidence": "2,969 of 12,197 uses resolve ('0' 1,234, '999' 1,100, '5' 209, SPN_n); the default 0x270299ed9a3cea3e (9,225) matches no client string (RESEARCH 01a1c274-edd7, 01a1c301-8a20). Not determinable from the client: its role (the hint says survive) and the default's name. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "4000000b1f264a1b": {
-  "meaning": "Upper bound of a small per-encounter delay range in seconds; the lower bound is 1f264a1a. Hint says aggro delay.",
-  "evidence": "f32, 0.8 on 11,884 of 11,953; >= 1f264a1a on 11,947 of 11,953; id adjacent. 'Aggro delay' is the hint, not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Upper bound of a small per-encounter delay range in seconds; the lower bound is 1f264a1a. Hint says aggro delay. f32, 0.8 on 11,884 of 11,953; >= 1f264a1a on 11,947 of 11,953; id adjacent. 'Aggro delay' is the hint, not observed. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000000b1f264a1a": {
-  "meaning": "Lower bound of the delay range whose upper bound is 1f264a1b.",
-  "evidence": "f32, 0.2 on 11,890 of 11,939; <= 1f264a1b on 11,947 of 11,953.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Lower bound of the delay range whose upper bound is 1f264a1b. f32, 0.2 on 11,890 of 11,939; <= 1f264a1b on 11,947 of 11,953. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000000d15e1ff74": {
-  "meaning": "Maps a Dynamic's named states to an enum saying whether it blocks passage: 1 blocked, 2 passable.",
-  "evidence": "1,317 Dynamics, name lift for door 6.9 and forcefield 5.8. Open gives 2 on 618 of 628; Closed gives 1 on 473 of 493; Locked gives 1 on 242 of 243; Off gives 2 on 407 of 476; On gives 1 on 377 of 480; Closed_Forcefield 1 on 18/18. Client enum not named; passage reading is inferred.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Maps a Dynamic's named states to an enum saying whether it blocks passage: 1 blocked, 2 passable. 1,317 Dynamics, name lift for door 6.9 and forcefield 5.8. Open gives 2 on 618 of 628; Closed gives 1 on 473 of 493; Locked gives 1 on 242 of 243; Off gives 2 on 407 of 476; On gives 1 on 377 of 480; Closed_Forcefield 1 on 18/18. Client enum not named; passage reading is inferred. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events. Using an object that carries the value beside one that does not, in game, or the executable's handler for it, would determine it."
  },
  "400000082cfbe217": {
-  "reason": "True on 6,603 NPCs, unrelated to their pkg.aggro package (6,037 of 49,693 'npc' packages, 375 of 2,657 'custom'), and it does not track friend or foe by name (bodyguards, marine guards, vault_droid_boss). The hint npcAggressive is not tested by client data. Compare flagged and unflagged NPCs of one faction in game."
+  "reason": "True on 6,603 NPCs, unrelated to their pkg.aggro package (6,037 of 49,693 'npc' packages, 375 of 2,657 'custom'), and it does not track friend or foe by name (bodyguards, marine guards, vault_droid_boss). The hint npcAggressive is not tested by client data. Compare flagged and unflagged NPCs of one faction in game. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "4000000bdd779ad1": {
   "meaning": "Harvesting profession of an NPC: prfProfession enum, 2 Bioanalysis, 3 Scavenging.",
@@ -173,16 +157,16 @@
   "confidence": "proved"
  },
  "40000043e13c7b11": {
-  "reason": "True on 5,924 of 13,698 Dynamics inside dynObjectDataList, only mildly more on console and terminal names (lift 2.0), and on objects such as lootable_body and generator_fake. The usable reading in hint dynIsUseable is plausible, not shown. Interact with flagged and unflagged objects in game."
+  "reason": "True on 5,924 of 13,698 Dynamics inside dynObjectDataList, only mildly more on console and terminal names (lift 2.0), and on objects such as lootable_body and generator_fake. The usable reading in hint dynIsUseable is plausible, not shown. Interact with flagged and unflagged objects in game. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events."
  },
  "400000041b1be4f1": {
-  "reason": "True on 5,849 of 12,201 Encounters: 2,967 of 3,062 _sf-named spawn groups, 2,882 of 9,139 others. It clearly favours open-world groups, but whether it means auto-active (hint spnEncounterActive) cannot be read. A server trace of an unflagged encounter would settle it."
+  "reason": "True on 5,849 of 12,201 Encounters: 2,967 of 3,062 _sf-named spawn groups, 2,882 of 9,139 others. It clearly favours open-world groups, but whether it means auto-active (hint spnEncounterActive) cannot be read. A server trace of an unflagged encounter would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "40000002aa610b6a": {
-  "reason": "On 5,338 spawner entries. The hint spnHasPath fails: with a path on the entry (aa610b70) 3,221 have it and 1,601 do not; 2,117 have it with no path. Name lift for patrol (13x) and circuit (12x) points at something about moving, not yet identified. Compare flagged and unflagged patrols in game."
+  "reason": "On 5,338 spawner entries. The hint spnHasPath fails: with a path on the entry (aa610b70) 3,221 have it and 1,601 do not; 2,117 have it with no path. Name lift for patrol (13x) and circuit (12x) points at something about moving, not yet identified. Compare flagged and unflagged patrols in game. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "40000003b9756bb4": {
-  "reason": "True on 4,331 NPCs, most in seasons chapters (lift 5.5). The level offset b9756bb5 is present with it on 307 and without it on 108, so it does not gate that offset. Hint npcLevelAdjust is not shown; level of a flagged NPC at different player levels would settle it."
+  "reason": "True on 4,331 NPCs, most in seasons chapters (lift 5.5). The level offset b9756bb5 is present with it on 307 and without it on 108, so it does not gate that offset. Hint npcLevelAdjust is not shown; level of a flagged NPC at different player levels would settle it. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "40000002c8e2537b": {
   "meaning": "Path's point table: maps point number to a point record.",
@@ -190,9 +174,7 @@
   "confidence": "proved"
  },
  "4000004eca7b53cb": {
-  "meaning": "Per-difficulty level range of an NPC: map of difficulty key to a record holding a min (53c9) and max (53ca) level.",
-  "evidence": "1,061 NPCs, 1,013 in seasons chapters. Keys {2,3} on 1,038. Key 3 usually has min 70; key 2 varies 60-70. Inner max == NPC max on 1,003 of 1,060 (key 3). Which key is which difficulty is not named by data; those chapters had story, veteran and master modes.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Per-difficulty level range of an NPC: map of difficulty key to a record holding a min (53c9) and max (53ca) level. 1,061 NPCs, 1,013 in seasons chapters. Keys {2,3} on 1,038. Key 3 usually has min 70; key 2 varies 60-70. Inner max == NPC max on 1,003 of 1,060 (key 3). Which key is which difficulty is not named by data; those chapters had story, veteran and master modes. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "40000002c8e25607": {
   "meaning": "Number of a point in a path, equal to its table key.",
@@ -200,20 +182,16 @@
   "confidence": "proved"
  },
  "40000002d9d8a238": {
-  "reason": "Float on path points, 0.2 on 2,322 of 2,324, 0.3 and 0.7 once each. Constant values have no reading; the wait-radius hint is not testable because coordinates are absent from these records."
+  "reason": "Float on path points, 0.2 on 2,322 of 2,324, 0.3 and 0.7 once each. Constant values have no reading; the wait-radius hint is not testable because coordinates are absent from these records. Not determinable from the client: patrol movement runs on the server, and combat logs give positions only on combat lines, so a path's traversal and waits never show. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "4000004eca7b53c9": {
-  "meaning": "Minimum level in an NPC's per-difficulty range.",
-  "evidence": "Inside 4eca7b53cb; 2-70; <= 53ca; mostly 60-70.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Minimum level in an NPC's per-difficulty range. Inside 4eca7b53cb; 2-70; <= 53ca; mostly 60-70. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "4000004eca7b53ca": {
-  "meaning": "Maximum level in an NPC's per-difficulty range.",
-  "evidence": "Inside 4eca7b53cb; 70 on 2,110 of 2,117, equal to the NPC's own max on 2,007 of 2,117 records.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Maximum level in an NPC's per-difficulty range. Inside 4eca7b53cb; 70 on 2,110 of 2,117, equal to the NPC's own max on 2,007 of 2,117 records. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "800000087c382b3b": {
-  "reason": "True on 1,761 Encounters, notably names with dispensed (lift 6.5) and adds (4.1), and with a max alive (4382d9b19) on 1,017 of 1,415. That suggests triggered add groups; ownership (hint spnEncounterOwned) is not shown. Its id starts 0x8000, unlike its neighbours. A script trace of one flagged group would settle it."
+  "reason": "True on 1,761 Encounters, notably names with dispensed (lift 6.5) and adds (4.1), and with a max alive (4382d9b19) on 1,017 of 1,415. That suggests triggered add groups; ownership (hint spnEncounterOwned) is not shown. Its id starts 0x8000, unlike its neighbours. A script trace of one flagged group would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "400000039e3b34a7": {
   "meaning": "NPC is a vendor.",
@@ -221,49 +199,39 @@
   "confidence": "proved"
  },
  "4000004e253c0358": {
-  "reason": "True on 1,459 of 2,172 phases, including class quarters and test phases. Client type int16. Phase ownership progress (hint) has no data to test it; a multi-player phase check would settle it."
+  "reason": "True on 1,459 of 2,172 phases, including class quarters and test phases. Client type int16. Phase ownership progress (hint) has no data to test it; a multi-player phase check would settle it. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line."
  },
  "400000432b0d61b0": {
-  "reason": "True on 1,428 NPCs, concentrated on operations (415) and bosses (toughness 4: 372, 5: 345), yet also on daily-area mobs. XP disabling (hint npcXpDisabled) is not observable in client data or combat logs; killing a flagged NPC and reading XP would settle it."
+  "reason": "True on 1,428 NPCs, concentrated on operations (415) and bosses (toughness 4: 372, 5: 345), yet also on daily-area mobs. XP disabling (hint npcXpDisabled) is not observable in client data or combat logs; killing a flagged NPC and reading XP would settle it. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "40000004382d9b19": {
-  "meaning": "Maximum entities of the encounter alive at a time.",
-  "evidence": "1,415 Encounters, 1-99, value 1 on 854, on names with dispensed (lift 3.0) and adds (2.7); present with 800000087c382b3b on 1,017. Fits hint spnEncounterMaxAlive; cap behaviour not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Maximum entities of the encounter alive at a time. 1,415 Encounters, 1-99, value 1 on 854, on names with dispensed (lift 3.0) and adds (2.7); present with 800000087c382b3b on 1,017. Fits hint spnEncounterMaxAlive; cap behaviour not observed. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "40000002c8e24edf": {
-  "meaning": "Path traversal style enum: 3 is a loop, 4 is random, 2 back and forth or one way; 1 is unclear.",
-  "evidence": "Names on 934 paths: 'circuit' 104 on 3 and none elsewhere; 'random' 30 on 4; 'patrol' 165 on 2 versus 15 on 3; 'elev' 264 on 2 and 63 on 3; 'taxi' 16 of 25 on 1 and 27 on 3. Reading of 2 and 1 is inferred.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Path traversal style enum: 3 is a loop, 4 is random, 2 back and forth or one way; 1 is unclear. Names on 934 paths: 'circuit' 104 on 3 and none elsewhere; 'random' 30 on 4; 'patrol' 165 on 2 versus 15 on 3; 'elev' 264 on 2 and 63 on 3; 'taxi' 16 of 25 on 1 and 27 on 3. Reading of 2 and 1 is inferred. Not determinable from the client: patrol movement runs on the server, and combat logs give positions only on combat lines, so a path's traversal and waits never show. Watching a patrol on a path that carries the value, in game, would determine it."
  },
  "4000000b15ac2497": {
-  "meaning": "Reset timer on a Spawn as a hashed preset name; RST_n and RST_DEFAULT are its own family.",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64): all 556 resolve: RST_DEFAULT 249, '999' 243, '0' 27, RST_1 18, SPN_13 7, RST_2 3, RST_3 1. 'Reset' reading comes from the RST prefix and hint spnResetDelay; what it resets is not observed.",
-  "confidence": "likely"
+  "meaning": "A timer preset name (FNV-1a 64) on Spawns, mostly from its own RST_ family.",
+  "evidence": "All 556 values resolve: RST_DEFAULT 249, '999' 243, '0' 27, RST_1 18, SPN_13 7, RST_2 3, RST_3 1. Not determinable from the client: what it resets (the 'reset delay' reading comes from the RST prefix and a community hint) and the RST durations. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "4000000329480aca": {
-  "reason": "True on 528 spawner entries, including spawns named rally (21) and replicator (42), but also crefacs and ordinary mobs. The hint (block combat on rally) cannot be tested from data. Watch a flagged spawn on arrival in game."
+  "reason": "True on 528 spawner entries, including spawns named rally (21) and replicator (42), but also crefacs and ordinary mobs. The hint (block combat on rally) cannot be tested from data. Watch a flagged spawn on arrival in game. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "4000004e47bb57a8": {
-  "reason": "Only ever enum 1, on 525 spawner entries, 485 of them with a path. A single value cannot be read; a second value or a client enum name would help."
+  "reason": "Only ever enum 1, on 525 spawner entries, 485 of them with a path. A single value cannot be read; a second value or a client enum name would help. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "40000044b6329bb1": {
-  "reason": "Enum 1 on 504 NPCs, 2 on 3; 436 of 507 are dynamic_events NPCs. That places it in world-event content, but shared loot (hint npcSharedLootEnum) cannot be read from data. Killing a flagged NPC in a group and comparing loot would settle it."
+  "reason": "Enum 1 on 504 NPCs, 2 on 3; 436 of 507 are dynamic_events NPCs. That places it in world-event content, but shared loot (hint npcSharedLootEnum) cannot be read from data. Killing a flagged NPC in a group and comparing loot would settle it. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "400000041dac06bc": {
-  "meaning": "Respawn time of a spawner in seconds.",
-  "evidence": "f32 on 494 Spawns: 120 (95), 6000 (45), 10, 60, 30, 15, 1800, 180, 86400 (10: onderon footprints, big_red, meteors). Values are time-like and round; no log check of a respawn was done. This is the only literal respawn duration in Spawn objects, relevant to #365/#366.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Respawn time of a spawner in seconds. f32 on 494 Spawns: 120 (95), 6000 (45), 10, 60, 30, 15, 1800, 180, 86400 (10: onderon footprints, big_red, meteors). Values are time-like and round; no log check of a respawn was done. This is the only literal respawn duration in Spawn objects, relevant to #365/#366. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "40000000293dbe20": {
-  "meaning": "Spawner's primary dispense trigger; only 'timer' occurs.",
-  "evidence": "421 Spawns, all spawnerType crefac (of 557 crefacs); constant 'timer' on those. Fits hint spnDispenseEvent; sibling 293dbe1d shows other event names.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Spawner's primary dispense trigger; only 'timer' occurs. 421 Spawns, all spawnerType crefac (of 557 crefacs); constant 'timer' on those. Fits hint spnDispenseEvent; sibling 293dbe1d shows other event names. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "40000003b9756bb5": {
-  "meaning": "NPC level offset: a signed small adjustment of level.",
-  "evidence": "415 NPCs, -1 167, 1 138, -2 39, 2 19, extremes -15 and 100; level fields unchanged in the record. Fits hint npcLevelOffset, not tested against a logged level.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: NPC level offset: a signed small adjustment of level. 415 NPCs, -1 167, 1 138, -2 39, 2 19, extremes -15 and 100; level fields unchanged in the record. Fits hint npcLevelOffset, not tested against a logged level. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "40000027bbad3572": {
   "meaning": "Lockout table of an operation: maps lockout state id to its internal name.",
@@ -271,7 +239,7 @@
   "confidence": "proved"
  },
  "40000005ff7df830": {
-  "reason": "True on 278 NPCs with a mix: swoop contacts, set_vendor, dynamic-event researchers, jawa_captive. Nothing joins them. An in-game look at two or three would be needed."
+  "reason": "True on 278 NPCs with a mix: swoop contacts, set_vendor, dynamic-event researchers, jawa_captive. Nothing joins them. An in-game look at two or three would be needed. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "4000004bf242d0a6": {
   "confidence": "proved",
@@ -279,31 +247,25 @@
   "evidence": "All 44 distinct values on all 249 uses equal the qstVariableGUID of a quest variable definition (registry pass 2026-11-09). spn.exp.seasons.01.ep_02.mob.class_boss has six entries keyed by qm_is_agent, qm_is_bounty_hunter, qm_is_jedi, qm_is_sith, qm_is_smug and qm_is_troop of qst.exp.seasons.01.ep_02: one boss per class story. Umbara trash entries are keyed by glb_chose_to_side_with_empire / _republic, Makeb bonus mobs by qm_is_on_quest and qm_completed_series_1. The high part is the owning quest's id prefix, which is why it looked area scoped. That the entry needs the variable set (rather than unset) is read from the names."
  },
  "40000042bd8893d0": {
-  "meaning": "NPC stands in for a story companion or ally temporarily.",
-  "evidence": "222 NPCs named for companions and allies: senya 26, theron 21, kira 13, t7 12, nadia 7, jaesa_light, kaliyo. Fits hint npcIsTemporaryCompanion; effect not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: NPC stands in for a story companion or ally temporarily. 222 NPCs named for companions and allies: senya 26, theron 21, kira 13, t7 12, nadia 7, jaesa_light, kaliyo. Fits hint npcIsTemporaryCompanion; effect not observed. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "400000456baa24ee": {
-  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it. Residue pass 2026-11-09: 9.17M candidates (token pairs from every Npc, Encounter, Spawn, Quest and Hydra FQN, tier and role words with numbers) give no FNV-1a 64 match. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
+  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it. Residue pass 2026-11-09: 9.17M candidates (token pairs from every Npc, Encounter, Spawn, Quest and Hydra FQN, tier and role words with numbers) give no FNV-1a 64 match. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "40000044a9a1e720": {
-  "reason": "True on 172 of 174 MountPackage records, no pattern to the 2 without. A constant cannot be read."
+  "reason": "True on 172 of 174 MountPackage records, no pattern to the 2 without. A constant cannot be read. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "4000004bf242d0a4": {
-  "meaning": "Lower bound of a chance entry's group-size condition.",
-  "evidence": "169 entries, values 1-4, <= 4bf242d0a5 on all 169: (1,8) 48, (1,4) 28, (2,2) 24, (3,3) 18, (1,1) 13, (4,4) 9, (4,MAX) 7. Reading it as group size rests on the bounds 1,2,3,4,8 and an open-ended top; not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Lower bound of a chance entry's group-size condition. 169 entries, values 1-4, <= 4bf242d0a5 on all 169: (1,8) 48, (1,4) 28, (2,2) 24, (3,3) 18, (1,1) 13, (4,4) 9, (4,MAX) 7. Reading it as group size rests on the bounds 1,2,3,4,8 and an open-ended top; not observed. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000004bf242d0a5": {
-  "meaning": "Upper bound of a chance entry's group-size condition; i64 max means no upper bound.",
-  "evidence": "Values 1,2,3,4,8 and 9223372036854775807 (15); paired with 4bf242d0a4.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Upper bound of a chance entry's group-size condition; i64 max means no upper bound. Values 1,2,3,4,8 and 9223372036854775807 (15); paired with 4bf242d0a4. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000004e6243cad8": {
-  "reason": "True on 162 of 21,581 NPC packages, including test appearances and torvix gang members (19). Client type int16. Nothing joins them; a visual comparison in game would be needed."
+  "reason": "True on 162 of 21,581 NPC packages, including test appearances and torvix gang members (19). Client type int16. Nothing joins them; a visual comparison in game would be needed. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "4000004be323a876": {
-  "reason": "True on 135 Encounters, including portn uprising (24), seasons arena groups and 'global' groups. No field or log tests it. A script trace of one would settle it."
+  "reason": "True on 135 Encounters, including portn uprising (24), seasons arena groups and 'global' groups. No field or log tests it. A script trace of one would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "4000004d7d04f6cb": {
   "meaning": "Faction a chance entry applies to: hashed name EMPIRE or REPUBLIC.",
@@ -311,12 +273,10 @@
   "confidence": "proved"
  },
  "4000000820e3e0b2": {
-  "meaning": "Marks a spawn as a player's companion spawn; enum 1 on 116, 2 on 9, values unexplained.",
-  "evidence": "120 of 125 Spawns have companion or ship in the FQN: spn.companion.alliance.*, spn.location.ship.*.  The difference between 1 and 2 is unknown.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Marks a spawn as a player's companion spawn; enum 1 on 116, 2 on 9, values unexplained. 120 of 125 Spawns have companion or ship in the FQN: spn.companion.alliance.*, spn.location.ship.*. The difference between 1 and 2 is unknown. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "400000430dd5d413": {
-  "reason": "True on 124 of 174 MountPackage records, evenly across names. Hint chrMorphRestrictsQuickbars is a morph idea, fits mrp objects, but quickbar behaviour is not in data. Use one flagged and one unflagged morph in game."
+  "reason": "True on 124 of 174 MountPackage records, evenly across names. Hint chrMorphRestrictsQuickbars is a morph idea, fits mrp objects, but quickbar behaviour is not in data. Use one flagged and one unflagged morph in game. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events."
  },
  "4000000ff70f4369": {
   "meaning": "Operation's state machine table: maps a state id to the settings applied in that state, including per-spawner on/off.",
@@ -324,21 +284,19 @@
   "confidence": "proved"
  },
  "40000003aad97db4": {
-  "reason": "Float on 109 spawner entries, 0.01-100, often 1-3. Time-like, but the hint spnDespawnTime is not tested: no log joins spawner entries. Timing a flagged despawn would settle it."
+  "reason": "Float on 109 spawner entries, 0.01-100, often 1-3. Time-like, but the hint spnDespawnTime is not tested: no log joins spawner entries. Timing a flagged despawn would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "4000004d712ce3c9": {
-  "meaning": "Per-mode bitmask of an operation's nightmare lockouts, 4 slots, sibling to 4000003336e29d76.",
-  "evidence": "18 rdd lists of 4: denova [0,3840,0,3840], darvannis [0,2080768,0,2080768], bits disjoint from 3336e29d76 on 18 of 18 and continuing above it. Non-zero slots are 2 and 4 where they occur. Fits hint for nightmare, supported by 41d51f0ca0 names _nim/_nightmare/_mm.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Per-mode bitmask of an operation's nightmare lockouts, 4 slots, sibling to 4000003336e29d76. 18 rdd lists of 4: denova [0,3840,0,3840], darvannis [0,2080768,0,2080768], bits disjoint from 3336e29d76 on 18 of 18 and continuing above it. Non-zero slots are 2 and 4 where they occur. Fits hint for nightmare, supported by 41d51f0ca0 names _nim/_nightmare/_mm. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000042fe4cc724": {
-  "reason": "True on 89 of 2,172 phases, e.g. guest quarters, fleet staging, story landing zones. No join tests it. Client type int16. In-game test of phase behaviour would settle it."
+  "reason": "True on 89 of 2,172 phases, e.g. guest quarters, fleet staging, story landing zones. No join tests it. Client type int16. In-game test of phase behaviour would settle it. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line."
  },
  "40000002996ed706": {
-  "reason": "True on 84 Spawns. Hint spnVaryByGroupSize is half supported: 73 of them have non-zero tiers 2-4, but 11 do not and 159 unflagged Spawns also do. So not required for tier values. A server trace at different group sizes would settle it."
+  "reason": "True on 84 Spawns. Hint spnVaryByGroupSize is half supported: 73 of them have non-zero tiers 2-4, but 11 do not and 159 unflagged Spawns also do. So not required for tier values. A server trace at different group sizes would settle it. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "40000042878a8e50": {
-  "reason": "True on 71 NPCs: exp.dark_v_light.world_boss NPCs (34 under exp), rakling pets, test NPCs, one boss. No shared property found; an in-game check would be needed."
+  "reason": "True on 71 NPCs: exp.dark_v_light.world_boss NPCs (34 under exp), rakling pets, test NPCs, one boss. No shared property found; an in-game check would be needed. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "40000041d51f0ca0": {
   "meaning": "Boss's nightmare-mode lockout id in an operation (a lockout state id).",
@@ -346,95 +304,79 @@
   "confidence": "proved"
  },
  "4000000ff6be6486": {
-  "meaning": "State id for a boss in an operation's state table; likely the state set once it is defeated.",
-  "evidence": "67 entries in phsRaidBossInfoList, all 67 keys of ff70f4369. 'Defeated' is the hint; state order is consistent but not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: State id for a boss in an operation's state table; likely the state set once it is defeated. 67 entries in phsRaidBossInfoList, all 67 keys of ff70f4369. 'Defeated' is the hint; state order is consistent but not observed. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044ab8218d1": {
-  "confidence": "likely",
-  "meaning": "Level-sync setting of an instance phase for its other difficulty mode, the one whose level is 426934e681 (80 on most); same id space as 8d0 and sysArea 7f381fb0.",
-  "evidence": "Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). star_fortress and zakuul_arena hold prefix+'65', and star_fortress's 426934e681 is 65; the other 62 phases hold d9bdae203a09f841 and have level 80 there on 62 of 62, so it reads as the level-80 (no down-sync) setting under a different name. Which mode (veteran, hard) is not named."
+  "reason": "Read so far, not proved: Level-sync setting of an instance phase for its other difficulty mode, the one whose level is 426934e681 (80 on most); same id space as 8d0 and sysArea 7f381fb0. Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). star_fortress and zakuul_arena hold prefix+'65', and star_fortress's 426934e681 is 65; the other 62 phases hold d9bdae203a09f841 and have level 80 there on 62 of 62, so it reads as the level-80 (no down-sync) setting under a different name. Which mode (veteran, hard) is not named. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "400000426934e681": {
-  "meaning": "Level an instance phase scales to in one difficulty mode.",
-  "evidence": "63 phases: 80 on 62, 65 on flashpoint_star_fortress. Only on instance phases: flashpoints, operations, uprisings, lair bosses. Mode (normal) is the hint phsNormalModeBolsterLevel, not shown. Phase-level value; effect on NPC HP tested only for the story field.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Level an instance phase scales to in one difficulty mode. 63 phases: 80 on 62, 65 on flashpoint_star_fortress. Only on instance phases: flashpoints, operations, uprisings, lair bosses. Mode (normal) is the hint phsNormalModeBolsterLevel, not shown. Phase-level value; effect on NPC HP tested only for the story field. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "400000426934e682": {
-  "meaning": "Level an instance phase scales to in another difficulty mode.",
-  "evidence": "62 phases: 80 on 61, 65 on flashpoint_star_fortress; absent where kdy_flashpoint has only one. Mode (hard) is the hint, not shown. Phase-level value; effect on NPC HP tested only for the story field.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Level an instance phase scales to in another difficulty mode. 62 phases: 80 on 61, 65 on flashpoint_star_fortress; absent where kdy_flashpoint has only one. Mode (hard) is the hint, not shown. Phase-level value; effect on NPC HP tested only for the story field. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044acb25b75": {
-  "meaning": "Hashed category or profile name of an instance phase for one difficulty mode.",
-  "evidence": "58 phases. Values split content: 0xd1c2f93d flashpoints (25), 0x5993afcb operations (14), UPRISING (hash match) on 10 uprisings, 0xac3ae0c0 the story-70 flashpoints, 0xa9af1a5f the story-75 flashpoints, 0xaa28ae6e dxun and iokath. Role and mode not shown; a stat table keyed by these would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Hashed category or profile name of an instance phase for one difficulty mode. 58 phases. Values split content: 0xd1c2f93d flashpoints (25), 0x5993afcb operations (14), UPRISING (hash match) on 10 uprisings, 0xac3ae0c0 the story-70 flashpoints, 0xa9af1a5f the story-75 flashpoints, 0xaa28ae6e dxun and iokath. Role and mode not shown; a stat table keyed by these would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044acb25b76": {
-  "meaning": "Hashed category or profile name of an instance phase for a second difficulty mode.",
-  "evidence": "57 phases; values parallel 25b75 with near-identical hashes: 0xd1c2f63d (24), 0xac3ae1c0, 0xa9af195f; operations 0x2adfadb3 (14); uprisings UPRISING (10). Role and mode not shown. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Hashed category or profile name of an instance phase for a second difficulty mode. 57 phases; values parallel 25b75 with near-identical hashes: 0xd1c2f63d (24), 0xac3ae1c0, 0xa9af195f; operations 0x2adfadb3 (14); uprisings UPRISING (10). Role and mode not shown. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "4000004f0c19935c": {
-  "reason": "True on 39 of 174 MountPackage records, notably droid-control morphs (observation, serving, mouse droids). Hint chrMorphDisablesTemporaryQuickSlot fits a morph, but quick-slot behaviour is not in data. Use one flagged morph in game."
+  "reason": "True on 39 of 174 MountPackage records, notably droid-control morphs (observation, serving, mouse droids). Hint chrMorphDisablesTemporaryQuickSlot fits a morph, but quick-slot behaviour is not in data. Use one flagged morph in game. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events."
  },
  "400000415717b690": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 1 and 0.6, one per ship role. Hint scFFChaseCameraBehavior_Unk1BoostDistance has 'Unk'. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 1 and 0.6, one per ship role. Hint scFFChaseCameraBehavior_Unk1BoostDistance has 'Unk'. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "400000415717b691": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 1 and 0.6, one per ship role. Hint has 'Unk1BoostVelocity'. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 1 and 0.6, one per ship role. Hint has 'Unk1BoostVelocity'. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "400000415717b692": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.75 and 0.25, one per ship role. Hint has 'Unk1Velocity'. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.75 and 0.25, one per ship role. Hint has 'Unk1Velocity'. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1bc": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.8, 0.7, 0.4, one per ship role. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.8, 0.7, 0.4, one per ship role. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1bd": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 2.5 and 0.4, one per ship role. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 2.5 and 0.4, one per ship role. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1be": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 5 and 1, one per ship role. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 5 and 1, one per ship role. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1bf": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.8 and 0.2; scouts have both. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.8 and 0.2; scouts have both. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1c0": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 2.5 and 3, one per ship role. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 2.5 and 3, one per ship role. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1c1": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 5 and 6, one per ship role. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 5 and 6, one per ship role. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1c2": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 0.2. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 0.2. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ce7bda1c3": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 0.2. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 0.2. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ceed100ac": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 3; hint has 'Unk3RightTangent'. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 3; hint has 'Unk3RightTangent'. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ceed100af": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 0.2. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 0.2. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ceed100b0": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.75 and 0.5, one per ship role. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Values 0.75 and 0.5, one per ship role. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004d6c253358": {
-  "meaning": "Position offset of the ship chase camera, as a vector.",
-  "evidence": "Vec3 on all 35 chase.camera.* objects, e.g. (0, 0.24, 0.8) on imp_infiltrator_a, beside vector 4ce7bda1b9 (0, 0.24, 0.4). Hint has 'QuickLookPositionOffset'; that it applies to quick look is not shown.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Position offset of the ship chase camera, as a vector. Vec3 on all 35 chase.camera.* objects, e.g. (0, 0.24, 0.8) on imp_infiltrator_a, beside vector 4ce7bda1b9 (0, 0.24, 0.4). Hint has 'QuickLookPositionOffset'; that it applies to quick look is not shown. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines. Flying GSF and measuring the effect, or reversing the executable's flight code, would determine it."
  },
  "40000042e9ca3a70": {
-  "reason": "Only ever enum 2, on 33 objects: conquest commanders (22 Encounters) and event.gree.area_pvp (11 Spawns). That content has PvP in common, but one value gives no reading of what it does. Hint is spnPvPInstanceOnlyEnum. Enter a flagged encounter on PvE and PvP instances to check."
+  "reason": "Only ever enum 2, on 33 objects: conquest commanders (22 Encounters) and event.gree.area_pvp (11 Spawns). That content has PvP in common, but one value gives no reading of what it does. Hint is spnPvPInstanceOnlyEnum. Enter a flagged encounter on PvE and PvP instances to check. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "400003d31a81e0d0": {
-  "reason": "True on 32 NPCs, mostly dynamic_events bosses (toughness 8 and 9), plus a few test and alliance NPCs. Client type int16. Boss-like only by rank; no effect visible in data."
+  "reason": "True on 32 NPCs, mostly dynamic_events bosses (toughness 8 and 9), plus a few test and alliance NPCs. Client type int16. Boss-like only by rank; no effect visible in data. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "40000002d9d8a250": {
-  "meaning": "Wait time at a path point in seconds.",
-  "evidence": "29 points, 0.1-90: 5 (6), 4 (4), 15 (3), 65 (2). Fits hint pthPointWaitTimeout; seconds is inferred; no observation of a patrol.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Wait time at a path point in seconds. 29 points, 0.1-90: 5 (6), 4 (4), 15 (3), 65 (2). Fits hint pthPointWaitTimeout; seconds is inferred; no observation of a patrol. Not determinable from the client: patrol movement runs on the server, and combat logs give positions only on combat lines, so a path's traversal and waits never show. Watching a patrol on a path that carries the value, in game, would determine it."
  },
  "40000044ab8218d0": {
   "confidence": "proved",
@@ -442,18 +384,16 @@
   "evidence": "Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). 25 of 27 uses resolve to a level: 10 (transition act 1), 32 and 36 (Revan flashpoints), 49 (directive_7), 50 (rakghoul, Ilum), 55 (man, rakata_prime, korriban, tython), 57 (blood_hunt), 60 (rishi_2), 65 (star_fortress, zakuul_arena), 70 (nathema, traitor, umbara), 75 (cor, enclave, sov). Where the phase has a story level 426936e2e9, it equals the encoded level on 9 of 9 (blood_hunt 57 included). The other value, d9bdae203a09f841, sits on elom and voss with story level 80 and is the same value as 8d1 on 62 phases; it is not the prefix plus any 1-4 character suffix."
  },
  "40000002d9d8a1cf": {
-  "reason": "True on 26 path points. Occurs with a wait value (2d9d8a250) on 18, without on 8, and 11 waits lack it, so it does not simply enable waiting as the hint says. A patrol trace in game would settle it."
+  "reason": "True on 26 path points. Occurs with a wait value (2d9d8a250) on 18, without on 8, and 11 waits lack it, so it does not simply enable waiting as the hint says. A patrol trace in game would settle it. Not determinable from the client: patrol movement runs on the server, and combat logs give positions only on combat lines, so a path's traversal and waits never show."
  },
  "40000034e60737c1": {
-  "meaning": "Entitlement or special-offer group a vendor belongs to.",
-  "evidence": "26 NPCs, grouped: 40 on vendor_keyfob (and vendor_starting), 30 on vendor_preorder, 2013 on vendor_collectors_edition, 1913 on herald_of_revan_vendor, 7 on tauntaun_handler_subscriber, 1 on test conv_starter NPCs. Fits an id; what it is checked against is not in the NPC record.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Entitlement or special-offer group a vendor belongs to. 26 NPCs, grouped: 40 on vendor_keyfob (and vendor_starting), 30 on vendor_preorder, 2013 on vendor_collectors_edition, 1913 on herald_of_revan_vendor, 7 on tauntaun_handler_subscriber, 1 on test conv_starter NPCs. Fits an id; what it is checked against is not in the NPC record. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "400000459f857171": {
-  "reason": "Enum 1 on 14 and 2 on 11 Encounters, all dynamic_events, Hoth 17, Dromund Kaas 4, 4 elsewhere: boss_encounter, phase_2, pirate_boss. No client enum name; whether 1 and 2 are boss and phase is a guess. Watch the encounters in game."
+  "reason": "Enum 1 on 14 and 2 on 11 Encounters, all dynamic_events, Hoth 17, Dromund Kaas 4, 4 elsewhere: boss_encounter, phase_2, pirate_boss. No client enum name; whether 1 and 2 are boss and phase is a guess. Watch the encounters in game. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it."
  },
  "40000045816865d0": {
-  "reason": "True on 24 NPCs, every one with turret in the name (24/24), e.g. alderaan guard_panteer_refuge_turret, ilum guard_republic_base_camp_turret. So turret-only, but other turrets lack it, and its effect is not in data. Client type int16. Compare a flagged and unflagged turret in game."
+  "reason": "True on 24 NPCs, every one with turret in the name (24/24), e.g. alderaan guard_panteer_refuge_turret, ilum guard_republic_base_camp_turret. So turret-only, but other turrets lack it, and its effect is not in data. Client type int16. Compare a flagged and unflagged turret in game. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value."
  },
  "400000426936e2e9": {
   "confidence": "proved",
@@ -461,40 +401,30 @@
   "evidence": "22 phases: 80 on 12 (uprisings, voss, elom), 70 (nathema, traitor, umbara), 75 (cor, enclave, sov), 57 blood_hunt, 60 kdy, 50 rakghoul. Equals the level encoded in the phase's story level-sync setting 44ab8218d0 (FNV-1a 64 of a fixed prefix plus the level) on 9 of 9 phases that have both, blood_hunt 57 included. Log HP agrees: with HP = class band x healing row, Nathema NPCs imply level 70 in 3,454 of 5,811 log counts, Corellia level 75 in 513 of 809."
  },
  "40000009af9f1223": {
-  "meaning": "NPC-level treasure package override, a hashed trp name.",
-  "evidence": "21 NPCs; FNV-1a 64 of the uppercased string (signed i64) in the same space as loot field 42956d8c70: 0x234993874b625ece = TRP.EMPTY on 10. Override as opposed to addition follows hint npcHarvestableTreasurePkgOverride, not shown.",
-  "confidence": "likely"
+  "meaning": "An NPC-level loot (treasure) package, as FNV-1a 64 of a trp.* name.",
+  "evidence": "21 NPCs. Values are in the loot-package id space of NPC 956d8c70 (RESEARCH 01a1c27a-8233); 0x234993874b625ece = TRP.EMPTY on 10. Not determinable from the client: whether it overrides or adds to the class package (the community hint says override), and the other names; loot is server-side. NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it.",
+  "confidence": "proved"
  },
  "4000000fd14fbe77": {
-  "reason": "Constant 7 on all 18 rdd objects. A constant cannot be read."
+  "reason": "Constant 7 on all 18 rdd objects. A constant cannot be read. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "40000011a445cda7": {
-  "meaning": "Operation's initial state id.",
-  "evidence": "18 rdd objects: value is the lowest key of state table ff70f4369 on 18 of 18 (0x...100). Fits hint phsRaidInitialState; being lowest does not show it is first entered, but nothing else stands out.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Operation's initial state id. 18 rdd objects: value is the lowest key of state table ff70f4369 on 18 of 18 (0x...100). Fits hint phsRaidInitialState; being lowest does not show it is first entered, but nothing else stands out. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044092bde92": {
-  "reason": "Constant 1 on all 18 rdd objects. A constant cannot be read."
+  "reason": "Constant 1 on all 18 rdd objects. A constant cannot be read. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. The value never varies in this build, so only server or executable code, or a build or object where it differs, would determine it."
  },
  "40000044acb25b77": {
-  "meaning": "Hashed profile name for a third mode, on operations only.",
-  "evidence": "16 phases, all operations: 0x2adfadb3 (14), 0x7de4b867 on dxun and iokath, equal to the same phase's 25b76. Fits a third operation mode (nightmare); not shown. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Hashed profile name for a third mode, on operations only. 16 phases, all operations: 0x2adfadb3 (14), 0x7de4b867 on dxun and iokath, equal to the same phase's 25b76. Fits a third operation mode (nightmare); not shown. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044ab8218d2": {
-  "confidence": "likely",
-  "meaning": "Level-sync setting of an uprising phase for a further mode; always d9bdae203a09f841, the setting that pairs with level 80.",
-  "evidence": "10 uprising phases only, all d9bdae203a09f841, the value 8d1 holds on 62 phases whose level is 80; its sibling level aea9e5b2 is 80 on all 10. Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none)."
+  "reason": "Read so far, not proved: Level-sync setting of an uprising phase for a further mode; always d9bdae203a09f841, the setting that pairs with level 80. 10 uprising phases only, all d9bdae203a09f841, the value 8d1 holds on 62 phases whose level is 80; its sibling level aea9e5b2 is 80 on all 10. Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044aea9e5b2": {
-  "meaning": "Level of an uprising phase in a further mode.",
-  "evidence": "10 uprising phases only, all 80; sibling of 9e5b4 and 9e5b5.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Level of an uprising phase in a further mode. 10 uprising phases only, all 80; sibling of 9e5b4 and 9e5b5. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044aea9e5b4": {
-  "confidence": "likely",
-  "meaning": "Level-sync setting of an uprising phase in a further mode; always d9bdae203a09f841 (the level-80 setting), beside level aea9e5b2 = 80.",
-  "evidence": "10 uprising phases only, all d9bdae203a09f841, as 8d1 and 8d2; that value pairs with level 80 wherever a level sits beside it (62 of 62 on 8d1). Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none)."
+  "reason": "Read so far, not proved: Level-sync setting of an uprising phase in a further mode; always d9bdae203a09f841 (the level-80 setting), beside level aea9e5b2 = 80. 10 uprising phases only, all d9bdae203a09f841, as 8d1 and 8d2; that value pairs with level 80 wherever a level sits beside it (62 of 62 on 8d1). Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line. Entering the instance in each mode and reading the result in game, or server instance data, would determine it."
  },
  "40000044aea9e5b5": {
   "meaning": "Hashed category name of an uprising phase: UPRISING.",
@@ -502,37 +432,31 @@
   "confidence": "proved"
  },
  "4000004327f8a7a0": {
-  "reason": "True on 8 phases, e.g. lanes_lab, alliance companion alerts, ord datacron, shroud_of_memory. No shared property. Client type int16. Would need an in-game check."
+  "reason": "True on 8 phases, e.g. lanes_lab, alliance companion alerts, ord datacron, shroud_of_memory. No shared property. Client type int16. Would need an in-game check. Not determinable from the client: instance phases, difficulty modes, lockouts and operation states are server-run. Combat logs name the area and difficulty on AreaEntered but print no phase state, lockout, bolster or level-sync line."
  },
  "40000008622e5a3a": {
-  "meaning": "Name of an animation (morpheme) network for the NPC.",
-  "evidence": "7 test NPCs (jr.tomb_robber, bbenson.locotest, dmedeiros.idleloco): 'humanoid_loco_cnv' and 'humanoid_loco_idle'. Fits hint npcMorphemeNetwork; asset file not located in the filename list.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Name of an animation (morpheme) network for the NPC. 7 test NPCs (jr.tomb_robber, bbenson.locotest, dmedeiros.idleloco): 'humanoid_loco_cnv' and 'humanoid_loco_idle'. Fits hint npcMorphemeNetwork; asset file not located in the filename list. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "4000000becbb6107": {
-  "reason": "Integer on 7 NPCs: tauntaun 5, lana_beniko 1, broonmark 1, damaged_probe 500, superboss_gormak_pet 400. Pattern not clear and too few to read."
+  "reason": "Integer on 7 NPCs: tauntaun 5, lana_beniko 1, broonmark 1, damaged_probe 500, superboss_gormak_pet 400. Pattern not clear and too few to read. Not determinable from the client: NPC rules are applied by the server. Combat logs give an NPC's name, id, position and health but no level, XP, loot, aggression, faction or companion state, and nothing else in the client data refers to this value. An in-game comparison of an NPC that carries the value with one that does not, or server data, would determine it."
  },
  "4000004ceed100aa": {
-  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 3 on the 6 objects that have it; hint has 'Unk2RightTangent'. Changing it and flying, or the client's camera code, would settle it."
+  "reason": "All 35 objects are chase.camera.* ship cameras, so this tunes the GSF chase camera, but which axis or response is not in the data. Constant 3 on the 6 objects that have it; hint has 'Unk2RightTangent'. Changing it and flying, or the client's camera code, would settle it. Not determinable from the client data: GSF flight, camera, weapon, visual and reward tuning is read by the client's flight code in the executable, which kessel does not reverse, or by server match rules. The data files hold the number only, and combat logs print no camera, flight-model, requisition or ship-tuning lines."
  },
  "4000004ebc3267ea": {
-  "reason": "True on 6 MountPackage records (mouse droid, zakuul_knight, test assets). Nothing joins them."
+  "reason": "True on 6 MountPackage records (mouse droid, zakuul_knight, test assets). Nothing joins them. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events. Using an object that carries the value beside one that does not, in game, or the executable's handler for it, would determine it."
  },
  "40000000293dbe1d": {
-  "meaning": "Event that activates a child spawner.",
-  "evidence": "4 test objects spn.test.crefac_child.*: 'death' (3), 'aggro' (1), all with dispense event absent and secondary 'spent'. Fits hint spnActivateEvent; four test objects are thin.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Event that activates a child spawner. 4 test objects spn.test.crefac_child.*: 'death' (3), 'aggro' (1), all with dispense event absent and secondary 'spent'. Fits hint spnActivateEvent; four test objects are thin. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "4000004592ba9a10": {
-  "reason": "True on 3 MountPackage records, all alliance.legacy_reborn: theron, sith_ship, malgus. Too few to read."
+  "reason": "True on 3 MountPackage records, all alliance.legacy_reborn: theron, sith_ship, malgus. Too few to read. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events. Using an object that carries the value beside one that does not, in game, or the executable's handler for it, would determine it."
  },
  "400003d359d0d932": {
-  "meaning": "Marks a rare encounter.",
-  "evidence": "3 of 3 Encounters are rare by name: oricon.rare.acolyte_harbinger, czerka enc_rare_dessler, yavin_4 enc_rare. Only 3 uses; behaviour not observed.",
-  "confidence": "likely"
+  "reason": "Read so far, not proved: Marks a rare encounter. 3 of 3 Encounters are rare by name: oricon.rare.acolyte_harbinger, czerka enc_rare_dessler, yavin_4 enc_rare. Only 3 uses; behaviour not observed. Not determinable from the client: spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it."
  },
  "400003d3c3f739d1": {
-  "reason": "Float on 2 MountPackage records: lana 0.01, jekiah_basilisk 0.75. Too few to read."
+  "reason": "Float on 2 MountPackage records: lana 0.01, jekiah_basilisk 0.75. Too few to read. Not determinable from the client: object use, collision, loot and morph rules are run by the server or by client code in the executable, which kessel does not reverse. Nothing else in the client data refers to this value, and combat logs print no use, loot, collision, mount or morph events. Using an object that carries the value beside one that does not, in game, or the executable's handler for it, would determine it."
  },
  "4000000becbce797": {
   "meaning": "Name of a weapon fx spec the NPC uses.",
@@ -540,9 +464,9 @@
   "confidence": "proved"
  },
  "40000000293dbe27": {
-  "meaning": "spnAutoStart: true when the spawner fills on its own; absent when a script or quest switches it on (hydra Set Active).",
-  "evidence": "Present (true) on 53,611 of 67,829 Spawns. Dynamic Encounter spawners lack it on 1,444 of 2,119 (68%) against 12,774 of 65,710 (19%) elsewhere. Ilum DE bosses without it (spn.dynamic_events.ilum.eastern_shelf.imperial.ensuring_victory_2.rep_siege_captain, slot A of enc ...republic_boss) are switched on by hyd ...inst_advance_mission On Custom:spawn_boss -> Set Active(true), which the quest raises. Name from client.gom; the not-automatic reading rests on that script join, not on a server observation.",
-  "confidence": "likely"
+  "meaning": "spnAutoStart: true when the spawner fills on its own; absent when a quest step or script has to switch it on.",
+  "evidence": "Name proved by its client.gom hash. Present on 65,220 of 81,329 Spawns. Spawners without it are switched on by a quest step (the 5b20eaaa enable flag in a step's spawner map 4000000a731cd8be, directly or through an encounter that holds them) 7,508 of 16,109 times (47%), against 5,316 of 65,220 (8%) for spawners with it (kessel-discovery/examples/registry_spawner_enable.py). Ilum dynamic-encounter bosses without it are switched on by Hydra Set Active(true) on a quest-raised On Custom:spawn_boss. The rest without it are switched by other scripts. Not determinable from the client: whether every unflagged spawner stays empty until switched. spawners and encounters run on the server. The client ships no spawner runtime or spawn definitions (.spn_c, .spn_crf and .spn_lst are not in the archives, RESEARCH 01a1c274-edd7 and 01a1c0be-9414), and combat logs record no spawn, despawn, respawn, timer or slot events, so the files hold this value and nothing that consumes or reports it. Timing or watching a spawner that carries the value beside one that does not, in game, or the server's spawner data, would determine it.",
+  "confidence": "proved"
  },
  "40000049b78d6eec": {
   "meaning": "FQN of the template one spawner entry places (npc.* or plc.*): the object that stands where a room instance of this spawner is placed.",

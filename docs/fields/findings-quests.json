@@ -5,19 +5,19 @@
   "meaning": "qstReqMinLevel: lowest character level that can take the quest."
  },
  "400000003aef5105": {
-  "confidence": "likely",
-  "evidence": "Value of the map 4000000a731cd8be; parallels named qstStepClientOnlySpawnerStateDisabled; 19,429 uses, never in one entry with 5b20eaaa. Follows enable for the same spawner in 3,672 of 4,416 cases.",
-  "meaning": "This quest step or task disables the spawner or encounter it is keyed by."
+  "meaning": "In a quest step's spawner map (4000000a731cd8be), the step disables the spawner or encounter that keys the entry.",
+  "evidence": "Value of the map 4000000a731cd8be; 19,429 uses, never in one entry with the enable flag 5b20eaaa (proved). It is the counterpart of the hash-named qstStepClientOnlySpawnerStateDisabled. For the same spawner in a branch it follows the enable in 3,672 of 4,416 cases.",
+  "confidence": "proved"
  },
  "400000005b20eaaa": {
-  "confidence": "likely",
-  "evidence": "Value of the map 4000000a731cd8be, keyed by Spawn (135,412) or Encounter (14,918) objects. Parallels named qstStepClientOnlySpawnerStateEnabled. For a spawner both enabled and disabled in a branch, enable comes first in 3,672 of 4,416 cases. Never combined with 3aef5105 in a single entry.",
-  "meaning": "This quest step or task enables the spawner or encounter it is keyed by."
+  "meaning": "In a quest step's spawner map (4000000a731cd8be), the step enables the spawner or encounter that keys the entry.",
+  "evidence": "Value of the map 4000000a731cd8be, keyed by Spawn (135,412) or Encounter (14,918) objects. It is the counterpart of the hash-named pair qstStepClientOnlySpawnerStateEnabled/Disabled, and never shares an entry with 3aef5105. For a spawner both enabled and disabled in a branch, it comes first in 3,672 of 4,416 cases. Spawners it names lack spnAutoStart (proved) far more often: 7,508 of 12,824 spawners it reaches have no auto start, against 8,601 of 68,505 it never reaches (kessel-discovery/examples/registry_spawner_enable.py). A switch-on is needed exactly where auto start is missing.",
+  "confidence": "proved"
  },
  "400000005ce63fcc": {
-  "confidence": "likely",
-  "evidence": "On 33 tasks, all with progress variable named *_fc_* (e.g. _fc_b1_s0_t0), and no other task has such a name; 32 also have named qstTaskForceConversationAssociatedObject (5d551476). 'fc' as force conversation comes from that sibling. Runtime effect not observed.",
-  "meaning": "Marks a task as an auto-generated force-conversation task."
+  "meaning": "Marks a quest task as a force-conversation task.",
+  "evidence": "Exactly the 33 tasks whose progress variable is named *_fc_* (e.g. _fc_b1_s0_t0), both ways: no other task has such a name. 32 of them also carry the hash-named qstTaskForceConversationAssociatedObject (5d551476).",
+  "confidence": "proved"
  },
  "40000000ad6e051c": {
   "confidence": "proved",
@@ -30,12 +30,10 @@
   "evidence": "Value 3 on Droid Repossession, which TORCommunity mission UdMKxSB calls qstDifficultyNormal, and the XP multiplier at index 3 is exactly 1.0. The era indices match the content they sit on (kessel-discovery/examples/registry_quest_difficulty.py, unfiltered extract): 6 SeasonOne on 15 qst.exp.seasons.01 chapters (KotFE, Season One) and on no other expansion content except the seasons.02 prologue ep_00; 7 SeasonTwo on 9 qst.exp.seasons.02 chapters (KotET, Season Two) and 21 qst.exp.03 (Onslaught) quests; 8 LotS on 22 qst.exp.04 (Legacy of the Sith) quests and one Ord Mantell daily, none elsewhere. Title tags do not separate 2 to 5 ([HEROIC] occurs on 3, 4 and 5), so those follow the name order of qstrewardscreditsdifficultyscale."
  },
  "40000001c65955ed": {
-  "reason": "Always true on 12 branches (7 location, 4 test, 1 dynamic event), e.g. waylaid_double_negative branch 3, contract_negotiations 2 to 4. Unlike qstBranchIsAlternateEnding, it shows no link to a named field. Playing one of these branches through would be needed."
+  "reason": "Always true on 12 branches (7 location, 4 test, 1 dynamic event), e.g. waylaid_double_negative branch 3, contract_negotiations 2 to 4. Unlike qstBranchIsAlternateEnding, it shows no link to a named field. Playing one of these branches through would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "40000001d2172763": {
-  "confidence": "likely",
-  "evidence": "Holder 40000004dc01e9d4 on tasks, with sibling 400000307860fc07 naming the bonus quest. When one bonus has both values in a branch, 1 comes earlier in 581 of 585; absent comes before 2 in 188 of 190. E.g. flashpoint_manaan logistic_confusion: 1 at step 1, 2 at step 10. 2 is on the last step in 738 of 1,355, against 230 of 2,428 for 1. This contradicts the community name qstTaskBonusMissionStartTrigger for value 2. Whether 2 ends, fails or completes the bonus is not separated.",
-  "meaning": "What a task's bonus-mission entry does to the bonus quest: enum, absent/1 appears at the bonus's start and 2 later in the same branch; 2 likely ends or closes it."
+  "reason": "Read so far, not proved: What a task's bonus-mission entry does to the bonus quest: enum, absent/1 appears at the bonus's start and 2 later in the same branch; 2 likely ends or closes it. Holder 40000004dc01e9d4 on tasks, with sibling 400000307860fc07 naming the bonus quest. When one bonus has both values in a branch, 1 comes earlier in 581 of 585; absent comes before 2 in 188 of 190. E.g. flashpoint_manaan logistic_confusion: 1 at step 1, 2 at step 10. 2 is on the last step in 738 of 1,355, against 230 of 2,428 for 1. This contradicts the community name qstTaskBonusMissionStartTrigger for value 2. Whether 2 ends, fails or completes the bonus is not separated. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it."
  },
  "40000001e3c45ddd": {
   "confidence": "proved",
@@ -43,37 +41,25 @@
   "meaning": "Name of the event that fires this Hydra script entry, e.g. On Enter, On Use, On Custom:<name>. Normally repeats the hydScriptMap key."
  },
  "40000002bb83598f": {
-  "confidence": "likely",
-  "evidence": "Sibling of the companion and NPC flags, set on 63,990 of 65,865 entries including all script kinds. On Enter or On Exit entries with it unset carry another instigator flag in 636 of 668 cases, e.g. companion-only cc_poi_barks triggers. No in-game check.",
-  "meaning": "Hydra trigger fires for player characters."
+  "reason": "Read so far, not proved: Hydra trigger fires for player characters. Sibling of the companion and NPC flags, set on 63,990 of 65,865 entries including all script kinds. On Enter or On Exit entries with it unset carry another instigator flag in 636 of 668 cases, e.g. companion-only cc_poi_barks triggers. No in-game check. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "40000002bb835990": {
-  "confidence": "likely",
-  "evidence": "927 uses. 289 On Enter and On Exit entries have only this flag, 224 in companion-bark scripts (cc_poi_barks, trig_cc_bark_*), the rest mostly ambient triggers, e.g. location.belsavis.ambient.republic.trig_blown_prison. No in-game check.",
-  "meaning": "Hydra trigger fires for companions."
+  "reason": "Read so far, not proved: Hydra trigger fires for companions. 927 uses. 289 On Enter and On Exit entries have only this flag, 224 in companion-bark scripts (cc_poi_barks, trig_cc_bark_*), the rest mostly ambient triggers, e.g. location.belsavis.ambient.republic.trig_blown_prison. No in-game check. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "40000002bb835991": {
-  "confidence": "likely",
-  "evidence": "768 uses. 141 On Enter and On Exit entries have only this flag, e.g. flashpoint boss trig_leash_boss and event trig_hostage_despawn, which only make sense for an NPC crossing the volume. No in-game check.",
-  "meaning": "Hydra trigger fires for NPCs."
+  "reason": "Read so far, not proved: Hydra trigger fires for NPCs. 768 uses. 141 On Enter and On Exit entries have only this flag, e.g. flashpoint boss trig_leash_boss and event trig_hostage_despawn, which only make sense for an NPC crossing the volume. No in-game check. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "40000002bb835992": {
-  "confidence": "likely",
-  "evidence": "Of 293 triggers with a non-empty bb835993 NPC list, 232 have this flag, and of 262 with this flag 232 have a list. The flag-only entries are on leash volumes (trig_leash_volume), which fit a specific boss crossing. The community name says 'custom' only.",
-  "meaning": "Hydra trigger fires for the listed NPCs in 40000002bb835993."
+  "reason": "Read so far, not proved: Hydra trigger fires for the listed NPCs in 40000002bb835993. Of 293 triggers with a non-empty bb835993 NPC list, 232 have this flag, and of 262 with this flag 232 have a list. The flag-only entries are on leash volumes (trig_leash_volume), which fit a specific boss crossing. The community name says 'custom' only. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "40000002bb835994": {
-  "reason": "Always true on 385 Hydra trigger entries, nearly all On Enter, 334 in location class-story content and the rest test scripts. 89% have deactivation scope Instigator. They run Play Conversation at 22% (base about 6%), and Set Quest State and Is Phase Owner are over-represented, so this fits solo story triggers. The community name DeactivateForInstigatorOnly duplicates the enum field, and nothing separates it from alternatives. Two players entering one in game would settle it."
+  "reason": "Always true on 385 Hydra trigger entries, nearly all On Enter, 334 in location class-story content and the rest test scripts. 89% have deactivation scope Instigator. They run Play Conversation at 22% (base about 6%), and Set Quest State and Is Phase Owner are over-represented, so this fits solo story triggers. The community name DeactivateForInstigatorOnly duplicates the enum field, and nothing separates it from alternatives. Two players entering one in game would settle it. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events."
  },
  "40000002bb835995": {
-  "confidence": "likely",
-  "evidence": "On 7,484 entries, mostly On Enter and On Exit; paired with the time field on 5,458. 2,026 uses have no explicit time (presumably a default) and 358 uses hold a time without this flag (leftover and unused).",
-  "meaning": "Hydra trigger reactivates after a delay, given by 40000002bb835996."
+  "reason": "Read so far, not proved: Hydra trigger reactivates after a delay, given by 40000002bb835996. On 7,484 entries, mostly On Enter and On Exit; paired with the time field on 5,458. 2,026 uses have no explicit time (presumably a default) and 358 uses hold a time without this flag (leftover and unused). Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "40000002bb835996": {
-  "confidence": "likely",
-  "evidence": "f32 0.01 to 6000; common values 5, 1, 10, 300, 30, 900; usually beside bb835995. The unit is inferred from the round values, which read as seconds: no join to a known duration was found.",
-  "meaning": "Delay before a Hydra trigger reactivates, in seconds."
+  "reason": "Read so far, not proved: Delay before a Hydra trigger reactivates, in seconds. f32 0.01 to 6000; common values 5, 1, 10, 300, 30, 900; usually beside bb835995. The unit is inferred from the round values, which read as seconds: no join to a known duration was found. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "40000002cdeb4375": {
   "confidence": "proved",
@@ -81,18 +67,18 @@
   "meaning": "Custom event name sent to a Hydra script; with a sibling Hydra reference (4000000a4fa14a1f) it fires that script's 'On Custom:<name>' entry."
  },
  "40000002ced5c808": {
-  "reason": "Enum 1 (9,503) or 2 (410) on tasks; absent on 34,004. The objective verb separates presence: present tasks are mostly Defeat, Destroy, Recover (e.g. Defeat Ortuno); absent ones are Speak, Return, Complete, Travel. So it is about world objectives, which fits group credit but does not prove it, and nothing separates 1 from 2 (Defeat Ortuno is 1, Defeat Commander Kallin is 2). No client enum matches. A grouped run with a member out of range on one task of each value would settle it."
+  "reason": "Enum 1 (9,503) or 2 (410) on tasks; absent on 34,004. The objective verb separates presence: present tasks are mostly Defeat, Destroy, Recover (e.g. Defeat Ortuno); absent ones are Speak, Return, Complete, Travel. So it is about world objectives, which fits group credit but does not prove it, and nothing separates 1 from 2 (Defeat Ortuno is 1, Defeat Commander Kallin is 2). No client enum matches. A grouped run with a member out of range on one task of each value would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "40000003e9153158": {
-  "reason": "An enum with the single value 1 on 38,621 of 38,777 steps. The absent 156 are not separated by qstCanBeFailed or fail objects (54 have both, 71 neither), and no client enum matches. The community name qstStepFailureScope has no support. A build or a client enum where the value differs would be needed."
+  "reason": "An enum with the single value 1 on 38,621 of 38,777 steps. The absent 156 are not separated by qstCanBeFailed or fail objects (54 have both, 71 neither), and no client enum matches. The community name qstStepFailureScope has no support. A build or a client enum where the value differs would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "40000004267b45a3": {
-  "reason": "Always true on a quest script call (cdeb4375 + Hydra reference), on 1,996 of about 13,000; most in the completion and start holders. Called script entries show no difference in trigger settings with or without it, since all 10,343 joins are Everyone with no reactivation. The community name qstHydraRunOnce has no support. A repeat-run test on a flagged call would settle it."
+  "reason": "Always true on a quest script call (cdeb4375 + Hydra reference), on 1,996 of about 13,000; most in the completion and start holders. Called script entries show no difference in trigger settings with or without it, since all 10,343 joins are Everyone with no reactivation. The community name qstHydraRunOnce has no support. A repeat-run test on a flagged call would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "400000049af60277": {
-  "confidence": "likely",
-  "evidence": "Always-type labels on 43,658 tasks. Of 226 non-Always labels, 217 are on tasks whose progress variable is an Item variable. Some values state the roll themselves ('Often -- RandInt(1,100) >= 50'). Whether the server still reads the text or the loot tables govern is not shown.",
-  "meaning": "Designer's drop-chance label for a task's quest item; free text such as Always, Often, Rare, or Rare -- RandInt(1,100) >= 70."
+  "meaning": "The designer's drop-chance label for a task's quest item, as free text: Always, Often, Rare, or 'Rare -- RandInt(1,100) >= 70'.",
+  "evidence": "Always-type labels on 43,658 tasks. 217 of the 226 others sit on tasks whose progress variable is an Item variable, and some state the roll itself ('Often -- RandInt(1,100) >= 50'). Not determinable from the client: whether the server reads the text or its loot tables decide (loot packages are server-side, RESEARCH 01a1c27a-8233). quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "4000000564513cfb": {
   "confidence": "proved",
@@ -110,22 +96,16 @@
   "meaning": "qstRewardsCredits: which credit curve the quest pays from, a key of qstrewardscreditsData field 4000000b8c279054. Credits = curve[qstXpLevel], then scaled by difficulty."
  },
  "4000000cd6b80e69": {
-  "confidence": "likely",
-  "evidence": "290 of 467 hyd.space_combat.* scripts have it; of 34,356 others, 52 do, 50 of them under test.users and test.andrewg. Why some space_combat scripts lack it is not shown.",
-  "meaning": "Marks a Hydra script as space combat content."
+  "reason": "Read so far, not proved: Marks a Hydra script as space combat content. 290 of 467 hyd.space_combat.* scripts have it; of 34,356 others, 52 do, 50 of them under test.users and test.andrewg. Why some space_combat scripts lack it is not shown. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events. Crossing a scripted volume that carries the value in game, beside one that does not, or server script logs, would determine it."
  },
  "4000000d632d5101": {
-  "confidence": "likely",
-  "evidence": "Under 4000000dbd7c6f8d in the spawner map; 22,515 quest uses. Names match Hydra state events such as On Custom:Open-Closed. Equal to 5102 in 18,017 of 18,437 pairs. Where they differ it is the more stable one: in the next step it stays the same 288 of 315 times, against 190 of 292 for 5102. That fits the spin-up reading in the community name but does not prove it; a phase re-entry test mid-quest would.",
-  "meaning": "Named state (On, Off, Open, Closed, Locked, Destroyed...) for placeables from the keyed spawner during this quest step; see 4000000d632d5102."
+  "reason": "Read so far, not proved: Named state (On, Off, Open, Closed, Locked, Destroyed...) for placeables from the keyed spawner during this quest step; see 4000000d632d5102. Under 4000000dbd7c6f8d in the spawner map; 22,515 quest uses. Names match Hydra state events such as On Custom:Open-Closed. Equal to 5102 in 18,017 of 18,437 pairs. Where they differ it is the more stable one: in the next step it stays the same 288 of 315 times, against 190 of 292 for 5102. That fits the spin-up reading in the community name but does not prove it; a phase re-entry test mid-quest would. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it."
  },
  "4000000d632d5102": {
-  "confidence": "likely",
-  "evidence": "Same place and vocabulary as 5101. Examples of differing pairs (5101, 5102): flashpoint_manaan (Closed, On), blood_hunt (Closed, Open), (On, Off). It carries the changing value more often than 5101, which fits a state applied on entering the step, but this does not prove it; a phase re-entry test mid-quest would.",
-  "meaning": "Second named state for placeables from the keyed spawner during this quest step; see 4000000d632d5101."
+  "reason": "Read so far, not proved: Second named state for placeables from the keyed spawner during this quest step; see 4000000d632d5101. Same place and vocabulary as 5101. Examples of differing pairs (5101, 5102): flashpoint_manaan (Closed, On), blood_hunt (Closed, Open), (On, Off). It carries the changing value more often than 5101, which fits a state applied on entering the step, but this does not prove it; a phase re-entry test mid-quest would. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it."
  },
  "40000029e237e188": {
-  "reason": "An integer 1 to 195 on all 9,463 quests, mostly 3 to 7, which fits a designer edit count as the community name qstVersion says, but nothing in the data ties it to one. Comparing the value for the same quests across game builds would settle it."
+  "reason": "An integer 1 to 195 on all 9,463 quests, mostly 3 to 7, which fits a designer edit count as the community name qstVersion says, but nothing in the data ties it to one. Comparing the value for the same quests across game builds would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000002a0e062ca2": {
   "confidence": "proved",
@@ -138,14 +118,14 @@
   "meaning": "The quest variable holding a task's progress; the task completes when it reaches qstTaskCountMax."
  },
  "400000307bd62590": {
-  "confidence": "likely",
-  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 166 of 172 resolve to qstInstanceVariableDefinition, e.g. hk_51.breakingandentering instance_doc_lighton. Before 7bd62591 in 85 of 89 branches. What activating an instance variable does in the world is not shown by the data.",
-  "meaning": "Instance quest variables activated for the player by this step."
+  "meaning": "The instance quest variables (qstVariableFqnId) a step lists to activate; 7bd62591 lists the same variables to deactivate at a later step.",
+  "evidence": "Values equal qstVariableFqnId (40000034b21e56a4) of variables defined in the same quest: 147 of 152 distinct values (registry pass), 166 of 172 resolving to qstInstanceVariableDefinition (hk_51.breakingandentering instance_doc_lighton). The step listing a variable here comes before the step listing it in 7bd62591 in 85 of 89 branches. Not determinable from the client: what activating an instance variable does in the world (server-side instance state). quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "400000307bd62591": {
-  "confidence": "likely",
-  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 134 of 143 resolve to qstInstanceVariableDefinition. After 7bd62590 in 85 of 89 branches. What deactivating does in the world is not shown by the data.",
-  "meaning": "Instance quest variables deactivated for the player by this step."
+  "meaning": "The instance quest variables (qstVariableFqnId) a step lists to deactivate, after 7bd62590 activated them.",
+  "evidence": "Values equal qstVariableFqnId of variables defined in the same quest: 104 of 111 distinct values; 134 of 143 resolve to qstInstanceVariableDefinition. The step comes after the 7bd62590 step for the same variable in 85 of 89 branches. Not determinable from the client: what deactivating an instance variable does in the world (server-side instance state). quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "40000034bc126750": {
   "confidence": "proved",
@@ -153,9 +133,9 @@
   "meaning": "Compiled form of a Hydra or conversation condition block: a flat postfix list of variable ids, constants and small operator codes."
  },
  "40000034c8b89fb0": {
-  "confidence": "likely",
-  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. Step: 10,068 SimpleBool and 56 PermanentBool of 10,127; task: 1,476 and 4 of 1,487. Names are past-tense milestones matching the step's own objective: sqm_defeated_boss on the step with task boss_trophy, sqm_machines_destroyed with counter_machines_destroyed. Timing: of 120 tasks whose qstTaskAutoCompleteVariable is set by a step list, 114 are set one step earlier. 'Set true' is inferred from the names and that auto-complete use, not read from a value.",
-  "meaning": "Boolean quest variables set when this step or task finishes."
+  "meaning": "The boolean quest variables (qstVariableFqnId) a step or task sets when it finishes.",
+  "evidence": "Values equal qstVariableFqnId of variables defined in the same quest: 10,816 of 10,824 distinct values. For steps, 10,068 are SimpleBool and 56 PermanentBool of 10,127; for tasks, 1,476 and 4 of 1,487. The names are past-tense milestones matching the step's own objective (sqm_defeated_boss on the step with task boss_trophy). Of 120 tasks whose qstTaskAutoCompleteVariable is set by a step list, 114 are set one step earlier, so the variable is set as the step closes. Not determinable from the client: the value written (true is read from the names), which is server quest state. quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "40000034c8b89fb2": {
   "confidence": "likely",
@@ -168,9 +148,9 @@
   "meaning": "Map-note quest variables removed from the player by this step or task."
  },
  "40000034d36ca501": {
-  "confidence": "likely",
-  "evidence": "Join: value = qstVariableFqnId (40000034b21e56a4) of a variable defined in the same quest's ProtoVarList fields. 1,775 of 1,794 resolve: SimpleBool 820, Complex 687, Link 217, PermanentBool 51; e.g. cnv_chose_to_hold_camp, gameplay_chose_turrets. Every use is beside 5b20eaaa (enable). Parallels named qstStepClientOnlySpawnerStateVariableId. Direction is not settled: names like cmplx_do_not_spawn_agent_ship suggest the spawner may enable when the variable is false in some cases.",
-  "meaning": "Quest variable that gates this spawner's enable state in the step; the spawner's enable depends on it."
+  "meaning": "The quest variable (qstVariableFqnId) that a quest step's spawner enable entry depends on.",
+  "evidence": "Values equal qstVariableFqnId of variables defined in the same quest: 593 of 600 distinct values, 1,775 of 1,794 uses (SimpleBool 820, Complex 687, Link 217, PermanentBool 51; cnv_chose_to_hold_camp, gameplay_chose_turrets). Every use sits beside the enable flag 5b20eaaa (proved). It is the counterpart of the hash-named qstStepClientOnlySpawnerStateVariableId. Not determinable from the client: the polarity: names like cmplx_do_not_spawn_agent_ship suggest the enable sometimes applies when the variable is false. quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "40000034d36ca502": {
   "confidence": "proved",
@@ -188,7 +168,7 @@
   "meaning": "The constant quest variable a Hydra script sets to advance this task: the task's completion hook."
  },
  "4000003d08886730": {
-  "reason": "Always true on 62 steps, 47 of which have qstCanBeFailed, with test quests qst.test.users.bsm.failany and failure_info_test and 22 space_combat. So it relates to failure, but 15 lack qstCanBeFailed and only 24 have fail objects. Failing a flagged and an unflagged step in game would settle it."
+  "reason": "Always true on 62 steps, 47 of which have qstCanBeFailed, with test quests qst.test.users.bsm.failany and failure_info_test and 22 space_combat. So it relates to failure, but 15 lack qstCanBeFailed and only 24 have fail objects. Failing a flagged and an unflagged step in game would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "400000404d7ad371": {
   "confidence": "proved",
@@ -206,20 +186,20 @@
   "meaning": "Number identifying a bind point (hearth stone) map note; the 140 unflagged BindPoint notes presumably hold 0."
  },
  "400000426c54c423": {
-  "reason": "Always true on an entry of cnvNpcReactions (cnvReactionNpcId, cnvReactionType); present on 55,762 of 57,281 entries. Rates do not separate by reaction type, and flagged entries never name the node's speaker, but neither do almost all unflagged ones. Comparing a node with and without the flag in a conversation in game would settle it."
+  "reason": "Always true on an entry of cnvNpcReactions (cnvReactionNpcId, cnvReactionType); present on 55,762 of 57,281 entries. Rates do not separate by reaction type, and flagged entries never name the node's speaker, but neither do almost all unflagged ones. Comparing a node with and without the flag in a conversation in game would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "400000428eab81d0": {
-  "reason": "Always true, on 7,553 of 9,463 quests. Absent mostly on hidden and private quests (phi -0.56 with qstIsHiddenQuest, -0.55 with qstReqPrivacy), +0.55 with qstStringIdVariableDefinition, and absent on 761 companion quests. That suggests a player-visible quest log entry, but 1,088 flagged quests have no journal strings and 44 hidden quests are flagged. Comparing flagged and unflagged quests in the mission log would settle it."
+  "reason": "Always true, on 7,553 of 9,463 quests. Absent mostly on hidden and private quests (phi -0.56 with qstIsHiddenQuest, -0.55 with qstReqPrivacy), +0.55 with qstStringIdVariableDefinition, and absent on 761 companion quests. That suggests a player-visible quest log entry, but 1,088 flagged quests have no journal strings and 44 hidden quests are flagged. Comparing flagged and unflagged quests in the mission log would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "40000042e413d370": {
-  "confidence": "likely",
-  "evidence": "All 92 quests with this flag also have named quest-level qstShowPlayButton (4000004eebd33f18, 103 quests), on alliance, exp and flashpoint content. The relation is proved; the UI effect is taken from the sibling's name and was not observed.",
-  "meaning": "Step-level companion of qstShowPlayButton: this step shows the quest's play button."
+  "meaning": "A step-level flag found only on quests that carry the hash-named quest-level qstShowPlayButton.",
+  "evidence": "All 92 quests with it also have qstShowPlayButton (4000004eebd33f18, 103 quests), on alliance, exp and flashpoint content. Not determinable from the client: that it shows the play button on that step, because the button is UI in the executable. quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "400000431424d192": {
-  "confidence": "likely",
-  "evidence": "27 quests, exactly the set whose 4000004eae529e18 resolves to a glb_repeat_* or repeat variable: 26 qst.exp.seasons.* chapters and qa.gameplay_persistence. All 27 have qstIsEpisode. Replay as the effect is read from the variable names, not observed.",
-  "meaning": "Marks a quest as a replayable story chapter."
+  "meaning": "Marks a quest as a replayable story chapter: the quests that define a repeat-run variable.",
+  "evidence": "Exactly the 27 quests whose 4000004eae529e18 resolves to a defined PermanentBool, both ways. Those variables are named glb_repeat_* or repeat (glb_repeat_season_2_ch_9 on qst.exp.seasons.02.ep_09). 26 are qst.exp.seasons.* chapters and one is the QA persistence test, and all 27 have qstIsEpisode.",
+  "confidence": "proved"
  },
  "4000004344191ff1": {
   "confidence": "proved",
@@ -227,9 +207,9 @@
   "meaning": "Set of bark events handled by a conversation: map from bark event id to true."
  },
  "400000437a802070": {
-  "confidence": "likely",
-  "meaning": "Map of area ids (or FNV-1a 64 hashed area/room names) to true listing the areas associated with a quest step.",
-  "evidence": "Keys are area ids in the same form as mapLinkAreaId: 885 of 953 keys occur as a qstTaskMapLink area in the same quest; values are all true. Registry pass 2026-11-09: 9 of the 9 keys that are not 0x4000... area ids (25 uses) are FNV-1a 64 of uppercased area or room names held as strings elsewhere, e.g. ruhnuk_story_arena on qst.daily_area.ruhnuk.story.shared.mission_4, ossus_daily_world_jedi_library on qst.daily_area.ossus.imperial.crit_path.mission_4, ode_flashpoint_hub_control_room on the umbara and copero wrappers. What the game does with the list (tracker, map, phase handling) is not shown."
+  "meaning": "A quest step's set of areas: map of area ids, or FNV-1a 64 of area or room names, to true.",
+  "evidence": "885 of 953 keys occur as a qstTaskMapLink area of the same quest; all 9 non-area-id keys are FNV-1a 64 of area or room names held as strings elsewhere (ruhnuk_story_arena, ossus_daily_world_jedi_library, ode_flashpoint_hub_control_room); values are all true. Not determinable from the client: what the game does with the set (tracker, map or phase handling). quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "40000043fdef4852": {
   "confidence": "proved",
@@ -267,10 +247,10 @@
   "meaning": "Group-finder category of a featured-content quest; one hash per category."
  },
  "40000045908ae8d2": {
-  "reason": "Always true, on 9,388 of 9,463 quests. The 75 absent are 72 qst.dynamic_events.dantooine plus 3 others, and absence correlates with 400003d3834751e1 (phi -0.77), but no named field or text explains it. Comparing a Dantooine dynamic event with and without it in game would be needed."
+  "reason": "Always true, on 9,388 of 9,463 quests. The 75 absent are 72 qst.dynamic_events.dantooine plus 3 others, and absence correlates with 400003d3834751e1 (phi -0.77), but no named field or text explains it. Comparing a Dantooine dynamic event with and without it in game would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "400000497ba659a0": {
-  "reason": "Always true on 1,743 quests. Most are companion conversations (612), and 619 of 698 qstReqPrivacy quests have it (phi 0.51); the rest are breadcrumbs, conquests and dailies. This contradicts the community name qstIsEventQuest. No named field explains the set; comparing how flagged and unflagged quests are offered in game would be needed."
+  "reason": "Always true on 1,743 quests. Most are companion conversations (612), and 619 of 698 qstReqPrivacy quests have it (phi 0.51); the rest are breadcrumbs, conquests and dailies. This contradicts the community name qstIsEventQuest. No named field explains the set; comparing how flagged and unflagged quests are offered in game would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000004bb8dc9943": {
   "confidence": "proved",
@@ -323,25 +303,19 @@
   "meaning": "Custom event name sent to the Hydra script in a conversation node's script call (2bd61399); it fires that script's 'On Custom:<name>' entry."
  },
  "4000004e2bd6139b": {
-  "reason": "Always true on 87 conversation script calls, most labelled with companion actions: Summon <companion>, Unlock <companion>, Add <companion>, Dismiss, and a few others (become_turret, on_explode). This suggests a call scoped to one participant rather than all, but it is an association from labels only. Testing a flagged call in a group conversation would settle it."
+  "reason": "Always true on 87 conversation script calls, most labelled with companion actions: Summon <companion>, Unlock <companion>, Add <companion>, Dismiss, and a few others (become_turret, on_explode). This suggests a call scoped to one participant rather than all, but it is an association from labels only. Testing a flagged call in a group conversation would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000004e2bd6139c": {
-  "reason": "Always true on a conversation node's script call, on 1,513 of 1,540. The 27 unset are nearly all scene exits: 'On Cnv Complete' on spirit_of_vengeance scenes, teleports (to_gravestone, ExitFlashpoint, Teleport to Odessen), mostly on leaf nodes. This suggests unset calls wait for the conversation to end, but nothing proves it. Watching a set and unset call's timing in game would settle it."
+  "reason": "Always true on a conversation node's script call, on 1,513 of 1,540. The 27 unset are nearly all scene exits: 'On Cnv Complete' on spirit_of_vengeance scenes, teleports (to_gravestone, ExitFlashpoint, Teleport to Odessen), mostly on leaf nodes. This suggests unset calls wait for the conversation to end, but nothing proves it. Watching a set and unset call's timing in game would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000004e43444e78": {
-  "confidence": "likely",
-  "evidence": "All 23 uses are on nodes with cnvConditionType 5 (cnvConditionType_RandomPool, 0-based), whose cnvNodeQuestGrants list the pool: mission boards such as iokath mission_board_imp (values 1 and 2) and makeb mission_terminal_new (6). The value is below the pool size on all 23 (1 of 2 to 7, 2 of 4 or 7, 6 of 10). In-game picks not counted.",
-  "meaning": "Number of quests picked from a random-pool conversation node."
+  "reason": "Read so far, not proved: Number of quests picked from a random-pool conversation node. All 23 uses are on nodes with cnvConditionType 5 (cnvConditionType_RandomPool, 0-based), whose cnvNodeQuestGrants list the pool: mission boards such as iokath mission_board_imp (values 1 and 2) and makeb mission_terminal_new (6). The value is below the pool size on all 23 (1 of 2 to 7, 2 of 4 or 7, 6 of 10). In-game picks not counted. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it."
  },
  "4000004e43444e79": {
-  "confidence": "likely",
-  "evidence": "2 uses, both value 1 on RandomPool nodes: mek_sha acquisitions_overseer_daily and cnv.test.qa.emulkey.terminal_test. Assigned by the id order against client enums cnvRandomPoolPer and cnvRandomPoolReset, with only two samples.",
-  "meaning": "Random-pool scope setting of a conversation node: 1 means per player (member of cnvRandomPoolPer)."
+  "reason": "Read so far, not proved: Random-pool scope setting of a conversation node: 1 means per player (member of cnvRandomPoolPer). 2 uses, both value 1 on RandomPool nodes: mek_sha acquisitions_overseer_daily and cnv.test.qa.emulkey.terminal_test. Assigned by the id order against client enums cnvRandomPoolPer and cnvRandomPoolReset, with only two samples. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it."
  },
  "4000004e43444e7a": {
-  "confidence": "likely",
-  "evidence": "8 uses, all with value 1 on RandomPool nodes. Client enums cnvRandomPoolPer and cnvRandomPoolReset exist with consecutive hashes, which fits the id order e79 then e7a. Spring festival egg hunt boards have this and quest interval -6861156100148308393 (mask 4 in qstRepeatIntervalProto), unlike -5303584831447202882 (mask 127). But makeb mission_terminal_new also has it with mask 127, so the assignment is not exclusive.",
-  "meaning": "Random-pool reset setting of a conversation node: 1 means weekly (member of cnvRandomPoolReset)."
+  "reason": "Read so far, not proved: Random-pool reset setting of a conversation node: 1 means weekly (member of cnvRandomPoolReset). 8 uses, all with value 1 on RandomPool nodes. Client enums cnvRandomPoolPer and cnvRandomPoolReset exist with consecutive hashes, which fits the id order e79 then e7a. Spring festival egg hunt boards have this and quest interval -6861156100148308393 (mask 4 in qstRepeatIntervalProto), unlike -5303584831447202882 (mask 127). But makeb mission_terminal_new also has it with mask 127, so the assignment is not exclusive. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it."
  },
  "4000004e6f677098": {
   "confidence": "proved",
@@ -349,14 +323,14 @@
   "meaning": "Quest map from qstBranchId to the 1-based position of that branch in the qstBranches list."
  },
  "4000004eab41b49b": {
-  "confidence": "likely",
-  "evidence": "114 of 117 steps with eab41b49a have this. 100 of 114 values also occur as qstTaskMapLink or step area ids, and they pair consistently: mrp.exp.seasons.02.ep_00_hk_bonus.story.hk_55 with 4611686355809927011 on 23 steps, mrp.alliance.legacy_reborn.* with 4611690224900330001. The mrp names are characters and vehicles (hk_55, lana, republic_walker). That the override is limited to the area is inferred from the pairing.",
-  "meaning": "Area in which the step's mount package override (mrp.*, 4000004eab41b49a) applies; the community reading is a polymorph area."
+  "meaning": "The area id paired with a step's mount package override (mrp.*, 4000004eab41b49a).",
+  "evidence": "On 114 of the 117 steps with eab41b49a. 100 of the 114 values also occur as qstTaskMapLink or step area ids, and they pair consistently: mrp.exp.seasons.02.ep_00_hk_bonus.story.hk_55 with 4611686355809927011 on 23 steps, mrp.alliance.legacy_reborn.* with 4611690224900330001. Not determinable from the client: that the override applies only inside the area (a community reading). quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "4000004eae529e18": {
-  "confidence": "likely",
-  "evidence": "27 values resolve to a PermanentBool named glb_repeat_* or repeat, e.g. qst.exp.seasons.02.ep_09 glb_repeat_season_2_ch_9 (the 27 are exactly the quests with 431424d192). The other 3,822 are the quest's id prefix with slot 0, which no variable definition holds. Whether the engine reads the placeholder at all is not shown.",
-  "meaning": "The quest variable marking a repeat run of the quest. Only 27 quests point at a defined variable; for 3,822 others it is an empty placeholder."
+  "meaning": "The quest variable (qstVariableFqnId) that marks a repeat run of the quest; on quests that define none it holds the empty slot 0 of the quest's own id prefix.",
+  "evidence": "27 values resolve to a PermanentBool named glb_repeat_* or repeat (the 27 are exactly the quests with 431424d192). The other 3,822 equal the quest's own variable id prefix with slot 0, which no variable definition holds (registry pass 2026-11-09: 27 of 3,849 values are qstVariableFqnIds). Not determinable from the client: whether the engine reads the empty placeholder. quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events. Playing a quest step that carries the value against one that does not, or server quest data, would determine it.",
+  "confidence": "proved"
  },
  "4000004ec8023d79": {
   "confidence": "proved",
@@ -364,10 +338,10 @@
   "meaning": "qstCommandPointValue: Command (Galactic Command) XP granted on completion."
  },
  "4000004ec86c22f2": {
-  "reason": "Always true on 512 quests: conquests, fpaccess, dailies, activities and dynamic events, 89% repeatable. All 212 quests with no qstCommandPointValue have it, and flagged quests with a value mostly have large ones (16,000 to 60,000 against the usual 600). That points at command-XP handling, but no value is explained. Comparing Command XP on flagged and unflagged completions would settle it."
+  "reason": "Always true on 512 quests: conquests, fpaccess, dailies, activities and dynamic events, 89% repeatable. All 212 quests with no qstCommandPointValue have it, and flagged quests with a value mostly have large ones (16,000 to 60,000 against the usual 600). That points at command-XP handling, but no value is explained. Comparing Command XP on flagged and unflagged completions would settle it. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000004f08946439": {
-  "reason": "Always true on 24 steps, all the second step of their branch (2, 3 or 5 steps) on shared daily and weekly quests (qst.pvp.warzone.weekly_*, pvp.arena, daily_area.iokath.shared), all with qstStepIsShareable. The tasks are ordinary counters, and nothing else distinguishes the step. Sharing or abandoning one of these quests in game, compared with a similar unflagged one, would be needed."
+  "reason": "Always true on 24 steps, all the second step of their branch (2, 3 or 5 steps) on shared daily and weekly quests (qst.pvp.warzone.weekly_*, pvp.arena, daily_area.iokath.shared), all with qstStepIsShareable. The tasks are ordinary counters, and nothing else distinguishes the step. Sharing or abandoning one of these quests in game, compared with a similar unflagged one, would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000004f2af88f68": {
   "confidence": "proved",
@@ -375,7 +349,7 @@
   "meaning": "Condition that reveals an achievement whose achDiscovery is 3 (conditional). A reference to a Condition object."
  },
  "4000004f2fb0c04a": {
-  "reason": "A single use, true, on cnd.ventures.basilisk_prototype.lanes_lab.can_claim_bb, type 46 HasCollectionItemUnlocked with cndCollectionItemMtxId. One sample has nothing to compare against. Finding a second use in a later build, or testing that claim in game, would be needed."
+  "reason": "A single use, true, on cnd.ventures.basilisk_prototype.lanes_lab.can_claim_bb, type 46 HasCollectionItemUnlocked with cndCollectionItemMtxId. One sample has nothing to compare against. Finding a second use in a later build, or testing that claim in game, would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "4000004f5c32a43a": {
   "confidence": "proved",
@@ -383,7 +357,7 @@
   "meaning": "Count compared by a HasCountOfActivePerkTag condition: how many active guild perks with the tag."
  },
  "4000004f83648418": {
-  "reason": "Always true on 336 script entries, dynamic_events 175, ventures 56, flashpoint 33, daily_area 29, operation 22. Over-represented actions: Execute Ability, Achievement Event, Set Quest Removed, Take Items, Contact Set Role (all 12 of 12), which all act on a person, hinting at per-participant execution; this is only an association. A multi-player test of a flagged and an unflagged script would settle it."
+  "reason": "Always true on 336 script entries, dynamic_events 175, ventures 56, flashpoint 33, daily_area 29, operation 22. Over-represented actions: Execute Ability, Achievement Event, Set Quest Removed, Take Items, Contact Set Role (all 12 of 12), which all act on a person, hinting at per-participant execution; this is only an association. A multi-player test of a flagged and an unflagged script would settle it. Not determinable from the client: Hydra scripts and their triggers run on the server. The client holds the script data but no trigger runtime, and combat logs print no trigger, volume or script events."
  },
  "400003d288e5e090": {
   "confidence": "proved",
@@ -391,12 +365,12 @@
   "meaning": "Map on a Hydra script action or condition, one level per key, holding FX parameter overrides for a VFX action: name such as @fxTimeout or FIRING mapped to a text value (duration, vector or state)."
  },
  "400003d3834751e1": {
-  "reason": "Integer always 1, on 117 of 133 qst.dynamic_events.dantooine quests and nowhere else, all with qstRequiredWorldEventId. Most biome and zone_progress quests have it; missions and world_boss quests do not. No other Dantooine field or value explains it, and with one value there is nothing to join. A future build with other values or a Dantooine play test would be needed."
+  "reason": "Integer always 1, on 117 of 133 qst.dynamic_events.dantooine quests and nowhere else, all with qstRequiredWorldEventId. Most biome and zone_progress quests have it; missions and world_boss quests do not. No other Dantooine field or value explains it, and with one value there is nothing to join. A future build with other values or a Dantooine play test would be needed. Not determinable from the client: quest and conversation flow runs on the server. The client holds the quest data but not the runtime that reads this value, and combat logs print no quest, task, conversation, variable or mission-log events."
  },
  "40000045816cd2a0": {
-  "meaning": "The trigger volume that starts a Dynamic Encounter quest: a hydra trig_* script placed in the area's rooms.",
-  "evidence": "204 Quests, almost all qst.dynamic_events.*; every value resolves to a hyd.* object named trig_event_volume (33), trig_event_region (78, plus 14 variants), trig_quest_trig_<event> (61) or another trig_* volume. Ilum: 13 of 20 DE quests name their trig_event_volume, whose only handler is On Enter -> Passes Conditional(cnd...is_volume_on_quest) -> Play Transmission(<event>_intro); the quest's hydra hooks (4fa14a1f + cdeb4375: spawn_boss, despawn_boss, end) drive inst_advance_mission's Set Active on the event's encounters. The volume is placed by FQN in the same room as the event's encounters (ensuring_victory_2: h1_rayshielded_republic_base). The reference is proved; 'entering it starts the event' is read from the scripts, not seen in a log.",
-  "confidence": "likely"
+  "meaning": "The trigger volume that starts a Dynamic Encounter quest: a hyd trig_* script placed in the area's rooms.",
+  "evidence": "204 Quests, almost all qst.dynamic_events.*. Every value is the GUID fold of a hyd.* object (204 of 204, registry pass 2026-11-09), named trig_event_volume (33), trig_event_region (78, plus 14 variants), trig_quest_trig_<event> (61) or another trig_* volume. On Ilum, trig_event_volume's only handler is On Enter -> Passes Conditional(cnd...is_volume_on_quest) -> Play Transmission(<event>_intro), and the volume is placed in the same room as the event's encounters (RESEARCH 01a1c0be-9414).",
+  "confidence": "proved"
  },
  "4000000024c97989": {
   "confidence": "proved",

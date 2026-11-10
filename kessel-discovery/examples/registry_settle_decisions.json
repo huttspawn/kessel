@@ -1,0 +1,391 @@
+{
+ "40000000293dbe27": {
+  "proved": {
+   "meaning": "spnAutoStart: true when the spawner fills on its own; absent when a quest step or script has to switch it on.",
+   "evidence": "Name proved by its client.gom hash. Present on 65,220 of 81,329 Spawns. Spawners without it are switched on by a quest step (the 5b20eaaa enable flag in a step's spawner map 4000000a731cd8be, directly or through an encounter that holds them) 7,508 of 16,109 times (47%), against 5,316 of 65,220 (8%) for spawners with it (kessel-discovery/examples/registry_spawner_enable.py). Ilum dynamic-encounter bosses without it are switched on by Hydra Set Active(true) on a quest-raised On Custom:spawn_boss. The rest without it are switched by other scripts.",
+   "nd": "whether every unflagged spawner stays empty until switched."
+  }
+ },
+ "40000003b981a0ad": {
+  "proved": {
+   "meaning": "taxRouteCost: the credit price of one taxi route.",
+   "evidence": "Name proved: the client strings 'taxRouteCost'/'guiTaxiCostNetwork' name it, and the field's hash matches. On 616 of 862 route entries, values 2 to 1,500, constant within a planet tier (Makeb 150, Mek-Sha 1000, Belsavis 300), absent on free story routes."
+  }
+ },
+ "40000009ae2f555b": {
+  "proved": {
+   "meaning": "plcdynLootPackage: the loot package a lootable placeable rolls, as FNV-1a 64 of the uppercased trp.* package name.",
+   "evidence": "Name proved by its client.gom hash. 638 placeables, 233 distinct hashes, in the id space of item 407c89a3 and NPC 956d8c70 (loot packages, RESEARCH 01a1c27a-8233). 3 resolve to trp.* names (trp.empty, trp.daily_area.ord_mantell.world.shared.datacron.access_card, trp.alliance.old_wounds.achievement.discarded_steak).",
+   "nd": "the other 230 package names and every package's contents; loot packages are server-side (no trp.* name folds to a shipped object, RESEARCH 01a1c27a-8233)."
+  }
+ },
+ "4000000e68c43612": {
+  "proved": {
+   "meaning": "qstExperienceMultiplierNormal: the quest XP multiplier by qstDifficulty (0 NoExp 0, 1 ChainStep 0.15, 2 Easy 0.45, 3 Normal 1.0, 4 Hard 1.4, 5 VeryHard 1.8, 6 SeasonOne 7.25, 7 SeasonTwo 9, 8 LotS 25).",
+   "evidence": "Name proved by its client.gom hash. 9 entries keyed 0-8, in the order of qstDifficulty (b0e9baf2, proved), and Normal (3) is exactly 1.0.",
+   "nd": "the realised XP, because combat logs print no XP."
+  },
+  "cat": "xp"
+ },
+ "4000000e68c43613": {
+  "proved": {
+   "meaning": "qstExperienceMultiplierBonus: the bonus-mission XP multiplier by qstDifficulty, half the normal one for indices 0-6 (0.5 at Normal, 3.625 at SeasonOne), then 4.5 and 5.",
+   "evidence": "Name proved by its client.gom hash. Exactly 0.5 x 4000000e68c43612 for indices 0-6.",
+   "nd": "the realised XP, because combat logs print no XP."
+  },
+  "cat": "xp"
+ },
+ "40000041436f3641": {
+  "proved": {
+   "meaning": "qstExperiencePerLevel: base quest XP by quest level 1-80 (448 at 1, 13,952 at 34, 20,224 at 50, 46,700 at 51, 72,652 at 80).",
+   "evidence": "Name proved by its client.gom hash. 80 entries, rising by level, with a step at 51.",
+   "nd": "the full XP formula against granted XP, because combat logs print no XP."
+  },
+  "cat": "xp"
+ },
+ "40000018ae425258": {
+  "proved": {
+   "meaning": "chrPlayerLegacyTitles: engine grant code -> player title ids, for the titles the game grants by rank (class story ranks, social rank, alignment rank, advanced class, space and PvP).",
+   "evidence": "Name proved by its client.gom hash. 97 codes and 99 ids, every row filled. The code families read cleanly: 2000-2003 trooper ranks Sergeant..Major, 2100-2703 one block per class story, 3001-3007 social ranks, 3020-3024 dark side ranks, 3040-3044 light side ranks, 5001-5016 the 16 advanced classes in client order, 10000 and 50000-50002 space, 30000-30001 warzones. The 24 social and alignment titles have no other grant path in the data.",
+   "nd": "the engine event that raises each code, which is server code."
+  }
+ },
+ "40000042394c09d0": {
+  "proved": {
+   "meaning": "itmHiddenSources: the set of item-source ids not shown to players.",
+   "evidence": "Name proved by its client.gom hash. The 21 members resolve to source labels such as 'Development Hidden', 'Item Slot: Chest' and the Ilum Lair augments."
+  }
+ },
+ "4000004c320bb353": {
+  "proved": {
+   "meaning": "itmGiftReactionBracketList: the gift reaction bark by computed gift value, in brackets -9,999..-1, 0, 1..70, 71..140 and 141..9,999, each with an itmGiftReactionStringId.",
+   "evidence": "Name proved by its client.gom hash. 5 brackets in itmGiftReactionsData. The computed value is the gift formula of RESEARCH 01a1c272."
+  }
+ },
+ "4000004c8cbfea50": {
+  "proved": {
+   "meaning": "effPostfixElements: a sub-effect's condition expression in postfix order. An element with no type (e71e2f92) is an operand, the effConditions entry whose id is e71f8f23; type 1 is AND and type 2 is OR, the members of client enum effLogicOp (effLogicOperand, effLogicOpAnd, effLogicOpOr).",
+   "evidence": "Name proved by its client.gom hash. Over every ability row, canonical and variant (kessel-discovery/examples/registry_postfix_check.py), all 84,131 lists evaluate to exactly one value with binary operators. 124,732 of 124,735 operand ids are keys of the same sub-effect's effConditions map (40000040f1040f75). The operators are type 1 (39,629) and type 2 (975), and the type values index effLogicOp. Static Barrier effect 2 is [HasAbility, HasEffect, AND]."
+  }
+ },
+ "4000004e4ffc3a18": {
+  "proved": {
+   "meaning": "cnvReactionDisplayChange: the reaction displays its influence change.",
+   "evidence": "Name proved by its client.gom hash. Set on 16 rows, all with influence 250 to 3,000 ('Your actions have strengthened <<1>>'s military operations.')."
+  }
+ },
+ "4000004ec7880469": {
+  "proved": {
+   "meaning": "qstRewardsInfoRewardDifficultyRequired: the chapter mode a reward row needs, 1 Story, 2 Veteran, 3 Master.",
+   "evidence": "Name proved by its client.gom hash. On 168 rows in exactly 24 quests, all KotFE and KotET chapters, the only content with three chapter modes. Quantities rise with the value: 10/20/30 of one token, 1/1/2 of another."
+  }
+ },
+ "400000005b20eaaa": {
+  "proved": {
+   "meaning": "In a quest step's spawner map (4000000a731cd8be), the step enables the spawner or encounter that keys the entry.",
+   "evidence": "Value of the map 4000000a731cd8be, keyed by Spawn (135,412) or Encounter (14,918) objects. It is the counterpart of the hash-named pair qstStepClientOnlySpawnerStateEnabled/Disabled, and never shares an entry with 3aef5105. For a spawner both enabled and disabled in a branch, it comes first in 3,672 of 4,416 cases. Spawners it names lack spnAutoStart (proved) far more often: 7,508 of 12,824 spawners it reaches have no auto start, against 8,601 of 68,505 it never reaches (kessel-discovery/examples/registry_spawner_enable.py). A switch-on is needed exactly where auto start is missing."
+  }
+ },
+ "400000003aef5105": {
+  "proved": {
+   "meaning": "In a quest step's spawner map (4000000a731cd8be), the step disables the spawner or encounter that keys the entry.",
+   "evidence": "Value of the map 4000000a731cd8be; 19,429 uses, never in one entry with the enable flag 5b20eaaa (proved). It is the counterpart of the hash-named qstStepClientOnlySpawnerStateDisabled. For the same spawner in a branch it follows the enable in 3,672 of 4,416 cases."
+  }
+ },
+ "400000005ce63fcc": {
+  "proved": {
+   "meaning": "Marks a quest task as a force-conversation task.",
+   "evidence": "Exactly the 33 tasks whose progress variable is named *_fc_* (e.g. _fc_b1_s0_t0), both ways: no other task has such a name. 32 of them also carry the hash-named qstTaskForceConversationAssociatedObject (5d551476)."
+  }
+ },
+ "400000431424d192": {
+  "proved": {
+   "meaning": "Marks a quest as a replayable story chapter: the quests that define a repeat-run variable.",
+   "evidence": "Exactly the 27 quests whose 4000004eae529e18 resolves to a defined PermanentBool, both ways. Those variables are named glb_repeat_* or repeat (glb_repeat_season_2_ch_9 on qst.exp.seasons.02.ep_09). 26 are qst.exp.seasons.* chapters and one is the QA persistence test, and all 27 have qstIsEpisode."
+  }
+ },
+ "4000004eae529e18": {
+  "proved": {
+   "meaning": "The quest variable (qstVariableFqnId) that marks a repeat run of the quest; on quests that define none it holds the empty slot 0 of the quest's own id prefix.",
+   "evidence": "27 values resolve to a PermanentBool named glb_repeat_* or repeat (the 27 are exactly the quests with 431424d192). The other 3,822 equal the quest's own variable id prefix with slot 0, which no variable definition holds (registry pass 2026-11-09: 27 of 3,849 values are qstVariableFqnIds).",
+   "nd": "whether the engine reads the empty placeholder."
+  }
+ },
+ "40000045816cd2a0": {
+  "proved": {
+   "meaning": "The trigger volume that starts a Dynamic Encounter quest: a hyd trig_* script placed in the area's rooms.",
+   "evidence": "204 Quests, almost all qst.dynamic_events.*. Every value is the GUID fold of a hyd.* object (204 of 204, registry pass 2026-11-09), named trig_event_volume (33), trig_event_region (78, plus 14 variants), trig_quest_trig_<event> (61) or another trig_* volume. On Ilum, trig_event_volume's only handler is On Enter -> Passes Conditional(cnd...is_volume_on_quest) -> Play Transmission(<event>_intro), and the volume is placed in the same room as the event's encounters (RESEARCH 01a1c0be-9414)."
+  }
+ },
+ "40000043392a0d71": {
+  "proved": {
+   "meaning": "The tier N of a QA gameplay-persistence GC test item, 1..5.",
+   "evidence": "Only on itm.qa.gameplay_persistence.gc.light_1..5 and dark_1..5, and the value equals N in the name on 10 of 10.",
+   "nd": "what the QA test does with it, because it is a test item never granted in play."
+  },
+  "cat": "object"
+ },
+ "40000043392a82a0": {
+  "proved": {
+   "meaning": "The signed tier of a QA gameplay-persistence GC test item: +N on light_N, -N on dark_N.",
+   "evidence": "Only on those 10 items; light_N holds +N and dark_N holds -N on 10 of 10.",
+   "nd": "what the QA test does with it, because it is a test item never granted in play."
+  },
+  "cat": "object"
+ },
+ "400000082d01fc99": {
+  "proved": {
+   "meaning": "Set on ranged-combat classes (the community name chrPreferRanged).",
+   "evidence": "Of NPC classes with ranged in the FQN 243 of 246 carry it; of those with melee, 8 of 243. It is on 104 class.cc.* companion classes, and all 997 also carry 400000082d01fc9a.",
+   "nd": "how the AI uses it (ranged positioning)."
+  }
+ },
+ "4000004eab7791a8": {
+  "proved": {
+   "meaning": "The ordinal of an unlockable crew mission within its crew skill.",
+   "evidence": "Exactly the 111 mission schematics with prfMissionUnlockable, both ways, of 1,122. Values 1..20 never repeat within a skill (all 8 skills) and rise with prfMissionLevel (research 24 is 2, 32 is 3 to 5, 130 is 18).",
+   "nd": "the unlock order in the crew-skill window."
+  },
+  "cat": "object"
+ },
+ "4000000d5c7a4baf": {
+  "proved": {
+   "meaning": "On a package's ability entry: the NPC attack waves (effParam_AttackWave values) the ability belongs to; [0] for none.",
+   "evidence": "Lists of ints in 0..15, the range of effParam_AttackWave on effAction_SetAttackWave. [0] on 30,080 of 33,703 entries; other values occur only in NPC, operation and flashpoint packages. In the 137 packages whose own abilities set waves, 343 of 420 listed values are values those abilities set (apn...lady_dominique.watchdog lists and sets 1-4; cz_predator_droid lists and sets 1-3).",
+   "nd": "that the ability is enabled only in those waves, and the waves of the 276 packages whose setter is elsewhere."
+  }
+ },
+ "400000307bd62590": {
+  "proved": {
+   "meaning": "The instance quest variables (qstVariableFqnId) a step lists to activate; 7bd62591 lists the same variables to deactivate at a later step.",
+   "evidence": "Values equal qstVariableFqnId (40000034b21e56a4) of variables defined in the same quest: 147 of 152 distinct values (registry pass), 166 of 172 resolving to qstInstanceVariableDefinition (hk_51.breakingandentering instance_doc_lighton). The step listing a variable here comes before the step listing it in 7bd62591 in 85 of 89 branches.",
+   "nd": "what activating an instance variable does in the world (server-side instance state)."
+  },
+  "cat": "quest"
+ },
+ "400000307bd62591": {
+  "proved": {
+   "meaning": "The instance quest variables (qstVariableFqnId) a step lists to deactivate, after 7bd62590 activated them.",
+   "evidence": "Values equal qstVariableFqnId of variables defined in the same quest: 104 of 111 distinct values; 134 of 143 resolve to qstInstanceVariableDefinition. The step comes after the 7bd62590 step for the same variable in 85 of 89 branches.",
+   "nd": "what deactivating an instance variable does in the world (server-side instance state)."
+  },
+  "cat": "quest"
+ },
+ "40000034c8b89fb0": {
+  "proved": {
+   "meaning": "The boolean quest variables (qstVariableFqnId) a step or task sets when it finishes.",
+   "evidence": "Values equal qstVariableFqnId of variables defined in the same quest: 10,816 of 10,824 distinct values. For steps, 10,068 are SimpleBool and 56 PermanentBool of 10,127; for tasks, 1,476 and 4 of 1,487. The names are past-tense milestones matching the step's own objective (sqm_defeated_boss on the step with task boss_trophy). Of 120 tasks whose qstTaskAutoCompleteVariable is set by a step list, 114 are set one step earlier, so the variable is set as the step closes.",
+   "nd": "the value written (true is read from the names), which is server quest state."
+  },
+  "cat": "quest"
+ },
+ "40000034d36ca501": {
+  "proved": {
+   "meaning": "The quest variable (qstVariableFqnId) that a quest step's spawner enable entry depends on.",
+   "evidence": "Values equal qstVariableFqnId of variables defined in the same quest: 593 of 600 distinct values, 1,775 of 1,794 uses (SimpleBool 820, Complex 687, Link 217, PermanentBool 51; cnv_chose_to_hold_camp, gameplay_chose_turrets). Every use sits beside the enable flag 5b20eaaa (proved). It is the counterpart of the hash-named qstStepClientOnlySpawnerStateVariableId.",
+   "nd": "the polarity: names like cmplx_do_not_spawn_agent_ship suggest the enable sometimes applies when the variable is false."
+  },
+  "cat": "quest"
+ },
+ "4000000b15aa9dbc": {
+  "proved": {
+   "meaning": "The delay before a spawn appears, as FNV-1a 64 of a timer preset name; SPN_n presets are fixed durations.",
+   "evidence": "81,280 of 81,315 values resolve as FNV-1a 64 of an uppercased preset name, '0' on 80,538. The durations match the times designers wrote into spawn FQNs (skytrooper_standard_jetpack_08sec): SPN_5 = 1 s (18/18), SPN_6 = 2 s (19/20), SPN_7 = 3 s (29/29), SPN_8 = 4 s (6/6), '5' = 5 s (16/16), SPN_25 = 8 s (7/7), SPN_11 = 10 s (7/7), SPN_27 = 15 s (4/4), SPN_12 = 20 s (4/4), SPN_4 = 30 s (2/2).",
+   "nd": "the durations of presets no spawn name states."
+  }
+ },
+ "4000000b15aa9dbb": {
+  "proved": {
+   "meaning": "A per-tier list of 4 timer preset names (FNV-1a 64), one per tier.",
+   "evidence": "325,277 of 325,316 values resolve as FNV-1a 64 of uppercased preset names: '0' 249,879, SPN_DEFAULT 55,080, '999' 12,770, CRF_DEFAULT 1,529, '5' 1,418, CRE_DEFAULT 811, PLC_DEFAULT 581, SPN_n, CRF_n, ENC_n. The family follows spawner type (crefac CRF_*, creature SPN_*, placeable PLC_*/SPN_*). SPN_n are durations (proved on 4000000b15aa9dbc).",
+   "nd": "the dispense role (from the community hint spnDispenseTimerPerGroupSize), what the tiers stand for, and the durations of the CRF, CRE and PLC presets."
+  }
+ },
+ "4000000b15ac2497": {
+  "proved": {
+   "meaning": "A timer preset name (FNV-1a 64) on Spawns, mostly from its own RST_ family.",
+   "evidence": "All 556 values resolve: RST_DEFAULT 249, '999' 243, '0' 27, RST_1 18, SPN_13 7, RST_2 3, RST_3 1.",
+   "nd": "what it resets (the 'reset delay' reading comes from the RST prefix and a community hint) and the RST durations."
+  }
+ },
+ "4000000b15ac2498": {
+  "proved": {
+   "meaning": "A timer preset name (FNV-1a 64) on Spawns; one unnamed default covers nearly all.",
+   "evidence": "100 of the 103 non-default uses resolve as named presets ('0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'); 80,800 of 80,903 hold the default 0xe23ddc377cb394ab, which no client string hashes or folds to (RESEARCH 01a1c274-edd7, 01a1c301-8a20).",
+   "nd": "its role (the community hint says aggro respawn) and the default's name, which is not a string the client holds."
+  }
+ },
+ "4000000b15ac2499": {
+  "proved": {
+   "meaning": "A per-tier list of 4 timer preset names (FNV-1a 64), from the SEC_ family on crefacs.",
+   "evidence": "All 325,316 values resolve: '0' 317,764, '1' 5,330, SEC_DEFAULT 2,170, '999' 44, SEC_2. Crefacs use SEC_DEFAULT (531 of 557 first slots); on creature and placeable spawns, '1' occurs almost only with 9eebcf39 = 'spent' (4,982 of 4,985).",
+   "nd": "the secondary-dispense role and the SEC durations."
+  }
+ },
+ "4000000b15ac249a": {
+  "proved": {
+   "meaning": "An encounter-level timer preset name (FNV-1a 64).",
+   "evidence": "12,191 of 12,201 values resolve: '999' 6,864, ENC_DEFAULT 3,811, ENC_1..6 764, SPN_DEFAULT 180, '0' 162. Open-world groups (_sf01 names) take ENC_DEFAULT 1,985 times against 621 for '999'.",
+   "nd": "its role (the hint says refill), whether 999 means never, and the ENC durations."
+  }
+ },
+ "4000000b15ac249b": {
+  "proved": {
+   "meaning": "A second encounter-level timer preset name (FNV-1a 64); one unnamed default covers most.",
+   "evidence": "2,969 of 12,197 uses resolve ('0' 1,234, '999' 1,100, '5' 209, SPN_n); the default 0x270299ed9a3cea3e (9,225) matches no client string (RESEARCH 01a1c274-edd7, 01a1c301-8a20).",
+   "nd": "its role (the hint says survive) and the default's name."
+  }
+ },
+ "4000003f8612b324": {
+  "proved": {
+   "meaning": "Formation -> a ship bone: for each formation key, the bone (by name hash) its members anchor to.",
+   "evidence": "All 27 keys are scFormationBones keys and all 17 values are vehBoneDataMap bones: shield_gen_01-03, shieldgen_*, and Master and Root, whose FNV-1a 64 the values are (registry pass 2026-11-09).",
+   "nd": "how the formation uses the bone in flight."
+  }
+ },
+ "400003d305be5393": {
+  "proved": {
+   "meaning": "Venture stage meta achievement -> venture story mission, two entries.",
+   "evidence": "Both keys and both values are GUID folds of shipped objects (4 of 4, registry pass 2026-11-09): ach...set_6.set_6_meta -> qst.ventures.basilisk_prototype.story.mission_2 and ach...set_10.set_10_meta -> qst...story.mission_3. Both keys are lgcVentureStageMetaAchievementId values.",
+   "nd": "whether completing the stage opens the mission (read from the names)."
+  }
+ },
+ "400000437a802070": {
+  "proved": {
+   "meaning": "A quest step's set of areas: map of area ids, or FNV-1a 64 of area or room names, to true.",
+   "evidence": "885 of 953 keys occur as a qstTaskMapLink area of the same quest; all 9 non-area-id keys are FNV-1a 64 of area or room names held as strings elsewhere (ruhnuk_story_arena, ossus_daily_world_jedi_library, ode_flashpoint_hub_control_room); values are all true.",
+   "nd": "what the game does with the set (tracker, map or phase handling)."
+  },
+  "cat": "quest"
+ },
+ "4000004eab41b49b": {
+  "proved": {
+   "meaning": "The area id paired with a step's mount package override (mrp.*, 4000004eab41b49a).",
+   "evidence": "On 114 of the 117 steps with eab41b49a. 100 of the 114 values also occur as qstTaskMapLink or step area ids, and they pair consistently: mrp.exp.seasons.02.ep_00_hk_bonus.story.hk_55 with 4611686355809927011 on 23 steps, mrp.alliance.legacy_reborn.* with 4611690224900330001.",
+   "nd": "that the override applies only inside the area (a community reading)."
+  },
+  "cat": "quest"
+ },
+ "40000042e413d370": {
+  "proved": {
+   "meaning": "A step-level flag found only on quests that carry the hash-named quest-level qstShowPlayButton.",
+   "evidence": "All 92 quests with it also have qstShowPlayButton (4000004eebd33f18, 103 quests), on alliance, exp and flashpoint content.",
+   "nd": "that it shows the play button on that step, because the button is UI in the executable."
+  },
+  "cat": "quest"
+ },
+ "400000049af60277": {
+  "proved": {
+   "meaning": "The designer's drop-chance label for a task's quest item, as free text: Always, Often, Rare, or 'Rare -- RandInt(1,100) >= 70'.",
+   "evidence": "Always-type labels on 43,658 tasks. 217 of the 226 others sit on tasks whose progress variable is an Item variable, and some state the roll itself ('Often -- RandInt(1,100) >= 50').",
+   "nd": "whether the server reads the text or its loot tables decide (loot packages are server-side, RESEARCH 01a1c27a-8233)."
+  },
+  "cat": "quest"
+ },
+ "40000041997c054a": {
+  "proved": {
+   "meaning": "The name of a GSF ship's dynamic-data (shield) package.",
+   "evidence": "Strings on the *_eppdynamicdata_collection singletons, beside scFFVehicleEppDynamicDataPackageId: dd_shield_ion_impact, dd_shield_fortress, dd_shield_feedback, dd_shield_distortion, dd_shield_quickrecharge; each ship has 4-6.",
+   "nd": "which shield component selects each package; that is read from the wording only."
+  }
+ },
+ "4000004c762441b0": {
+  "proved": {
+   "meaning": "A list of paid-permission indexes; here [41], paid_permission.ability.fleet_pass.",
+   "evidence": "Index 41 of the permission table is paid_permission.ability.fleet_pass.",
+   "nd": "the rule the list serves (the hint says restricted abilities)."
+  }
+ },
+ "400000414895e067": {
+  "proved": {
+   "meaning": "The paid permission a store discount requires: [827], paid_permission.premium.discounts.",
+   "evidence": "[827] on both discount records, whose debug strings end .subscriber; index 827 of the permission table is paid_permission.premium.discounts."
+  }
+ },
+ "4000004c776b8ec1": {
+  "proved": {
+   "meaning": "A 57-word bitset over paid-permission indexes, set for single-bit permissions and clear for block-counted ones and for the 39 newest.",
+   "evidence": "Decoded as 9da4d449. The 194 clear indexes up to 3687 are all 155 permissions with chrPaidPermissionBlockOffset or BlockMaxOffset (outfit, GTN, cargo, quickbar, level-boost counters) plus indexes 3649-3687, the newest added.",
+   "nd": "what reads the mask."
+  }
+ },
+ "400003d26f1f36c0": {
+  "proved": {
+   "meaning": "A story class's alignment tier: -5 for the Empire classes, 5 for the Republic classes.",
+   "evidence": "The negative of chrStoryClassMirrorAlignmentTierRequirement on all 8 classes, and equal to the unlock's lgcUnlockDefAlignmentReq (6f1f36c1) of -5 and 5."
+  }
+ },
+ "40000042693e3550": {
+  "proved": {
+   "meaning": "The level cap, 80.",
+   "evidence": "Single 80 in utlTweakableInfoPrototype. It equals the 80 rows of the XP table and the top of chrPaidPermissionMaxLevels, and 80 is the live 7.x cap."
+  }
+ },
+ "4000001cca75ccf8": {
+  "proved": {
+   "meaning": "The server-side asset map: asset enum -> path, fqn and proto id, for assets used by scripts.",
+   "evidence": "It has the same children as the hash-named hcaAssetMapClient, but holds \\server\\tbl\\*.tbl paths; 40 enums are shared with the client map and 67 are only here."
+  }
+ },
+ "40000009af9f1223": {
+  "proved": {
+   "meaning": "An NPC-level loot (treasure) package, as FNV-1a 64 of a trp.* name.",
+   "evidence": "21 NPCs. Values are in the loot-package id space of NPC 956d8c70 (RESEARCH 01a1c27a-8233); 0x234993874b625ece = TRP.EMPTY on 10.",
+   "nd": "whether it overrides or adds to the class package (the community hint says override), and the other names; loot is server-side."
+  },
+  "cat": "npc"
+ },
+ "400000429f09b921": {
+  "proved": {
+   "meaning": "On a schematic with materials: the disassembly loot key for its product, in the id space of prfDisassembleLoot.",
+   "evidence": "Present on all 9,440 schematics that have prfSchematicMaterials and on none of the 1,828 without. 266 of 303 distinct values (8,060 of 9,440 uses) are values of prfDisassembleLoot in prfDisassembleInfoPrototype, and 710 of 782 material sets map to one value.",
+   "nd": "the other 37 keys and what any key returns; disassembly results are server-side loot."
+  }
+ },
+ "400000420902e502": {
+  "proved": {
+   "meaning": "The three achievement event codes of a stronghold decoration subcategory: [its own, its category's, the all-decorations root].",
+   "evidence": "decSubCategoriesTable: 62 subcategory rows, each holding [own, parent, root]. The root is E0007154E1FE6065 on all 62. The parent takes 12 values, and 11 of them are the own code of a category row whose list is [X, X, root]. The row's 8da19698 is the category key that e56994ec lists it under on 62 of 62. Subcategory keys are FNV-1a 64 of their gui/auctionhouse.stb names on 51 of 62. 6 of the 63 codes are keys of lgcAchievementEvents firing ach.strongholds.decorations.collect_*.",
+   "nd": "the event names behind the other 57 codes: none folds from any client string (registry pass 2026-11-09), so they are named server-side."
+  }
+ },
+ "4000004d572d4fd1": {
+  "cat": "pvp"
+ },
+ "4000004e43444e78": {
+  "cat": "quest"
+ },
+ "400000446838e863": {
+  "proved": {
+   "meaning": "PvP queue lockout durations in ms: 300,000 (5 min), 900,000 (15 min), 3,600,000 (1 h).",
+   "evidence": "pvpTweakablePrototype [300000, 900000, 3600000], beside the warzone point tweakables. The first two equal the official unranked lockouts: the SWTOR team's 6.1.4 post (devtrackers.gg/swtor/p/7f976d9b) says 'the 5-minute lockout penalty for being vote kicked' and 'the 15-minute Deserter lockout ... for leaving a match' still apply.",
+   "nd": "which rule uses the 1-hour value; the post names ranked lockouts (20 minutes, escalating to an unstated maximum) that this list does not hold."
+  },
+  "cat": "pvp"
+ },
+ "400000438c7daff0": {
+  "proved": {
+   "meaning": "The points required for a personal conquest goal: 100,000.",
+   "evidence": "100000 on 20 of 21 conquests (TimeofPeace lacks it), beside the event's personal_completion quest. The 7.0 developer posts on swtor.com and Swtorista's 7.0 conquest guide say the personal goal rose from 50,000 to 100,000 for Legacy of the Sith, and later guides still give 100,000."
+  }
+ },
+ "4000000bbd01aa97": {
+  "proved": {
+   "meaning": "Base percent chance of a crew-skill critical by mission difficulty enum: 15, 11, 8, 5.",
+   "evidence": "Parallel to the named prfProfessionBaseFailures (1, 6, 10, 15 over the same 4 keys); sibling prfAffectionCriticalMaximum is 5. The developers' April 2012 crew-skill Q&A, quoted on the SWTOR forums, gives a 15% base critical chance on yellow, green and grey missions plus up to 5% from companion affection. That matches the 15 at the easiest key and the affection maximum of 5.",
+   "nd": "the 11 and 8 tiers, which no published source gives."
+  }
+ },
+ "4000004ec6eb9d5a": {
+  "proved": {
+   "meaning": "The crew skill level a boosted character starts with: 500, 550 and 600 for boosts to level 60, 65 and 70.",
+   "evidence": "ccsBoostLevelDataPrototype holds 500, 550 and 600 for boost levels 60, 65 and 70. The community crew-skill grade table (SWTOR wiki, Crew Skill) puts grade 9 at player level 60-65 and skill 500-550 and grade 10 at 65-70 and 550-600, so each value is the skill floor for its level."
+  }
+ },
+ "400000432330bf50": {
+  "proved": {
+   "meaning": "The CXP bonus fraction granted at the top server-alignment tier of the retired Dark vs Light server war: 0.15.",
+   "evidence": "0.15 only on the two level-5 tiers of dvlServerAlignmentData. Community guides of the KotET-era server war say a server wins at Light 5 or Dark 5, and characters of the winning alignment then get a 15% CXP bonus for the victory hour. Swtorista's 7.0 news says the server-wide meter was retired in 7.0."
+  }
+ }
+}
