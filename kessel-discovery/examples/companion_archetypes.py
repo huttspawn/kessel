@@ -1,4 +1,9 @@
-"""Which companion unlocks which legacy archetype buff.
+"""Which companion belongs to which legacy bonus group.
+
+The group names (healer, melee damage, melee tank, ranged damage, ranged tank) are pre-4.0 role names kept
+in the legacy-unlock texts; since 4.0 every companion takes any combat role, so they are labels of legacy
+bonus groups, not companion roles. Whether the server still grants the group buffs is not in the client
+(RESEARCH 01a1c30d-73cd rev 6).
 
 usage: python3 -I companion_archetypes.py <lgcUnlockPrototypeMap.json> <unlocks.stb dump>
 
