@@ -1,6 +1,6 @@
 """Every ModifyStat on an accuracy stat (melee, ranged, force, tech accuracy; 1-based effParam_Stat), by ability.
 
-usage: python3 -I accuracy_passives.py <abl_all.jsonl>
+usage: python3 -I accuracy_passives.py <abl_all.jsonl> [all]   (all: every FQN, not only player-class prefixes)
 
 Prints each ability FQN, the stat, modStatType and amount, grouped by FQN prefix, to find a +1% accuracy
 that every player has (a class or discipline passive) behind the community's 110% target.
@@ -49,8 +49,9 @@ for line in open(sys.argv[1]):
 print("abilities with an accuracy ModifyStat:", len(hits))
 pre = collections.Counter(".".join(f.split(".")[:3]) for f in hits)
 print(pre.most_common(25))
+ALL = len(sys.argv) > 2 and sys.argv[2] == "all"
 for f in sorted(hits):
-    if f.startswith(("abl.player", "abl.sith", "abl.jedi", "abl.bounty", "abl.trooper", "abl.smuggler", "abl.agent",
+    if ALL or f.startswith(("abl.player", "abl.sith", "abl.jedi", "abl.bounty", "abl.trooper", "abl.smuggler", "abl.agent",
                      "abl.imperial", "abl.republic", "abl.generic", "abl.class", "abl.discipline", "abl.legacy",
                      "abl.companion", "abl.common")):
         amounts = sorted({json.dumps(h, sort_keys=True) for h in hits[f]})
