@@ -558,9 +558,9 @@
   "confidence": "proved"
  },
  "4000000de986726f": {
-  "meaning": "What kind of map note the template is, which decides what shows it: 1 bind point, 2 checkpoint, 3 dev/unused marker, 5 map link to another page or area, 6 phase (instance) entrance, 7 quest objective marker (shown while a quest step lists it), 9 taxi, 10 and 11 unplaced legacy markers, 12 warzone and return markers, 13 elevator (Wonkavator) link, 14 PvP base, 15 conquest/operation marker. No client enum names are attached.",
-  "evidence": "Crossed with mpnIconAsset on all 15,953 templates: 1 = BindPoint 431/432; 2 = CheckPoint 670/671; 5 = DefaultMapLink 3,241/3,251 with mpnMapLink set on 3,205; 6 = instance_* names, 1,626 DefaultIcon; 7 = QuestCircle 6,565/6,713 and 5,732 of them listed by a quest step's map notes (no other value has more than 12); 9 = Taxi 380/408 with mpnMetadataFullFQN naming tax.* on 376; 13 = Wonkavator 1,222/1,222 with mpnMetadataID set on 1,199; 14 = PvpRepublicLarge/PvpEmpireLarge. Meanings of 3, 10, 11, 12 and 15 are read from names only.",
-  "confidence": "likely"
+  "confidence": "likely",
+  "evidence": "Crossed with mpnIconAsset on all 15,953 templates: 1 = BindPoint 431/432; 2 = CheckPoint 670/671; 5 = DefaultMapLink 3,241/3,251 with mpnMapLink set on 3,205; 6 = instance_* names, 1,626 DefaultIcon; 7 = QuestCircle 6,565/6,713; 9 = Taxi 380/408 with mpnMetadataFullFQN naming tax.* on 376; 13 = Wonkavator 1,222/1,222; 14 = PvpRepublicLarge/PvpEmpireLarge. Of the 5,764 templates any quest task lists (qstTaskMapNoteList 40000004bce1f1c6), 5,732 are type 7; of 6,853 placed type-7 notes, 6,280 are listed by a task and the other 558 belong mostly to quests the client no longer ships (no qst at the template path for 337 of the 574 unlisted placements). Type 13 notes sit on the elevator placeables (236 of 258 placements of 149 elevator placeables within 5 units, median 0.28). Meanings of 3, 10, 11, 12 and 15 are read from names only.",
+  "meaning": "What kind of map note the template is, which decides what shows it: 1 bind point, 2 checkpoint, 3 dev/unused marker, 5 map link to another page or area, 6 phase (instance) entrance, 7 quest objective marker (shown only while an active task of a held quest lists it in qstTaskMapNoteList), 9 taxi, 10 and 11 unplaced legacy markers, 12 warzone and return markers, 13 elevator (Wonkavator) link, 14 PvP base, 15 conquest/operation marker. No client enum names are attached."
  },
  "4000000424ed04cd": {
   "meaning": "phsImplicitlyPhasedAreaID: the area directory (/resources/world/areas/<id>/) the phase loads. Several area directories that share one combat-log area id are phase copies named here (strongholds, flashpoint and story phases, GSF match variants).",
@@ -581,5 +581,20 @@
   "meaning": "phsRepublicExitMapNoteID: the Republic-side counterpart of phsExitMapNoteID, a note id in mapnotes.not.",
   "evidence": "73 of 76 values are mapnotes.not note ids; the note sits in phsRepublicExitAreaID's area in 50 of 51.",
   "confidence": "proved"
+ },
+ "40000007d852e845": {
+  "confidence": "likely",
+  "evidence": "True on 174 of 15,953 templates (98 map links, 20 elevators, 20 phase entrances, 8 taxis); 0 of the 174 are listed by any quest task's qstTaskMapNoteList or a quest map-note variable, against 5,764 listed templates overall. 227 placed notes use them. What the client does with a hidden note is not observable in the logs.",
+  "meaning": "mpnDoNotDisplay: the template's placed notes are never drawn on the map; a hidden anchor (map links, elevators, phase entrances), never a quest marker."
+ },
+ "40000034e7e45c30": {
+  "confidence": "likely",
+  "evidence": "True on 126 templates (52 map links, 9 elevators, 51 with no type); 2 are quest-objective templates. Read from the hash-proved name and the types; display not observed.",
+  "meaning": "mpnDoNotDisplayOnMinimap: the note is drawn on the full map but not the minimap."
+ },
+ "400000439b7e5300": {
+  "confidence": "proved",
+  "evidence": "Set on 240 templates; 235 values are cnd object references and 5 are one GUID no shipped object has: cnd.utility.faction.empire 67, cnd.utility.faction.republic 61, cnd.global.is_rep/is_imp 16, Dantooine reputation map-link gates (can_see_maint_maplinks, can_see_speeder_maplinks), class gates (cnd.classes.is_bounty_hunter), stronghold purchase (has_purchased_mountain_retreat), quest-state gates (on_imp_quest_4). By type: quest objective 88, map link 54, bind point 43, elevator 30.",
+  "meaning": "mpnVisibilityCondition: a condition (cnd.*) that must hold for the player for the template's notes to show."
  }
 }

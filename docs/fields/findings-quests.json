@@ -567,5 +567,10 @@
   "confidence": "proved",
   "meaning": "achType: which system an achievement belongs to. Client enum lgcAchievementType: 0 Standard (absent), 1 Conquest, 2 GalacticSeasons, 3 PvPSeasons, 4 Ventures.",
   "evidence": "The client.gom enum record lists lgcAchievementTypeStandard, Conquest, GalacticSeasons, PvPSeasons, Ventures in that order. Zero-based index proved by FQN family on all 1,221 uses: 1 on 397 ach.conquests.*; 2 on 570 ach.galactic_seasons.* and 42 ach.conquests.galactic_seasons.priority_objectives.*; 3 on 36 ach.pvp_seasons.*; 4 on 176 ach.ventures.*; no exception. Every conquest objective a conquest event lists carries it; 367 ach.conquests.* that no event lists lack it (live 7.x)."
+ },
+ "400000307860fc07": {
+  "confidence": "proved",
+  "evidence": "1,779 entries in 1,248 parent quests name 1,685 quests; every value resolves to a Quest object (4,289 of 4,293 values, the rest test quests). 1,629 targets have 'bonus' in the FQN and 1,770 of 1,779 share at least three FQN segments with the parent (e.g. qst.flashpoint.manaan.* -> qst.flashpoint.manaan.bonus.logistic_confusion). Of the 163 bonus quests the story spine left isolated (RESEARCH 01a1c2b9-b2b8), 141 are named here and 122 of those through a parent the spine graph already reaches. kessel's quest_chain guid_ref rows are these entries plus qstTaskObjects quest keys (400000496ef4d6a0) found by a 0xCF byte scan, with edge_class bonus/next guessed from the FQN.",
+  "meaning": "The bonus mission a parent quest's task attaches (qstTaskBonusMission entry in the task's 40000004dc01e9d4 list): the parent quest -> bonus quest edge, the fifth quest edge kind. The bonus quest's own payload does not name its parent."
  }
 }
