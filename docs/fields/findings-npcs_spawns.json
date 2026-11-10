@@ -75,7 +75,7 @@
  },
  "4000000b15ac2498": {
   "meaning": "A hashed timer preset on Spawns; the role is unproven and one default covers nearly all.",
-  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not. Residue pass 2026-11-09: 0xe23ddc377cb394ab is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side.",
+  "evidence": "80,800 of 80,903 use 0xe23ddc377cb394ab, unrecovered after exhaustive search of 7-character A-Z_ prefixes with and without _DEFAULT. 100 of the other 103 are named timers (FNV-1a 64 of the uppercased string (signed i64)): '0' 44, '999' 27, SPN_11, INSTANT, '5', '5 SECONDS'. Timer form is proved; the aggro-respawn role in the hint spnAggroRespawnDelay is not. Residue pass 2026-11-09: 0xe23ddc377cb394ab is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
   "confidence": "likely"
  },
  "40000005da8c9272": {
@@ -146,7 +146,7 @@
  },
  "4000000b15ac249b": {
   "meaning": "A second encounter-level timer as a hashed preset name; the role is unproven (the hint says survive).",
-  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only. Residue pass 2026-11-09: 0x270299ed9a3cea3e is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side.",
+  "evidence": "FNV-1a 64 of the uppercased string (signed i64) on 2,969 of 12,197 uses: '0' 1,234, '999' 1,100, '5' 209, SPN_n. The default 0x270299ed9a3cea3e (9,225) is unrecovered. Timer form is proved; 'survive' is hint only. Residue pass 2026-11-09: 0x270299ed9a3cea3e is still unrecovered after 1.72M more candidates, plain and folded: every token of docs/fields/names.json under SPN_/ENC_/CRF_/CRE_/PLC_/TMR_/TIMER_ prefixes and _DEFAULT/_TIMER/_DELAY suffixes, and 0..100000 as bare numbers and with SECONDS, MINUTES, MS, S and M forms. It lacks the E000 prefix, so it is not a GUID fold. No spawn timing exists in the client (.spn_c not shipped), so the duration is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
   "confidence": "likely"
  },
  "4000000b1f264a1b": {
@@ -274,7 +274,9 @@
   "reason": "True on 278 NPCs with a mix: swoop contacts, set_vendor, dynamic-event researchers, jawa_captive. Nothing joins them. An in-game look at two or three would be needed."
  },
  "4000004bf242d0a6": {
-  "reason": "u64 per chance entry, high part area scoped: 000cea08 star_fortress, 000e7b27 umbara, 000b1613 makeb, low part 0x1xx, the same shape as rdd state ids (0x9ffb...). class_boss has six different values for six entries. So probably a phase or quest state that picks the entry, but nothing here joins it; the strings table holds none of the ids sampled. Finding what defines these ids (the phase objects' state tables) would settle it."
+  "confidence": "proved",
+  "meaning": "The quest variable that selects a spawner chance entry: a qstVariableGUID (2c1fe390). The entry applies to players for whom that variable is set.",
+  "evidence": "All 44 distinct values on all 249 uses equal the qstVariableGUID of a quest variable definition (registry pass 2026-11-09). spn.exp.seasons.01.ep_02.mob.class_boss has six entries keyed by qm_is_agent, qm_is_bounty_hunter, qm_is_jedi, qm_is_sith, qm_is_smug and qm_is_troop of qst.exp.seasons.01.ep_02: one boss per class story. Umbara trash entries are keyed by glb_chose_to_side_with_empire / _republic, Makeb bonus mobs by qm_is_on_quest and qm_completed_series_1. The high part is the owning quest's id prefix, which is why it looked area scoped. That the entry needs the variable set (rather than unset) is read from the names."
  },
  "40000042bd8893d0": {
   "meaning": "NPC stands in for a story companion or ally temporarily.",
@@ -282,7 +284,7 @@
   "confidence": "likely"
  },
  "400000456baa24ee": {
-  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it. Residue pass 2026-11-09: 9.17M candidates (token pairs from every Npc, Encounter, Spawn, Quest and Hydra FQN, tier and role words with numbers) give no FNV-1a 64 match."
+  "reason": "Hash of an unrecovered string; 3 values on 211 NPCs, 203 of them dynamic_events. Toughness splits them: 0x8576 on standard/strong (49 of 52), 0x853f on boss 2-4 (34 of 36), 0x7770 mixed, mostly boss 8/9. So a tier-like selector for world events, unnamed. Recovering the three strings, or comparing fights, would settle it. Residue pass 2026-11-09: 9.17M candidates (token pairs from every Npc, Encounter, Spawn, Quest and Hydra FQN, tier and role words with numbers) give no FNV-1a 64 match. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "40000044a9a1e720": {
   "reason": "True on 172 of 174 MountPackage records, no pattern to the 2 without. A constant cannot be read."
@@ -349,9 +351,9 @@
   "confidence": "likely"
  },
  "40000044ab8218d1": {
-  "meaning": "Hashed profile name of an instance phase for one difficulty mode; one value covers nearly everything.",
-  "evidence": "64 phases: 0xd9bdae203a09f841 on 62 (flashpoints, operations, uprisings), 0x3a8a72 on star_fortress and zakuul_arena. Sits beside 8d0 and 8d2. Hashes are unrecovered unless named; exhaustive 7-character A-Z0-9_ space search and game vocabulary with prefixes and suffixes found none but UPRISING. Which mode is not shown.",
-  "confidence": "likely"
+  "confidence": "likely",
+  "meaning": "Level-sync setting of an instance phase for its other difficulty mode, the one whose level is 426934e681 (80 on most); same id space as 8d0 and sysArea 7f381fb0.",
+  "evidence": "Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). star_fortress and zakuul_arena hold prefix+'65', and star_fortress's 426934e681 is 65; the other 62 phases hold d9bdae203a09f841 and have level 80 there on 62 of 62, so it reads as the level-80 (no down-sync) setting under a different name. Which mode (veteran, hard) is not named."
  },
  "400000426934e681": {
   "meaning": "Level an instance phase scales to in one difficulty mode.",
@@ -365,12 +367,12 @@
  },
  "40000044acb25b75": {
   "meaning": "Hashed category or profile name of an instance phase for one difficulty mode.",
-  "evidence": "58 phases. Values split content: 0xd1c2f93d flashpoints (25), 0x5993afcb operations (14), UPRISING (hash match) on 10 uprisings, 0xac3ae0c0 the story-70 flashpoints, 0xa9af1a5f the story-75 flashpoints, 0xaa28ae6e dxun and iokath. Role and mode not shown; a stat table keyed by these would settle it.",
+  "evidence": "58 phases. Values split content: 0xd1c2f93d flashpoints (25), 0x5993afcb operations (14), UPRISING (hash match) on 10 uprisings, 0xac3ae0c0 the story-70 flashpoints, 0xa9af1a5f the story-75 flashpoints, 0xaa28ae6e dxun and iokath. Role and mode not shown; a stat table keyed by these would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
   "confidence": "likely"
  },
  "40000044acb25b76": {
   "meaning": "Hashed category or profile name of an instance phase for a second difficulty mode.",
-  "evidence": "57 phases; values parallel 25b75 with near-identical hashes: 0xd1c2f63d (24), 0xac3ae1c0, 0xa9af195f; operations 0x2adfadb3 (14); uprisings UPRISING (10). Role and mode not shown.",
+  "evidence": "57 phases; values parallel 25b75 with near-identical hashes: 0xd1c2f63d (24), 0xac3ae1c0, 0xa9af195f; operations 0x2adfadb3 (14); uprisings UPRISING (10). Role and mode not shown. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
   "confidence": "likely"
  },
  "4000004f0c19935c": {
@@ -435,9 +437,9 @@
   "confidence": "likely"
  },
  "40000044ab8218d0": {
-  "meaning": "Hashed story-mode profile name of a flashpoint phase, tied to its story bolster level.",
-  "evidence": "27 phases, values pair with 426936e2e9: 0x3a8706 on cor_flashpoint, enclave, sov (all story 75); 0x3a8709 on nathema, traitor, umbara (all story 70); 0x3a8084 on blood_hunt (57); 0x3a807d on rakghoul phases (50) and also Ilum with no story level. Mode reading is from the pairing. Hashes are unrecovered unless named; exhaustive 7-character A-Z0-9_ space search and game vocabulary with prefixes and suffixes found none but UPRISING.",
-  "confidence": "likely"
+  "confidence": "proved",
+  "meaning": "Story-mode level-sync setting of a flashpoint phase, in the same id space as sysAreaInfoTable 7f381fb0: FNV-1a 64 of a fixed prefix plus the sync level.",
+  "evidence": "Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). 25 of 27 uses resolve to a level: 10 (transition act 1), 32 and 36 (Revan flashpoints), 49 (directive_7), 50 (rakghoul, Ilum), 55 (man, rakata_prime, korriban, tython), 57 (blood_hunt), 60 (rishi_2), 65 (star_fortress, zakuul_arena), 70 (nathema, traitor, umbara), 75 (cor, enclave, sov). Where the phase has a story level 426936e2e9, it equals the encoded level on 9 of 9 (blood_hunt 57 included). The other value, d9bdae203a09f841, sits on elom and voss with story level 80 and is the same value as 8d1 on 62 phases; it is not the prefix plus any 1-4 character suffix."
  },
  "40000002d9d8a1cf": {
   "reason": "True on 26 path points. Occurs with a wait value (2d9d8a250) on 18, without on 8, and 11 waits lack it, so it does not simply enable waiting as the hint says. A patrol trace in game would settle it."
@@ -454,9 +456,9 @@
   "reason": "True on 24 NPCs, every one with turret in the name (24/24), e.g. alderaan guard_panteer_refuge_turret, ilum guard_republic_base_camp_turret. So turret-only, but other turrets lack it, and its effect is not in data. Client type int16. Compare a flagged and unflagged turret in game."
  },
  "400000426936e2e9": {
+  "confidence": "proved",
   "meaning": "Level a flashpoint scales to in story (solo) mode.",
-  "evidence": "22 phases: 80 on 12 (uprisings, voss, elom), 70 (nathema, traitor, umbara), 75 (cor, enclave, sov), 57 blood_hunt, 60 kdy, 50 rakghoul. Log HP agrees: with HP = class band x healing row, Nathema NPCs imply level 70 in 3,454 of 5,811 log counts (trash and boss), Corellia level 75 in 513 of 809; umbara 70 on 483 of 1,376. Other counts fit no level, so not fully explained.",
-  "confidence": "likely"
+  "evidence": "22 phases: 80 on 12 (uprisings, voss, elom), 70 (nathema, traitor, umbara), 75 (cor, enclave, sov), 57 blood_hunt, 60 kdy, 50 rakghoul. Equals the level encoded in the phase's story level-sync setting 44ab8218d0 (FNV-1a 64 of a fixed prefix plus the level) on 9 of 9 phases that have both, blood_hunt 57 included. Log HP agrees: with HP = class band x healing row, Nathema NPCs imply level 70 in 3,454 of 5,811 log counts, Corellia level 75 in 513 of 809."
  },
  "40000009af9f1223": {
   "meaning": "NPC-level treasure package override, a hashed trp name.",
@@ -476,13 +478,13 @@
  },
  "40000044acb25b77": {
   "meaning": "Hashed profile name for a third mode, on operations only.",
-  "evidence": "16 phases, all operations: 0x2adfadb3 (14), 0x7de4b867 on dxun and iokath, equal to the same phase's 25b76. Fits a third operation mode (nightmare); not shown.",
+  "evidence": "16 phases, all operations: 0x2adfadb3 (14), 0x7de4b867 on dxun and iokath, equal to the same phase's 25b76. Fits a third operation mode (nightmare); not shown. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
   "confidence": "likely"
  },
  "40000044ab8218d2": {
-  "meaning": "Hashed profile name of an uprising phase for a further mode.",
-  "evidence": "10 uprising phases only, all 0xd9bdae203a09f841, the same value as 8d1 and aea9e5b4. Hashes are unrecovered unless named; exhaustive 7-character A-Z0-9_ space search and game vocabulary with prefixes and suffixes found none but UPRISING.",
-  "confidence": "likely"
+  "confidence": "likely",
+  "meaning": "Level-sync setting of an uprising phase for a further mode; always d9bdae203a09f841, the setting that pairs with level 80.",
+  "evidence": "10 uprising phases only, all d9bdae203a09f841, the value 8d1 holds on 62 phases whose level is 80; its sibling level aea9e5b2 is 80 on all 10. Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none)."
  },
  "40000044aea9e5b2": {
   "meaning": "Level of an uprising phase in a further mode.",
@@ -490,9 +492,9 @@
   "confidence": "likely"
  },
  "40000044aea9e5b4": {
-  "meaning": "Hashed profile name of an uprising phase in a further mode.",
-  "evidence": "10 uprising phases only, all 0xd9bdae203a09f841, as 8d1 and 8d2.",
-  "confidence": "likely"
+  "confidence": "likely",
+  "meaning": "Level-sync setting of an uprising phase in a further mode; always d9bdae203a09f841 (the level-80 setting), beside level aea9e5b2 = 80.",
+  "evidence": "10 uprising phases only, all d9bdae203a09f841, as 8d1 and 8d2; that value pairs with level 80 wherever a level sits beside it (62 of 62 on 8d1). Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none)."
  },
  "40000044aea9e5b5": {
   "meaning": "Hashed category name of an uprising phase: UPRISING.",

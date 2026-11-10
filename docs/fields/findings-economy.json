@@ -36,7 +36,7 @@
   },
   "40000009ae2f555b": {
     "meaning": "plcdynLootPackage: the loot package a lootable placeable rolls, a hash in the same id space as the item's 407c89a3 (FNV-1a 64 of an uppercased trp.* name).",
-    "evidence": "638 placeables, 233 distinct hashes; 3 resolve by FNV-1a 64 to trp.* names (none of the 233 is an existing node). Same space as item 407c89a3, where 547 of 3,540 resolve to trp.<item fqn tail> names.",
+    "evidence": "638 placeables, 233 distinct hashes; 3 resolve by FNV-1a 64 to trp.* names (none of the 233 is an existing node). Same space as item 407c89a3, where 547 of 3,540 resolve to trp.<item fqn tail> names. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; no further value matched.",
     "confidence": "likely"
   },
   "400000410344aaf8": {
