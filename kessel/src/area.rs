@@ -92,13 +92,17 @@ impl<'a> Cursor<'a> {
     }
 }
 
+/// True when `data` begins with an area.dat's signature.
+pub fn is_area_dat(data: &[u8]) -> bool {
+    Cursor { data, pos: 0 }
+        .len_string()
+        .is_ok_and(|s| s.starts_with("AREA_DAT_BINARY_FORMAT"))
+}
+
 /// Read an area.dat's room names and asset table.
 pub fn read_area(data: &[u8]) -> Result<AreaDat> {
+    ensure!(is_area_dat(data), "not an area.dat");
     let mut c = Cursor { data, pos: 0 };
-    ensure!(
-        c.len_string()?.starts_with("AREA_DAT_BINARY_FORMAT"),
-        "not an area.dat"
-    );
     c.pos = ROOM_LIST_OFFSET;
     let rooms = (0..c.u32()?)
         .map(|_| c.len_string())

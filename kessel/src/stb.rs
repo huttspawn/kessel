@@ -144,6 +144,27 @@ pub fn parse(data: &[u8], path: &str) -> Result<StbFile> {
     })
 }
 
+/// True when `data` reads as a whole string table: the 0x01 version, two zero bytes, a count
+/// whose entries fit, and every entry's text inside the data and after the entries.
+pub fn is_stb(data: &[u8]) -> bool {
+    if data.len() < HEADER_SIZE || data[..3] != [0x01, 0, 0] {
+        return false;
+    }
+    let count = u32::from_le_bytes([data[3], data[4], data[5], data[6]]) as usize;
+    let Some(end) = count
+        .checked_mul(ENTRY_SIZE)
+        .and_then(|n| n.checked_add(HEADER_SIZE))
+        .filter(|end| *end <= data.len())
+    else {
+        return false;
+    };
+    data[HEADER_SIZE..end].chunks_exact(ENTRY_SIZE).all(|e| {
+        let len = u32::from_le_bytes([e[14], e[15], e[16], e[17]]) as usize;
+        let offset = u32::from_le_bytes([e[18], e[19], e[20], e[21]]) as usize;
+        len == 0 || (offset >= end && offset.checked_add(len).is_some_and(|x| x <= data.len()))
+    })
+}
+
 /// The kind of a second entry of an (id1, id2) key, from its flags' low
 /// byte: 0x50 is a dialogue option's wheel text, 0x46 a female variant.
 pub fn variant_kind(flags: u16) -> &'static str {

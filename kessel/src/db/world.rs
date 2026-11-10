@@ -450,18 +450,7 @@ impl Database {
             counts.script_actions = insert_script_actions(tx)?;
 
             let mut dirs: BTreeSet<u64> = pairs.iter().map(|(_, dir)| *dir).collect();
-            let mut mapdata =
-                tx.prepare("SELECT fqn FROM objects WHERE fqn LIKE 'world.areas.%.mapdata'")?;
-            for fqn in mapdata.query_map([], |r| r.get::<_, String>(0))? {
-                if let Some(dir) = fqn?
-                    .strip_prefix("world.areas.")
-                    .and_then(|s| s.strip_suffix(".mapdata"))
-                    .and_then(|d| d.parse().ok())
-                {
-                    dirs.insert(dir);
-                }
-            }
-            drop(mapdata);
+            dirs.extend(mapdata_dirs(tx)?);
             for (_, path) in hashes.paths_matching("/resources/world/areas/") {
                 if let Some(dir) = path
                     .strip_prefix("/resources/world/areas/")
@@ -655,6 +644,32 @@ impl ArchiveFiles {
         let (i, entry) = self.index.get(&crate::hash::combine_hash(ph, sh))?;
         Some(self.archives.get_mut(*i)?.read_entry(entry))
     }
+}
+
+/// The area directories the map data names: mapAreasDataProto's entries and the map-page
+/// objects `world.areas.<id>.mapdata`.
+pub(super) fn map_area_dirs(tx: &Transaction) -> Result<std::collections::BTreeSet<u64>> {
+    let mut dirs: std::collections::BTreeSet<u64> = match load_singleton(tx, "mapAreasDataProto")? {
+        Some(proto) => area_log_pairs(&proto).into_iter().map(|(_, dir)| dir).collect(),
+        None => Default::default(),
+    };
+    dirs.extend(mapdata_dirs(tx)?);
+    Ok(dirs)
+}
+
+fn mapdata_dirs(tx: &Transaction) -> Result<Vec<u64>> {
+    let mut stmt = tx.prepare("SELECT fqn FROM objects WHERE fqn LIKE 'world.areas.%.mapdata'")?;
+    let fqns = stmt
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(fqns
+        .iter()
+        .filter_map(|fqn| {
+            fqn.strip_prefix("world.areas.")
+                .and_then(|s| s.strip_suffix(".mapdata"))
+                .and_then(|d| d.parse().ok())
+        })
+        .collect())
 }
 
 /// Decode a singleton by FQN; `None` when absent or undecodable.

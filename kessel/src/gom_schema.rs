@@ -195,6 +195,35 @@ pub fn quality_label(idx: i64) -> Option<String> {
     )
 }
 
+/// The build's client field dictionary, found by the hash of this path.
+pub const CLIENT_GOM_PATH: &str = "/resources/systemgenerated/client.gom";
+
+/// The type tag client.gom declares for each property, keyed by the property id's high32
+/// (the low32 of the field id an object carries). A property record is a u32 size, the u64 id
+/// at 0x04, its first string offset 0x20 at 0x12, and the tag byte at 0x20; records follow an
+/// 8-byte file header, each padded to 8 bytes.
+pub fn declared_tags(data: &[u8]) -> anyhow::Result<HashMap<u32, u8>> {
+    let u16_at = |b: &[u8], i: usize| u16::from_le_bytes([b[i], b[i + 1]]);
+    let mut tags = HashMap::new();
+    let mut pos = 8;
+    while let Some(head) = data.get(pos..pos + 4) {
+        let size = u32::from_le_bytes([head[0], head[1], head[2], head[3]]) as usize;
+        if size == 0 {
+            pos += 1;
+            continue;
+        }
+        let Some(body) = data.get(pos..pos + size).filter(|_| size >= 16) else {
+            break;
+        };
+        if body.len() > 0x20 && u16_at(body, 0x12) == 0x20 {
+            tags.insert(u32::from_le_bytes([body[8], body[9], body[10], body[11]]), body[0x20]);
+        }
+        pos = (pos + size).next_multiple_of(8);
+    }
+    anyhow::ensure!(!tags.is_empty(), "no property records");
+    Ok(tags)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
