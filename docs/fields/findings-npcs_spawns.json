@@ -126,8 +126,8 @@
   "confidence": "proved"
  },
  "40000004a5db4db4": {
-  "meaning": "Dynamic state transition: the hydra hook that fires it.",
-  "evidence": "28,439 values: 'On Custom:<name>' 28,332, 'On Use' 105, 'On Exit' 2; contains the end state name on 25,677. Same hook grammar as hydra handlers in reflection 01a179d4.",
+  "meaning": "Dynamic state transition: the Hydra hook the Dynamic sends to its own script (4fa14a22) when the transition is requested, e.g. by use from a usable state; the script's handler performs the state change.",
+  "evidence": "28,439 values: 'On Custom:<name>' 28,332, 'On Use' 105, 'On Exit' 2; contains the end state name on 25,677. Same hook grammar as hydra handlers in reflection 01a179d4. Joined to the attached script: the hook is a handler of that script on 27,090 of 27,183 transitions that have a script, and the handler sets the Dynamic to the transition's end state on 25,018; 8,298 start in a state listed in dynUsableStates. Example: kath_hound_cage_new, usable On, On->Off 'On Custom:open_cage' -> handler sets Off and raises soe_befriend_kath_hound. RESEARCH 01a1c37d-7483.",
   "confidence": "proved"
  },
  "40000004566bea5a": {
