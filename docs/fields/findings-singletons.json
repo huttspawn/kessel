@@ -82,7 +82,7 @@
   "meaning": "Reference to the crew skill's basic crafting table: key of prfCraftingTableSpecMap."
  },
  "40000009af9f120f": {
-  "reason": "Distinct id per area on 59 of 253, mostly main planets (Tatooine, Coruscant, Dromund Kaas, Hutta...). Resolves to no object, string, or other field. Hint says loot package, which nothing shows. Server loot data would settle it."
+  "reason": "Distinct id per area on 59 of 253, mostly main planets (Tatooine, Coruscant, Dromund Kaas, Hutta...). Resolves to no object, string, or other field. Hint says loot package, which nothing shows. Server loot data would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000000a8d28eff9": {
   "reason": "Int on all 334 space ships: 3000 x316, 1000 x16, 5000 x2. The 1000s include player-class engines (sc_engine_bountyhunter, smuggler, sith, trooper) with 1800 or 1500 hit points. Possibly ms or a range, the data cannot tell; flying the space mission against one would."
@@ -101,7 +101,7 @@
   "reason": "Value 100 on all 3,174 mission-result rows, one row per result enum. A constant in a one-row list cannot show whether it is a weight (the hint) or a percentage. A mission result list with two rows, or server code, would settle it."
  },
  "4000000bc36d0a85": {
-  "reason": "One id per crew-mission result row, 1,313 distinct, 86 of 968 on result 0 and always on results 1 and 2, so it plausibly picks a treasure package as the hint says. The ids match no object, stable id, string or other singleton field, including all object payloads. A decoded server treasure table would settle it."
+  "reason": "One id per crew-mission result row, 1,313 distinct, 86 of 968 on result 0 and always on results 1 and 2, so it plausibly picks a treasure package as the hint says. The ids match no object, stable id, string or other singleton field, including all object payloads. A decoded server treasure table would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000000d37e9a07e": {
   "reason": "Single 2 in PvP settings. Hint 'shutdown imbalance' and the 37e9a0xx run; no value test possible; an early warzone shutdown check would settle it."
@@ -394,7 +394,7 @@
   "reason": "Integer 1-250 on 447 of 448 macrobinocular targets (2 x144, 1 x56, 5 x55). Reads as a priority or rank but no sibling or target property orders by it; hint says mouse selection. Scanning overlapping targets in game would test it."
  },
  "40000040b6a43670": {
-  "reason": "Not in the client. A 64-bit FNV-1a name hash on 9 boost rows, the same kind as 40000040c28dfca0 (see there). No client string, object FQN, STB text or permission-name variant hashes to any of the 9 values; it is not another row's chrPaidPermissionId. The named thing is server-side."
+  "reason": "Not in the client. A 64-bit FNV-1a name hash on 9 boost rows, the same kind as 40000040c28dfca0 (see there). No client string, object FQN, STB text or permission-name variant hashes to any of the 9 values; it is not another row's chrPaidPermissionId. The named thing is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "40000040b6a43671": {
   "confidence": "proved",
@@ -402,7 +402,7 @@
   "meaning": "Index list of the paid permissions that carry c28dfca0 or b6a43670."
  },
  "40000040c28dfca0": {
-  "reason": "Not in the client. A 64-bit name hash on 12 boost rows (prf.criticals, prf.research, xp.undebuff and _2 to _5, valor.undebuff, the three prf.skill increase_chance rows, rep.bonus_gain_rate). The values are FNV-1a 64 hashes, like chrPaidPermissionId: for xp.undebuff_2 to _5, multiplying each by the inverse of the FNV prime leaves values that differ only in the low byte, by exactly '2' xor '3' = 1, '2' xor '4' = 6, '2' xor '5' = 7, so the four names differ only in a last character 2, 3, 4, 5. No client string, object FQN, STB text or permission name (with common prefixes and suffixes) hashes to any of them (8.5 million candidates), so the named thing (likely a server stat or tweakable) is server-side."
+  "reason": "Not in the client. A 64-bit name hash on 12 boost rows (prf.criticals, prf.research, xp.undebuff and _2 to _5, valor.undebuff, the three prf.skill increase_chance rows, rep.bonus_gain_rate). The values are FNV-1a 64 hashes, like chrPaidPermissionId: for xp.undebuff_2 to _5, multiplying each by the inverse of the FNV prime leaves values that differ only in the low byte, by exactly '2' xor '3' = 1, '2' xor '4' = 6, '2' xor '5' = 7, so the four names differ only in a last character 2, 3, 4, 5. No client string, object FQN, STB text or permission name (with common prefixes and suffixes) hashes to any of them (8.5 million candidates), so the named thing (likely a server stat or tweakable) is server-side. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "40000040c3935eb2": {
   "confidence": "proved",
@@ -800,7 +800,9 @@
   "meaning": "Default exit of a flagship area: key into that area's gldFlagshipAreaExitMap."
  },
  "400000420902e502": {
-  "reason": "3 achievement-event-like E000 ids per decoration subcategory. 6 of 63 are keys of lgcAchievementEvents, and those fire @ach.strongholds.decorations.collect_* (e.g. Biological -> collect_environmental_1/2/3). The other 57 resolve nowhere, one on 64 rows. So it is probably 'event fired when you collect decorations in this subcategory' but most values are unconfirmed; acquiring a decoration while logging events would settle it."
+  "confidence": "likely",
+  "meaning": "The three achievement event codes a stronghold decoration subcategory raises: [its own code, its category's code, the all-decorations root code].",
+  "evidence": "decSubCategoriesTable: 62 subcategory rows (key = FNV-1a 64 of the subcategory's gui/auctionhouse.stb name on 51 of 62: Decals, Biological, Couches, ...), each list [own, parent, root]. The third is E0007154E1FE6065 on all 62; the second takes 12 values, 11 of which are the own code of a category row whose list is [X, X, root] (the 'All' rows), and the row's 8da19698 is the category key that e56994ec lists it under on 62 of 62. 6 of the 63 codes are keys of lgcAchievementEvents and fire ach.strongholds.decorations.collect_* (Biological -> collect_environmental_1/2/3). The codes are 0xE000 event codes (fold of an event name); none of the 63 is the fold or FNV-1a 64 of any dec.* FQN prefix, subcategory name or other client string (registry pass sweep, 73M variants), so the event names are server-side or built at run time. Acquiring a decoration while an achievement counts would prove it."
  },
  "400000420c879ea0": {
   "confidence": "proved",
@@ -823,23 +825,23 @@
   "meaning": "Level cap."
  },
  "4000004273335770": {
-  "reason": "Constant 8463396652490197606 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it."
+  "reason": "Constant 8463396652490197606 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004273335771": {
-  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it."
+  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004273335772": {
-  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it."
+  "reason": "Constant 869489362156390483 on exactly the 180 companions with role specs 074bfb28-2a, one each per field (770 differs from 771 and 772); they follow the Tank/DPS/Heal order, so a per-role id is plausible. The values match no object, string or singleton field. Reading the companion role-switch code would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "400000427f381fb0": {
-  "confidence": "likely",
-  "evidence": "Each value has one paired level (4217349595677118970 with 70, 4215506814188615784 with 50, 4221144010305318231 with 37 or 33), except 3 areas with no level. 9922612179959598498 on stronghold_rishi_pirate also appears as mmsMatchmaker 558f7b72. The id resolves to nothing, so its exact role is not shown.",
-  "meaning": "Id of the level-sync setting paired with 7f381fb1."
+  "confidence": "proved",
+  "meaning": "Level-sync setting of an area: FNV-1a 64 of a fixed prefix plus the sync level (paired level in 7f381fb1).",
+  "evidence": "Level-sync setting ids are FNV-1a 64 of one constant prefix followed by the level as decimal digits: undoing the last two bytes of every resolved value gives the same FNV state 0x8b2c52524acd632d (registry pass 2026-11-09; the prefix itself is not recovered; meet-in-the-middle to 10 A-Z characters found none). 94 of 95 values decode to a level, and it equals the paired 7f381fb1 on 91; 2 have no paired level and 1 encodes 37 beside 33. The one unresolved value, 0x89b433349674cda2 on stronghold_rishi_pirate, is also mmsMatchmakers 2558f7b72 on 8 of 10 queues. Phase field 44ab8218d0 holds values from the same family."
  },
  "400000427f381fb1": {
-  "confidence": "likely",
-  "evidence": "hut_main, tython_blockout, ord_resize, kor_rebuild_test 10; ald_main 33; dan_main, ossus_main, iokath 70; meksha_main, onderon_main 75. Higher on later worlds. Fits the hint; the sync was not observed in game.",
-  "meaning": "Level to which this area syncs characters."
+  "confidence": "proved",
+  "meaning": "Level to which this area syncs characters.",
+  "evidence": "Equals the level encoded in the area's own level-sync setting name (7f381fb0, FNV-1a 64 of a fixed prefix plus the level) on 91 of 92 rows; the exception pairs 33 with a setting named for 37. hut_main, tython_blockout, ord_resize, kor_rebuild_test 10; ald_main 33; dan_main, ossus_main, iokath 70; meksha_main, onderon_main 75. The sync itself was not observed in game."
  },
  "400000429bb759d0": {
   "confidence": "proved",
@@ -1052,13 +1054,19 @@
   "reason": "Single value 8 in utlTweakableInfoPrototype. Adjacent ids do not show a purpose; single constant only."
  },
  "40000044dcbfd721": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, base of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
+  "meaning": "cbtStandardRatingInfo, the first of three standard-rating curves indexed by item rating 0..417: the scale that modStatType_StandardRatingPercent amounts multiply (the 16 abl.itm.relic.*.scales_with_item_rating procs).",
+  "evidence": "The only StandardRatingPercent users are those 16 relic abilities (ModifyStat StatModType 9 at 4.0/3.5/1.8, SpellDamage 1.0/0.75, Heal 1.35, AbsorbDamage 5.5), named scales_with_item_rating, the same naming as StandardHealthPercent -> cbtStandardHealingInfo. 418 entries cover live ratings (to 344) and 8.0 (370). Datuh Healing Resonance tick 4,524 (158 ticks, no variance) = 1.35 x third column at index 336; other players ticks fit no single column, so the index, column and any bonus term are not proved. Tool: relic_proc_values.py.",
+  "confidence": "likely"
  },
  "40000044dcbfd722": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, 2.3x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
+  "meaning": "cbtStandardRatingInfo, the second (2.3x the first) of three standard-rating curves indexed by item rating 0..417: the scale that modStatType_StandardRatingPercent amounts multiply (the 16 abl.itm.relic.*.scales_with_item_rating procs).",
+  "evidence": "The only StandardRatingPercent users are those 16 relic abilities (ModifyStat StatModType 9 at 4.0/3.5/1.8, SpellDamage 1.0/0.75, Heal 1.35, AbsorbDamage 5.5), named scales_with_item_rating, the same naming as StandardHealthPercent -> cbtStandardHealingInfo. 418 entries cover live ratings (to 344) and 8.0 (370). Datuh Healing Resonance tick 4,524 (158 ticks, no variance) = 1.35 x third column at index 336; other players ticks fit no single column, so the index, column and any bonus term are not proved. Tool: relic_proc_values.py.",
+  "confidence": "likely"
  },
  "40000044dcbfd723": {
-  "reason": "418 floats rising from 1 to 2150/4945/7310, 3.4x of the first column from about index 50 on. The columns are three scales of one curve per index, with values for low indices clamped to 1. The data does not tie the index to level or rating, nor the columns to a stat. Comparing with tooltips at known item ratings would settle it. Residue pass 2026-11-09: the other B1 curves are now settled (cbtShieldPerLevel and cbtArmorPerLevel are keyed by FNV-1a 64 of the uppercased armour-class name, then itmQuality, then level; chrGearScorePrototype is discipline -> STAT -> weight), but this table has no key at all, only a 418-long index, so nothing in the data names the index or the three columns."
+  "meaning": "cbtStandardRatingInfo, the third (3.4x the first) of three standard-rating curves indexed by item rating 0..417: the scale that modStatType_StandardRatingPercent amounts multiply (the 16 abl.itm.relic.*.scales_with_item_rating procs).",
+  "evidence": "The only StandardRatingPercent users are those 16 relic abilities (ModifyStat StatModType 9 at 4.0/3.5/1.8, SpellDamage 1.0/0.75, Heal 1.35, AbsorbDamage 5.5), named scales_with_item_rating, the same naming as StandardHealthPercent -> cbtStandardHealingInfo. 418 entries cover live ratings (to 344) and 8.0 (370). Datuh Healing Resonance tick 4,524 (158 ticks, no variance) = 1.35 x third column at index 336; other players ticks fit no single column, so the index, column and any bonus term are not proved. Tool: relic_proc_values.py.",
+  "confidence": "likely"
  },
  "400000455d382d30": {
   "confidence": "proved",
@@ -1310,9 +1318,9 @@
   "reason": "Single value 2000 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
  },
  "4000004d572d4fd1": {
-  "confidence": "likely",
-  "evidence": "11 of 17 skirmishes [0]; TDM ones list -1776755446276976708 etc., which join sndAudioRegions, phsInstance names and load screens. Exact list rule not shown.",
-  "meaning": "Skirmish's map variants or areas: list of area-related ids, 0 for none."
+  "confidence": "proved",
+  "meaning": "The space maps a GSF skirmish runs on: a list of FNV-1a 64 hashes of uppercased map names, [0] for none.",
+  "evidence": "All 4 distinct non-zero values (7 uses) are FNV-1a 64 of map names: spvp_001 (e757b255d3eb8fbc), spvp_002 (e757b555d3eb94d5), spvp_003 (e757b455d3eb9322) and test (0ed8a7fa7d902e25); 11 of 17 skirmishes hold [0]. The spvp_* names are the GSF space areas (sysAreaInfoTable spvp_* rows). Found by kessel-discovery/examples/registry_hash_match.py."
  },
  "4000004d57caef38": {
   "reason": "Single value 10 in scPvpGlobalDataPrototype, no hint and no named neighbour of the same kind. Nothing in the data to compare it against; GSF client behaviour or a server table would be needed."
@@ -1397,7 +1405,7 @@
   "meaning": "Command points needed to complete each Galactic Command rank."
  },
  "4000004ec1cae6b2": {
-  "reason": "One constant 17422568960780474198 on all 999 ranks. Resolves to no object, string or other singleton field. A rank with a different reward or an in-game rank-up inspection may settle it."
+  "reason": "One constant 17422568960780474198 on all 999 ranks. Resolves to no object, string or other singleton field. A rank with a different reward or an in-game rank-up inspection may settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004ec4e32328": {
   "confidence": "likely",
@@ -1481,10 +1489,10 @@
   "reason": "Single 240000 in a run of 5: 480000, 0.1, 0.1, 240000, 240000. The large ones look like 8 and 4 minutes in ms, with two factors, but their subject is not in the data."
  },
  "4000004eed05cbac": {
-  "reason": "Single id 4089735489459046769. Resolves to no object, string, or singleton field. A client lookup table would settle it."
+  "reason": "Single id 4089735489459046769. Resolves to no object, string, or singleton field. A client lookup table would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004eed05cbad": {
-  "reason": "Single id -2326155948441634526. Resolves to no object, string, or singleton field. A client lookup table would settle it."
+  "reason": "Single id -2326155948441634526. Resolves to no object, string, or singleton field. A client lookup table would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "4000004ef01cf6b9": {
   "reason": "True on one area, iokath_daily. One use cannot show what is special; compare Iokath daily area with others."
@@ -1542,8 +1550,8 @@
  },
  "400003d2558f7b72": {
   "confidence": "likely",
-  "evidence": "8 of 10 queues share -8524131893749953118, which as u64 is 9922612179959598498, the 7f381fb0 of stronghold_rishi_pirate. That is its only other use; the id itself resolves nowhere.",
-  "meaning": "Level-sync setting id for a matchmaking queue, the same kind as sysArea 7f381fb0."
+  "meaning": "Level-sync setting id for a matchmaking queue, the same kind as sysArea 7f381fb0.",
+  "evidence": "8 of 10 queues share 0x89b433349674cda2 (-8524131893749953118), the 7f381fb0 of stronghold_rishi_pirate and its only other use. The other 94 sysArea settings are FNV-1a 64 of one prefix plus the sync level; this value is not that prefix plus any 1-4 character suffix, so it is a differently named setting (plausibly no sync), not shown."
  },
  "400003d257e04946": {
   "confidence": "proved",
@@ -1556,10 +1564,10 @@
   "meaning": "Class's starting fleet area name."
  },
  "400003d257e440e0": {
-  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it."
+  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "400003d257e440e1": {
-  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it."
+  "reason": "One E000-prefixed id per class, same in both fields for Warrior and Inquisitor, different for the rest. Matches no object or singleton field, not even legacy unlocks. Boost-to-level grants per class may be the source; tracing a boost would settle it. Push-2 registry pass (2026-11-09, kessel-discovery/examples/registry_hash_match.py): every distinct value was also tried as FNV-1a 64 of an uppercased string and as an E000 GUID fold (01a1c265) over 2.4M client strings (every FQN with prefix swaps and trp. forms, every string field value in all objects, conversations and Hydra, STB text, client.gom names and enums), 73M variants, and against every qstVariableGUID and qstVariableFqnId; none matched."
  },
  "400003d26f1f36c0": {
   "confidence": "likely",
@@ -1591,8 +1599,8 @@
  },
  "400003d320920091": {
   "confidence": "likely",
-  "evidence": "chrFactionPackagesPrototype. republic -> [republic], empire -> [empire], republic_no_defend -> [republic], and coalition_* lists republic and -9109750429590205317; 34 of 69 are empty. Hint chrCurrentAnimSpeedType does not fit and is rejected.",
-  "meaning": "Factions this faction counts as belonging to or aligned with: list of faction ids."
+  "meaning": "Factions this faction counts as belonging to or aligned with: list of faction ids, each FNV-1a 64 of an uppercased faction name.",
+  "evidence": "chrFactionPackagesPrototype keys are FNV-1a 64 of the faction's own name field f2f87997 on 69 of 69 rows, and 35 of the 50 list members are such keys: republic -> [republic], empire -> [empire], empire_utility_npc -> [empire]. The other 15 are two names held by no row: -9109750429590205317 always beside republic (coalition_*, friendly_all, PvP_Pets, player_friendly_scripted_hostile_a/b) and -7295637456547716065 beside empire (friendly, neutralguard, defend_players_real_damage), plausibly the two player sides; 91 faction-name tokens in 1-3 word combinations match neither. 34 of 69 lists are empty. That the list means allegiance is read from these pairings, not observed."
  },
  "400003d326fc002d": {
   "confidence": "proved",
@@ -1659,19 +1667,19 @@
   "meaning": "chrCompanionInfo_gift_interest_romanced_map: the gift interests that change once the companion is romanced, same coding."
  },
  "4000000854bd7f1a": {
-  "confidence": "likely",
-  "evidence": "Keys are chrCompanionGiftInterest values used in the companion maps; how the multiplier enters the gift formula is not proved.",
-  "meaning": "itmGiftCategoryInterestMap: influence multiplier per gift interest: neutral (1) 0, like (3) 4, favorite (4) 9, love (5) 16."
+  "confidence": "proved",
+  "meaning": "itmGiftCategoryInterestMap: per-interest factor of gift influence: neutral (1) 0, like (3) 4, favorite (4) 9, love (5) 16. Multiplies; a neutral gift gives 0.",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts)."
  },
  "4000000854bd7f19": {
-  "confidence": "likely",
-  "evidence": "7 rows keyed by quality enum; the gift item ranks in fqn (standard, premium, prototype, artifact, legendary) are the likely keys.",
-  "meaning": "itmGiftQualityMap: influence multiplier per gift quality: 0.5, 1, 8, 16, 32, 80, 81."
+  "confidence": "proved",
+  "meaning": "itmGiftQualityMap: per-quality factor of gift influence, keyed by item quality: 0 0.5, 1 1, 2 premium 8, 3 prototype 16, 4 artifact 32, 5 legendary 80, 6 81. It is the base: there is no separate base amount.",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts)."
  },
  "4000000854bd7f1b": {
-  "confidence": "likely",
-  "evidence": "19 rows keyed -9..9.",
-  "meaning": "itmGiftDeltaRankMap: influence multiplier by gift rank minus companion rank: 0 -> 1.0, +1 1.2, +2 1.4, +3 and up 1.6, -1 0.8, -2 0.6, -3 0.4, -4 0.2, -5 and below 0.1."
+  "confidence": "proved",
+  "meaning": "itmGiftDeltaRankMap: factor by (gift's itmGiftAffectionRank, rank minus one) minus the companion's affection rank: 0 1.0, +1 1.2, +2 1.4, +3 and up 1.6, -1 0.8, -2 0.6, -3 0.4, -4 0.2, -5 and below 0.1.",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts). Using gift rank (not rank minus one) matches only 30 of 164."
  },
  "400000428b61fc20": {
   "confidence": "proved",
@@ -1679,9 +1687,9 @@
   "meaning": "chrAllianceContactInfluenceLevels: influence needed for each companion influence rank: rank r -> r+1 costs (r+1)^2 x 100 (400, 900, ... 260,100 for 50 ranks)."
  },
  "40000008623c15ef": {
-  "confidence": "likely",
-  "evidence": "9 rows keyed by chrCompanionAffectionRank; not used by 7.x influence ranks.",
-  "meaning": "chrCompanionAffectionValueToRankMap: the pre-4.0 affection value at each affection rank (-1,000, 3,600, 10,000, 22,500, 40,000, 90,000, 160,000, 250,000, 360,000)."
+  "confidence": "proved",
+  "meaning": "chrCompanionAffectionValueToRankMap: influence points at which a companion's gift rank steps (-1,000, 3,600, 10,000, 22,500, 40,000, 90,000, 160,000, 250,000, 360,000 = influence levels 6, 10, 15, 20, 30, 40, 50, 60). Still used in 7.x: it is the companion rank the gift delta-rank factor compares against, and the community's gift brackets (1, 6, 10, 15, 20, 30, 40, 50).",
+  "evidence": "Proof: with influence per gift = round(quality x interest x deltaRank) x (1 + Legacy of Altruism), and companion rank = the index in chrCompanionAffectionValueToRankMap 40000008623c15ef of the companion's influence points, the gifts needed to cross each influence bracket match all 164 cells of the community per-bracket table (Love, Altruism III; huttspawn site/src/lib/gifts/curve.ts). Without Altruism a companion takes 199 rank-6 legendary loved gifts from level 1 to 50 (Swtorista: about 200 gold gifts)."
  },
  "4000004c320bb353": {
   "confidence": "likely",
@@ -1722,5 +1730,30 @@
   "meaning": "String ref (id1 only, table lgc/unlocks.stb id2 656577): title of a legacy unlock. For datacron unlocks it names the planet and the stat (Mastery, Endurance, Presence; old Willpower/Strength/Aim/Cunning datacrons now read Mastery).",
   "evidence": "249 rows. qst.location.tython.data_holocron.tyt_willpower_i (9ca4acd0) -> 740 'Tython Purple Mastery Datacron'; hot_cunningiii -> 709 'Hoth Orange Mastery Datacron'; tar2_willpoweriii -> 734 'Taris (Imperial) Purple Mastery Datacron'. 89 datacron rows (icon datacron_*), all with requirement 759 'Discover the location of the datacron to unlock.' and none with an effect text (74cafaa2) or an amount field.",
   "confidence": "proved"
+ },
+ "4000000ddd1e5927": {
+  "confidence": "proved",
+  "evidence": "1.0 on all 189 companions in chrCompanionInfo_Prototype (live 7.x); beside chrCompanionInfo_starting/minimum/maximum_affection (10,000 / -1,000 / 10,000). Influence scaling that does vary lives in player stats instead: stat_affection_conversation (Legacy of Persuasion), stat_affection_gift (Legacy of Altruism), stat_influence_accrual_rate (amplifier amp.companions.influential). RESEARCH 01a1c2f6-bd28 rev 2.",
+  "meaning": "chrCompanionInfo_affectionMultiplier: per-companion multiplier on influence gained; 1.0 for every companion, so it changes nothing in 7.x."
+ },
+ "400003d334787442": {
+  "confidence": "proved",
+  "meaning": "qstEraQuestOrder: the ordered quest list of one era spec in qstErasPrototype (the Story tab of the mission log).",
+  "evidence": "22 era specs, 783 slots, 732 distinct quests, all resolving to extracted Quests. Sith Warrior era 1 runs korriban.class.sith_warrior.arm_yourself .. act_3 retribution (64); KotFE ep_01_the_hunt .. ep_16; KotET ep_01 .. ep_09. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "400003d34a017460": {
+  "confidence": "proved",
+  "meaning": "qstEraRequirementsConditionalId: the Condition that unlocks an era spec, cnd.quests.eras.restrictions.<era> (previous era complete, plus content access).",
+  "evidence": "14 era specs (eras 2-9) carry one of the 8 restrictions.* conditions; the 8 era-1 class specs carry none. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "400000459584dda9": {
+  "confidence": "proved",
+  "meaning": "qstEraVisibilityConditionalId: who sees an era spec: cnd.global.is_<class> on the 8 era-1 specs, is_imp / is_rep on faction specs, iokath empire/republic_era_is_visible on Iokath.",
+  "evidence": "20 of 22 specs; KotFE and KotET (one spec each) have none. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "400000459584dda1": {
+  "confidence": "proved",
+  "meaning": "qstErasOrderMap: era order 1..9 -> the era spec ids at that order (8 class specs at 1, one or two faction specs after).",
+  "evidence": "Keys 1-9 hold 8, 2, 2, 2, 1, 1, 2, 2, 2 spec ids, each a key of qstErasMap 400000459584dda3; qstEraHighestOrder 400003d349602b50 = 9. RESEARCH 01a1c2f6-a868 rev 5."
  }
 }

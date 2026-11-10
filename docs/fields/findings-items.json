@@ -1,0 +1,77 @@
+{
+ "40000043f84d7ac4": {
+  "meaning": "itmModdableSetId: the item's modifier set, a key of itmModifierSets (dacef5518) in itmModifierSetTablePrototype. It is the per-item link to the stat-split packages that #332 asked for; itmModifierSetID 0xacec47da does not exist in this client.",
+  "evidence": "On 4,866 of 131,396 items (itm.eq.random 2,585, itm.gen.random 1,553, itm.mod.enhancement *.rand.* 285, itm.gen.sow 200, itm.mod.mod 114, barrel/armoring/hilt 38 each); 4,856 resolve to one of the 338 sets. 0xacec47da is on 0 items and in no client.gom property. Only 8 of these items also carry itmEquipModStats. Tool: kessel-discovery/examples/items_modsets.py.",
+  "confidence": "proved"
+ },
+ "4000003534ae42aa": {
+  "meaning": "itmModSetPackageSmallId: a package of a modifier set, the key of itmModifierPackagesList (4e32e7ebe8), whose itmModPkgAttributePercentages give the stat split.",
+  "evidence": "All 1,195 distinct values in itmModifierSets are keys of the 1,312-entry package table. The enhancement set of itm.mod.enhancement.ilvl_0134.legendary.rand.att_crit_end_pwr lists packages 1477..1496: endurance 70 with power 50..69 and critical 130..111 permille, the 20 rolls of a random enhancement.",
+  "confidence": "proved"
+ },
+ "400000249d4ed5c3": {
+  "meaning": "itmModPkgAttributePercentages: STAT -> permille of the item budget. A stat's value is item_budget_table(quality, item level - 1, permille).",
+  "evidence": "313 fixed-stat itm.eq items (item_stats) are reproduced exactly, every stat, by one package at list index item_level-1, and all 313 lie inside that package variant's itmModPkgMinLevel..MaxLevel. Controls: index item_level gives 31, item_level-2 gives 1, item_level-5 gives 5. Example itm.eq.cc.yuun.waist.medium.premium.cc_07x1 (level 48): package 492 endurance 180, mastery 300, power 20 -> 37, 56, 5 = item_stats.",
+  "confidence": "proved"
+ },
+ "40000004d73288ae": {
+  "meaning": "itmModPkgMinLevel: lowest item level at which this variant of a modifier package applies; a package holds 1 to 3 level-ranged variants.",
+  "evidence": "All 313 itm.eq items reproduced by a package sit inside its MinLevel..MaxLevel. 1,172 packages have one variant, 40 two, 100 three. item_modifier_packages keys on (mod_id, stat_index) and keeps one variant only.",
+  "confidence": "proved"
+ },
+ "40000004d73288b0": {
+  "meaning": "itmModPkgMaxLevel: highest item level at which this variant of a modifier package applies.",
+  "evidence": "See itmModPkgMinLevel 40000004d73288ae.",
+  "confidence": "proved"
+ },
+ "400000249d4ed5c1": {
+  "meaning": "itmBudgetedAttributes: quality -> list of 200 levels -> list of 1,000 permille slots -> stat points. The level list is 0-based: list index i is item level i+1, so item_budget_table.item_level is item level minus 1.",
+  "evidence": "Every stat of every single mod (itm.mod.*, 21,932 items) lies in the budget row at index item_level-1 for 21,884 items, against 20,162 at index item_level and 20,507 at item_level-5; all 512 armorings, 2,746 mods, 2,630 enhancements, 1,009 barrels and 348 hilts hit at item_level-1. Package reproduction peaks at the same offset (see 400000249d4ed5c3).",
+  "confidence": "proved"
+ },
+ "4000000a2d7b8780": {
+  "meaning": "itmEquipSetBonus: the gear set the item belongs to, a key of itmSetBonuses (2d7b877e) in itmSetBonusesPrototype.",
+  "evidence": "On 4,411 items; all 4,411 resolve to one of 218 sets, 171 of which have member items. Survivor's Gear (297049677576016420) has 20 items, 2 pieces -> abl.itm.setbonus.endgame_pvp.htank1.light.02_01 'Reduces cooldown of Spike or Spinning Kick by 10 seconds.' Tool: items_set_bonuses.py.",
+  "confidence": "proved"
+ },
+ "4000000a2d7b8781": {
+  "meaning": "itmSetBonusBonuses: pieces worn -> the set-bonus ability granted at that count.",
+  "evidence": "659 entries in 218 sets; piece keys 2 (213), 3 (31), 4 (216), 5 (36), 6 (133), 7 (30). All 367 abilities resolve to abl.itm.setbonus.* or test FQNs and 657 of 659 rows have effect text (str.abl id1=1); the two without are abl.test.dhunt.itemset01/02. 17 texts carry <<N>> tokens, which resolve through ablDescriptionTokenEffect.",
+  "confidence": "proved"
+ },
+ "400000164512e6c1": {
+  "meaning": "itmEnhancementSlots: the item's mod slots, each a key of itmEnhancementTypes (734860ef): modulator (the augment slot), circuitry (mod), support (enhancement), harness (armoring), hilt, barrel, colorCrystal, dyePack, tuning; 0 = empty position.",
+  "evidence": "Every non-zero value is one of the 9 keys of itmEnhancementInfoPrototype.734860ef, whose 3353ec87 strings name them. Mod items' itmEnhancementType agrees: itm.mod.augment (169) and itm.mod.modulator -> modulator, armoring/harness -> harness, mod/overlay -> circuitry, enhancement/support -> support, hilt/power_crystal -> hilt, barrel -> barrel.",
+  "confidence": "proved"
+ },
+ "4000000f734860f1": {
+  "meaning": "itmEnhancementType: the slot type a mod item fits, a key of itmEnhancementTypes (734860ef).",
+  "evidence": "23,086 items; families map one to one (itm.mod.augment 169 and itm.mod.modulator 1,341 -> modulator; itm.mod.armoring 550 and harness 3,592 -> harness; itm.mod.mod 1,546 and overlay 4,541 -> circuitry; itm.mod.enhancement 2,915 and support 4,434 -> support).",
+  "confidence": "proved"
+ },
+ "4000002f55809161": {
+  "meaning": "itmEnhancementDefaults: the mod item pre-slotted in each position of itmEnhancementSlots (0 = empty). A moddable shell's stats are the sum of these mods' itmEquipModStats.",
+  "evidence": "Parallel to itmEnhancementSlots on 85,551 items. 23,604 items have default mods and no stats of their own, so their stats exist only through the defaults; 1,219 have own stats plus a default colour crystal. The sum was not checked against a tooltip.",
+  "confidence": "likely"
+ },
+ "4000000ba38ca337": {
+  "meaning": "ablDescriptionTokenEffect: the effect a description token <<N>> reads, as its effNumber (2efdc39f) among the effect variants of the same ability.",
+  "evidence": "2,845 of 3,026 Duration tokens resolve to an effect with an effDuration. Every relic proc agrees with Sean's combat logs: Power, Critical and Mastery Surge <<1>> = effect 2 = 6 s (log windows 6.0-6.1 s, 7,531 / 1,758 / 6,587), <<2>> = effect 3 = 20 s (minimum apply gap 20.0 s); Healing Resonance 3 s and 20 s; Alacrity Boost 30 s; Absorb Shield 10 s. abl.agent.evasion <<1>> = effect 1 = 4 s, which Jedipedia also shows; the 3 s in #320 is effect 2 (Blow for Blow). Tool: ability_token_values.py.",
+  "confidence": "proved"
+ },
+ "4000000a384b793c": {
+  "meaning": "ablDescriptionTokenMultiplier: factor applied to the effect's value for the displayed number (Duration: multiplier x effDuration).",
+  "evidence": "1.0 on every relic Duration token, whose values match the logs; Healing Resonance's Healing token has 4.0 over a 3 s heal-over-time, which fits a total over ticks but is not shown.",
+  "confidence": "likely"
+ },
+ "4000004ec802b2a8": {
+  "meaning": "The NPC's own ability packages (apn), a list of AnimationPackage refs. With its class's package (1d72ea3a) they carry the NPC's passives, including boss health passives and per-mode passives (abl.exp.seasons.multi.difficulty_modes.*).",
+  "evidence": "Walking these packages' ablPackageAbilitiesList (f4787f5b) reaches the health passive of every boss tested: npc.exp.seasons.02.ep_09.story.valkorion lists apn.exp.seasons.02.ep_09.bosses.valkorion, whose passive adds 9,566,190 to the 506,305 base for his logged 10,072,495; Shae Vizla, Sairisi, Ortuno, Stivastin, Master Oric Traless and Mentor reproduce their logged max HP from the 2,952,392 base. RESEARCH 01a1c30f-29f2 rev 3; tool npc_health_walk.py.",
+  "confidence": "proved"
+ },
+ "4000000a1d72ea3a": {
+  "meaning": "The class's ability package (apn), given to every NPC of the class; the second source of an NPC's passives besides the NPC's own list (c802b2a8).",
+  "evidence": "class.npc.humanoid.boss.flashpoint.raid.eternity_vault.difficulty_3.boss_soa -> apn.npc.combat.flashpoint.raid.eternity_vault.difficulty_3.boss_soa. Its 2,094 values reference AnimationPackage rows. The walk through both sources reproduces logged boss max HP (RESEARCH 01a1c30f-29f2).",
+  "confidence": "proved"
+ }
+}

@@ -1,0 +1,326 @@
+{
+  "4000004623267ecc": {
+    "meaning": "itmItemUpgradesMap (name by hash F6646379): the Item Upgrade System's rules, a map of upgrade key -> {itmItemUpgradeSpec 23267eca (the key again), itmUpgradeCostSpec 23267ec2 (cost key), 23267ecb (ladder key), itmItemUpgradeItemsSpec bc17d858 (result key)}.",
+    "evidence": "8.0 PTS itmUpgradesPrototype: 6,968 rules. Every cost key resolves in 23267ec5, every ladder key in 23267ec8 and every result key in bc17d852 (6,968 of 6,968 each). Items reach a rule through their item field bc17d85a (7,069 items).",
+    "confidence": "proved"
+  },
+  "4000004623267eca": {
+    "meaning": "itmItemUpgradeSpec (hash 4177EC1F): an upgrade rule's own key, equal to its map key in itmItemUpgradesMap.",
+    "evidence": "6,968 of 6,968 values equal the enclosing map key.",
+    "confidence": "proved"
+  },
+  "4000004623267ec2": {
+    "meaning": "itmUpgradeCostSpec (hash 184FECF3): the cost key. In an upgrade rule it points at the cost, and in a cost record it is the cost's own key.",
+    "evidence": "6,968 rule values all resolve to the 29 keys of itmItemUpgradeCostsMap (23267ec5); the 29 cost records carry their own key here.",
+    "confidence": "proved"
+  },
+  "4000004623267ec5": {
+    "meaning": "itmItemUpgradeCostsMap (hash F5715040): the 29 upgrade costs, cost key -> {itmUpgradeCostSpec 23267ec2, itmItemUpgradeCreditCost 23267ec3, itmItemUpgradeCosts 23267ec4}.",
+    "evidence": "Kalikoran steps use 100,000 credits + 100 Force Imbued Fragment + 60 Tech Fragments; the steps from 360 and 370 use 200,000 credits + 100 Force Imbued Fragment + 100 Force Harnessing Shard + 100 Tech Fragments, matching the developer post's 'Shards required at certain item ratings'.",
+    "confidence": "proved"
+  },
+  "4000004623267ec3": {
+    "meaning": "itmItemUpgradeCreditCost (hash E524CDFC): credits charged for one upgrade step.",
+    "evidence": "29 values, 10,000 to 200,000, alongside currency lists. The developer post says upgrades cost credits.",
+    "confidence": "proved"
+  },
+  "4000004623267ec4": {
+    "meaning": "itmItemUpgradeCosts (hash 244CDB26): the currencies one step costs, a list of (currency item, count).",
+    "evidence": "44 entries; every first element resolves to an Item (itm.loot.token.motf.currency1 'Force Imbued Fragment', currency2 'Force Harnessing Shard', war_commendation 'Tech Fragments', ventures challenge_token 'Challenge Token', '[ARCHIVED] OP-1 Catalyst', '[ARCHIVED] Conquest Commendations').",
+    "confidence": "proved"
+  },
+  "4000004623267ec8": {
+    "meaning": "Upgrade ladders: map of ladder key -> {23267ec7 list of (rating, quality)}; 11 ladders.",
+    "evidence": "Every rule's ladder key (23267ecb) resolves here. The ladders list ratings that are rungs of their own chains: Kalikoran (354,3)(356,4)(372,5)(380,5); Rakata operation gear (320,5)(330,5)(340,5); Ventures expert every rung 24..306 at 6.",
+    "confidence": "proved"
+  },
+  "4000004623267ec7": {
+    "meaning": "A ladder's checkpoints: list of (item rating, quality), with quality one above itmBaseQuality (premium 3, prototype 4, artifact 5, legendary 6).",
+    "evidence": "On the Kalikoran chain, 354 is the last premium rung, 356 the first prototype, 372 the first artifact and 380 the ceiling. Rakata artifact rows carry 5, legendary implants and Ventures legendary gear carry 6. What the UI does with a checkpoint is not seen.",
+    "confidence": "likely"
+  },
+  "4000004623267ecb": {
+    "meaning": "An upgrade rule's ladder key, into 23267ec8.",
+    "evidence": "6,968 of 6,968 values are keys of 23267ec8.",
+    "confidence": "proved"
+  },
+  "400003d3bc17d852": {
+    "meaning": "itmItemUpgradeItemsMap (hash 90964BA6): the result of each upgrade, result key -> {itmItemUpgradeItemsList bc17d854}.",
+    "evidence": "6,964 keys; every rule's itmItemUpgradeItemsSpec resolves here. Walking item -> rule -> result reproduces the Kalikoran chain 352 -> 380, one item per 2 ratings.",
+    "confidence": "proved"
+  },
+  "400003d3bc17d854": {
+    "meaning": "itmItemUpgradeItemsList (hash E2F52FD8): the items an upgrade can produce, a list of {itmItemUpgradeItemSpec bc17d855, upgrade type bc17d857}; 2-4 entries mean a choice.",
+    "evidence": "6,833 single results; 131 multi-entry results sit at the ceilings (Kalikoran ilvl 178 artifact rating 380, legendary implants at 380) and list the same piece with another tertiary stat (_acc, _alac, _crit, _abs, _shld).",
+    "confidence": "proved"
+  },
+  "400003d3bc17d855": {
+    "meaning": "itmItemUpgradeItemSpec (hash 6182EF14): the item an upgrade produces.",
+    "evidence": "7,105 of 7,105 values resolve to Item objects, each the next rung or a tertiary variant of the source item.",
+    "confidence": "proved"
+  },
+  "400003d3bc17d857": {
+    "meaning": "Upgrade result type, an itmUpgradeTypes value (enum CBEE98DA: 0 itmUpgradeTypeUpgrade, 1 itmUpgradeTypeVariant, 2 itmUpgradeTypeNewItem); absent means Upgrade.",
+    "evidence": "280 uses, all 1 (Variant), all on the tertiary-stat choices at the ceiling. The enum's value names are plain text in client.gom, and the field's record references that enum.",
+    "confidence": "proved"
+  },
+  "400003d3bc17d858": {
+    "meaning": "itmItemUpgradeItemsSpec (hash 0102112B): an upgrade rule's result key, into itmItemUpgradeItemsMap.",
+    "evidence": "6,968 of 6,968 values are keys of bc17d852.",
+    "confidence": "proved"
+  },
+  "400003d3bc17d85a": {
+    "meaning": "itmUpgradeSpec (hash A348755E): an item's upgrade key, into itmItemUpgradesMap; held by the new itmItem component 400003d3bc17d859.",
+    "evidence": "7,069 items carry it (Ventures 4,920, Kalikoran 1,302, legendary implants 782, expertise augments 42, operation gear 23); 6,960 distinct values, all keys of 23267ecc.",
+    "confidence": "proved"
+  },
+  "40000046658c5411": {
+    "meaning": "itmRequiredCharacterType (hash F8DD7E3D, same as its enum): the character type an item requires (enum itmRequiredCharacterType: 0 None, 1 Standard, 2 Venture).",
+    "evidence": "Exactly the 5,166 itm.gen.ventures items carry it, all with 2 (Venture). The enum's value names are plain text in client.gom.",
+    "confidence": "proved"
+  },
+  "40000046499053b3": {
+    "meaning": "qstRewardsMapping (hash 042E05FD): quest -> map of branch -> reward-set key into qstRewardsSetMap. Replaces qstRewardsItems c788046a.",
+    "evidence": "2,701 quest keys (2,693 resolve to Quest objects); their values are keys of 499053b2.",
+    "confidence": "proved"
+  },
+  "40000046499053b2": {
+    "meaning": "qstRewardsSetMap (hash 9CFF189B): reward-set key -> list of reward rows {d9f35ee6 item, 07958075 count, b3006cb8/b3006cb9 level band, d9f35ee5 always, qstRewardsInfoRequiredConditionals 1a7c1f02, 1a7c1f00}.",
+    "evidence": "1,023 sets and 18,895 rows. Kalikoran rewards are listed per archetype with conditions cnd.trp.loot_archetype.dps_alac / dps_crit / healer / tank_abs / tank_shld (1,945 rows each).",
+    "confidence": "proved"
+  },
+  "400003d41a7c1f02": {
+    "meaning": "qstRewardsInfoRequiredConditionals (hash CA010A61): the conditions a reward row requires, a list of Condition refs. Replaces the single qstRewardsInfoRequiredConditional 3a9c8933.",
+    "evidence": "15,442 refs, all Condition objects: cnd.trp.loot_archetype.*, cnd.trp.loot_archetype.weapons.is_weapon_<hand>_<type>_<archetype>, cnd.trp.discipline.is_generic_<role>, cnd.metrics.is_level_80_plus.",
+    "confidence": "proved"
+  },
+  "400003d41a7c1f00": {
+    "reason": "A list present on all 18,895 8.0 reward rows and empty on every one, and no other object or singleton uses it. Its client.gom record (hash 6F03C59C, unnamed; no candidate name hashes to it) references no class or enum, so the client does not say what the list would hold. The data cannot settle it until a build puts a value in it."
+  },
+  "400000462dbe4982": {
+    "meaning": "Condition clause: character type to test, a chrCharacterType value (enum 38D54163: 0 chrCharacterTypeStandard, 1 chrCharacterTypeDifficultyChallenge).",
+    "evidence": "247 condition clauses, all with value 1 and condition op 143, e.g. cnd.ventures.challenge_mode.utility.is_on_challenge_venture. The field's record references the enum, and the enum's value names are plain text.",
+    "confidence": "proved"
+  },
+  "40000046473302c3": {
+    "meaning": "In chrAdvancedClassRequirements (b45ace77), the character types barred from taking a combat style from a given origin, a list of chrCharacterType values.",
+    "evidence": "On all 16 class.pc.advanced.* combat styles, the native origin has [] and each cross-origin origin has [1] (DifficultyChallenge). Example: assassin is open to sith_sorcerer and barred to Venture characters of sith_warrior, jedi_knight and jedi_wizard. This is the gate Sean saw on the PTS: a Venture character is held to its origin's combat styles (01a1b93f).",
+    "confidence": "proved"
+  },
+  "4000004653c93593": {
+    "meaning": "Quest objectives on average item rating: a list of {qstVariableDefinition fields (2adec3c7 hook name, ...), 53c93592 target rating}.",
+    "evidence": "Only qst.exp.05.systems.progression.gear_quest and gear_quest_imp, the gear progression mission the developer post says unlocks at level 85. Hooks hook_reach_irating_362, _372, _380, with targets 362, 372 and 380.",
+    "confidence": "proved"
+  },
+  "4000004653c93592": {
+    "meaning": "Target item rating of a reach-rating objective.",
+    "evidence": "Values 362, 372 and 380 on hooks hook_reach_irating_362/372/380.",
+    "confidence": "proved"
+  },
+  "400003d40f3d17c6": {
+    "meaning": "Quest objectives on upgrading an item: a list of {qstVariableDefinition fields, qstMaxCount 2afe250d, 0f3d17c1 rating, 0f3d17c2 and 0f3d17c5 comparisons (cndComparisonEnum), 0f3d17c4 item quality (itmQualityType)}.",
+    "evidence": "Only on the two gear_quest missions, hook hook_item_upgrade_275, with values 316, comparison 4, quality 2 and comparison 4. The record references cndComparisonEnum twice and itmQualityType once.",
+    "confidence": "likely"
+  },
+  "400003d40f3d17c1": {
+    "meaning": "The item-rating operand of an upgrade objective.",
+    "evidence": "Value 316 on hook_item_upgrade_275 of both gear_quest missions. Which side of the comparison it sits on is not settled.",
+    "confidence": "likely"
+  },
+  "400003d40f3d17c2": {
+    "meaning": "Upgrade-objective comparison (cndComparisonEnum), probably for the rating.",
+    "evidence": "Value 4 on both gear quests; its record references cndComparisonEnum.",
+    "confidence": "likely"
+  },
+  "400003d40f3d17c4": {
+    "meaning": "Upgrade-objective item quality (itmQualityType).",
+    "evidence": "Value 2 on both gear quests; its record references itmQualityType.",
+    "confidence": "likely"
+  },
+  "400003d40f3d17c5": {
+    "meaning": "Upgrade-objective comparison (cndComparisonEnum), probably for the quality.",
+    "evidence": "Value 4 on both gear quests; its record references cndComparisonEnum.",
+    "confidence": "likely"
+  },
+  "400003d432934414": {
+    "meaning": "lgcLegendaryStatusMap (hash E145639A): Legendary Status tiers, tier key -> {1ECBF9B1 key, 32934418, 32934419 and 33c7f380 string-like ids, 3293441e story indices, 33c7f381 entry keys}.",
+    "evidence": "3 tiers, each listing 8 story indices (1-8, 9-16, 17-24) and the 8 matching entry keys of 32934415.",
+    "confidence": "proved"
+  },
+  "400003d432934415": {
+    "meaning": "Legendary Status entries: entry key -> {1ECBF9B1 tier key, 3293441a own key, 3293441b index 1-24, 3293441c achievement, 33c7f382 class name}.",
+    "evidence": "24 entries, each naming an ach.ventures.legendary_status.<veteran|master|...>.<class>_story achievement; 3 tiers x 8 class stories.",
+    "confidence": "proved"
+  },
+  "400003d432934416": {
+    "meaning": "Achievement -> Legendary Status entry key.",
+    "evidence": "24 achievements (ach.ventures.legendary_status.*), each value a key of 32934415.",
+    "confidence": "proved"
+  },
+  "400003d432934417": {
+    "meaning": "lgcLegendaryStatusSpecsId (hash 1ECBF9B1): the Legendary Status tier key, on tiers and on entries.",
+    "evidence": "27 values, all one of the 3 tier keys.",
+    "confidence": "proved"
+  },
+  "400003d43293441a": {
+    "meaning": "A Legendary Status entry's own key.",
+    "evidence": "24 of 24 equal the entry's map key.",
+    "confidence": "proved"
+  },
+  "400003d43293441b": {
+    "meaning": "A Legendary Status entry's index, 1-24.",
+    "evidence": "24 distinct values 1-24, matching the tier's 3293441e lists.",
+    "confidence": "proved"
+  },
+  "400003d43293441c": {
+    "meaning": "A Legendary Status entry's achievement.",
+    "evidence": "24 of 24 resolve to ach.ventures.legendary_status.* Achievement objects.",
+    "confidence": "proved"
+  },
+  "400003d43293441e": {
+    "meaning": "A Legendary Status tier's story indices.",
+    "evidence": "Lists [1..8], [9..16] and [17..24].",
+    "confidence": "proved"
+  },
+  "400003d433c7f381": {
+    "meaning": "A Legendary Status tier's entry keys.",
+    "evidence": "3 lists of 8, every value a key of 32934415.",
+    "confidence": "proved"
+  },
+  "400003d433c7f382": {
+    "meaning": "A Legendary Status entry's class name string.",
+    "evidence": "24 lowercase class names (smuggler, trooper, sithsorcerer, bountyhunter, ...). They do not always match the story in 3293441c (master.sith_inquisitor_story carries 'smuggler'), so this may be an icon or display key.",
+    "confidence": "likely"
+  },
+  "400003d433c7f383": {
+    "meaning": "Legendary Status tier order.",
+    "evidence": "A list of the 3 tier keys.",
+    "confidence": "likely"
+  },
+  "400003d432934418": {
+    "meaning": "A Legendary Status tier's player flair: FNV-1a 64 of the flair name, a key of chrPlayerFlairTablePrototype.",
+    "evidence": "Each tier's value equals FNV-1a 64 of an uppercased flair name and is a key in the PTS flair table: 3638484091300804978 = flair_legendary_status (tier 'Legendary Player'), -5084536892060546158 = flair_veteran_legendary_status ('Classic Legendary Player'), -588207968880995559 = flair_master_legendary_status ('Expert Legendary Player'). 3 of 3 resolve.",
+    "confidence": "proved"
+  },
+  "400003d432934419": {
+    "meaning": "A Legendary Status tier's display name, a string id (id2 << 32 | id1) into str.gui.tooltips (id2 194677).",
+    "evidence": "3 of 3 resolve: 836131348284106 = 'Legendary Player', 836131348284206 = 'Classic Legendary Player', 836131348284207 = 'Expert Legendary Player'.",
+    "confidence": "proved"
+  },
+  "400003d433c7f380": {
+    "meaning": "A Legendary Status tier's status title, a string id into str.gui.tooltips (id2 194677).",
+    "evidence": "3 of 3 resolve: 836131348284210 = 'Origin Status' (tier with stories 1-8), 836131348284209 = 'Veteran Status' (9-16), 836131348284208 = 'Master Status' (17-24).",
+    "confidence": "proved"
+  },
+  "400003d3faef2fb1": {
+    "meaning": "Venture modes: map of mode key -> {2D58CC7E order, DE7EC9F0 own key, 24D4C232 name string, 05378F17 the mode's ventures, 473302c1 gear-set unlock achievements, 47d7ce40 completion achievement}.",
+    "evidence": "3 modes: order 1 'Basilisk Prototype' (1 venture), order 2 'Classic Venture' (8 ventures, one per class story, meta ach.ventures.veteran.veteran_meta 'Venture Monarch: Completed all 8 Classic Ventures'), order 3 'Expert Venture' (8 ventures, meta ach.ventures.master.master_meta 'Venture Grand Monarch: Completed all 8 Expert Ventures'). Every listed venture is a key of lgcVenturesMap, and each of them points back to its mode through faef2fb5.",
+    "confidence": "proved"
+  },
+  "400003d3faef2fb3": {
+    "meaning": "A Venture mode's order.",
+    "evidence": "Values 1, 2 and 3 on Basilisk Prototype, Classic Venture and Expert Venture; faef2fb9 lists the modes in the same order.",
+    "confidence": "proved"
+  },
+  "400003d3faef2fb5": {
+    "meaning": "A venture's mode: a key of the Venture modes map (400003d3faef2fb1); on a mode it is the mode's own key.",
+    "evidence": "On the 17 ventures, each value is the key of the mode whose venture list (05378F17) contains that venture: 17 of 17 agree. On the 3 modes, the value equals the map key.",
+    "confidence": "proved"
+  },
+  "400003d3faef2fb6": {
+    "meaning": "lgcVentureDisplayIndex (hash DDCD4C8E): a venture's display order.",
+    "evidence": "17 ventures carry values 1-8.",
+    "confidence": "likely"
+  },
+  "400003d3faef2fb7": {
+    "meaning": "A Venture mode's name, a string id into str.gui.legacy (id2 627063).",
+    "evidence": "3 of 3 resolve: 2693215077532050 = 'Basilisk Prototype', 2693215077532052 = 'Classic Venture', 2693215077532053 = 'Expert Venture'. The neighbouring 2693215077532051 = 'Venture Difficulty' is the UI label.",
+    "confidence": "proved"
+  },
+  "400003d3faef2fb8": {
+    "meaning": "A Venture mode's ventures: a list of lgcVenturesMap keys.",
+    "evidence": "17 of 17 values are keys of lgcVenturesMap (5cf70582). Classic and Expert each list 8, one per class story (jedi_knight .. bounty_hunter); Basilisk Prototype lists the one basilisk_prototype venture.",
+    "confidence": "proved"
+  },
+  "400003d3faef2fb9": {
+    "meaning": "Venture mode order: the 3 mode keys.",
+    "evidence": "The list is [Basilisk Prototype, Classic Venture, Expert Venture], the same order as faef2fb3 (1, 2, 3).",
+    "confidence": "proved"
+  },
+  "40000046473302c1": {
+    "meaning": "A Venture mode's gear-set unlock achievements, one per slot.",
+    "evidence": "Classic and Expert both list the 8 achievements ach.ventures.master.gear_set_unlocks.<chest|ear|feet|hands|head|legs|waist|wrist>; their text reads e.g. \"Grand Venturer's Set: Chest\" / 'Complete the Classic Jedi Consular Venture to unlock the chest slot.' Basilisk Prototype has none.",
+    "confidence": "proved"
+  },
+  "4000004647d7ce40": {
+    "meaning": "A Venture mode's completion achievement.",
+    "evidence": "Classic Venture -> ach.ventures.veteran.veteran_meta ('Venture Monarch', 'Completed all 8 Classic Ventures.'); Expert Venture -> ach.ventures.master.master_meta ('Venture Grand Monarch', 'Completed all 8 Expert Ventures.').",
+    "confidence": "proved"
+  },
+  "400003d3e3a3e620": {
+    "meaning": "Character-creator stages (replaces ccsFactionSelectStageMap): map of ccsState enum -> start level -> faction (FNV-1a 64: REPUBLIC 1086966210362573345, EMPIRE -1855280666668608219) -> stage details {04aad848 stage stg.charselect.*, 9d313440 start mark, f83036c0 ccsStageDetailMarks}.",
+    "evidence": "4 states (0-3), each with start level 1 and both factions; the stages are stg.charselect.create_grey_backdrop[_republic|_imperial], and the start marks are _start_grey_backdrop_republic/_imperial. The faction keys are the hashes taxFaction uses.",
+    "confidence": "proved"
+  },
+  "400003d3f83036c0": {
+    "meaning": "ccsStageDetailMarks (hash B561DECB): character-creator stage marks per state; replaces ccsStageDetailMarksPerState 4000001004aad84b.",
+    "evidence": "24 uses in ccsStagesPrototype holding chrGenderEnum-keyed maps of camera and NPC marks.",
+    "confidence": "likely"
+  },
+  "400003d3e3a3e624": {
+    "meaning": "A creator stage's second camera mark, used only in ccsState 3.",
+    "evidence": "Present only in state 3, per gender: CAM3 (gender 0) and CAM4 (gender 1), next to ccsStageCamera CAM2/CAM5 and ccsStageMark NPC3/NPC4. States 0-2 have one camera and one mark. What the second camera is for is shown in the stage, not in the data.",
+    "confidence": "likely"
+  },
+  "400003d3e3a3e625": {
+    "meaning": "ccsStageCamera (hash 9F09BE3D): a creator stage's camera mark name.",
+    "evidence": "Values CAM1, CAM2, CAM5.",
+    "confidence": "likely"
+  },
+  "400003d3e3a3e626": {
+    "meaning": "ccsStageMark (hash E2ED6D1F): a creator stage's mark name.",
+    "evidence": "Values CAM1 and NPC1-NPC3; the name is a singleton FQN that hashes to the record.",
+    "confidence": "proved"
+  },
+  "400003d3f699df51": {
+    "meaning": "An activity-finder category's weekly missions: a list of Quest refs (one Republic, one Imperial).",
+    "evidence": "5 categories carry it, 2 quests each: Master Flashpoints -> qst.daily.<republic|imperial>.flashpoint_weekly_hardmode_1; Veteran tactical Flashpoints -> flashpoint_weekly_tactical_1; Story, Veteran and Master Uprisings -> weekly_story_uprisings / weekly_veteran_uprisings / weekly_master_uprisings. These are the weekly sources of Force Harnessing Shards in the developer post.",
+    "confidence": "proved"
+  },
+  "400000464c981571": {
+    "meaning": "A meta dynamic event's stage name, a string id into str.gui.quest (id2 194672).",
+    "evidence": "9 of 9 resolve, to 'Battle Stage 1' .. 'Battle Stage 9' (836109873447229-37), one per meta dynamic event in wevDynamicEventToMetaDynamicEventInfo (Ryloth battle events).",
+    "confidence": "proved"
+  },
+  "400003d40c444a20": {
+    "meaning": "Legacy level cap (likely): a new utlTweakable scalar, 60.",
+    "evidence": "The 8.0 announcements raise the legacy cap from 50 to 60. In the same build, lgcPerkReqLgcLvl (400001069a9119a9) goes from a maximum of 40 to 60, so perks now require legacy levels up to 60. The record (hash E8EC7B15) has no name, and no candidate hashes to it; utlTweakable_DisLootDisciplineSelectionLevel is also 60, so the value alone does not prove the role.",
+    "confidence": "likely"
+  },
+  "4000004631d0c4d6": {
+    "reason": "Not in either client.gom, so there is no name or type. In 8.0 it is 3.0 on exactly the 32 open-world planet areas (ald_main .. zio_main), the same areas that carry 4000004631d1aee0, the overworld Difficulty Mode faction list. 3.0 matches the three modes (Story/Veteran/Master), but a constant on every area it appears on has no variation to test a reading against, so the data cannot settle it."
+  },
+  "4000004631d1aee0": {
+    "meaning": "An open-world planet's NPC factions, a list of faction keys (chrFactionPackages keys, FNV-1a 64 of the faction name), on the areas that 8.0's overworld Difficulty Mode applies to.",
+    "evidence": "Non-empty on the same 32 open-world planet areas as 4000004631d0c4d6 and empty on all 228 others. Every value resolves through chrFactionPackagesPrototype's f2f87997 name: hostile1 (32), wildlife_predator (32), neutral (32), hostile2 (29), empire (5, on the Republic-side areas bal2_main, coruscant_main, ord_resize, tar_main, tython_blockout) and republic (3, on the Imperial-side areas bal_main, dro_main, tar2_main). Tying the list to the Difficulty Mode is inference from the 8.0 feature; the faction join itself is proved.",
+    "confidence": "likely"
+  },
+  "400003d33b455452": {
+    "reason": "Not in either client.gom. 93 instanced areas carry the same value, 1445174518347708194: flashpoints (mini_flashpoint_*, story_flashpoint_*, nathema, directive7), operations (raid_*), uprisings (uprising_*), arenas (pvp_arena_*), warzones (pvp_*) and GSF (spvp_*). None of the 32 open-world planets carries it. The value is not a chrFactionPackages key, an object GUID or a string id, and it is not FNV-1a 64 of any of 610,874 candidate strings (every string in all 930 decoded singletons, every short str.gui text, every ventures FQN). One constant that resolves to nothing cannot be named from data."
+  },
+  "4000004f1191b8d8": {
+    "meaning": "grpFinderContentMinItemRating (name in names.json): the minimum item rating to queue for an activity-finder content.",
+    "evidence": "In 8.0, 32 contents carry 370, all at level 85 in the Master Flashpoints category (Battle of Rishi, The Black Talon, Maelstrom Prison, Kaon Under Siege, ... Ruins of Nul, The False Emperor). 370 is a Kalikoran rung (ilvl 177 prototype).",
+    "confidence": "proved"
+  },
+  "400003d3ac639ca0": {
+    "meaning": "decAllowStateSave (name in names.json): the decoration keeps its state when placed (8.0 decoration persistence).",
+    "evidence": "True on 125 decorations and absent on the other 4,619; no other decoration field correlates with it. They are decorations with switchable states: cadera_normal_to_burned banners, fleet doorways, the Nar Nights music stage, fireworks, taxidermy. The sibling record 400003d3ac639ca1 is aptDecorationState.",
+    "confidence": "likely"
+  },
+  "400003d3acf26f20": {
+    "meaning": "aptHookAllowsDecorationYTranslation (name in names.json): the hook type lets a decoration move vertically.",
+    "evidence": "True on 8 of 16 hook types, all floor-like: Floor Small, Floor Medium, Floor Large, Floor Medium Narrow, Massive Structure, Starship, Centerpiece, Floor Covering. False on every wall and ceiling hook and on Sky Deck Arena. The hook names are string ids (d24c64a2) that resolve.",
+    "confidence": "proved"
+  }
+}
