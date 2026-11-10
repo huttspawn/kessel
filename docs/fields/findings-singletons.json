@@ -1735,5 +1735,25 @@
   "confidence": "proved",
   "evidence": "1.0 on all 189 companions in chrCompanionInfo_Prototype (live 7.x); beside chrCompanionInfo_starting/minimum/maximum_affection (10,000 / -1,000 / 10,000). Influence scaling that does vary lives in player stats instead: stat_affection_conversation (Legacy of Persuasion), stat_affection_gift (Legacy of Altruism), stat_influence_accrual_rate (amplifier amp.companions.influential). RESEARCH 01a1c2f6-bd28 rev 2.",
   "meaning": "chrCompanionInfo_affectionMultiplier: per-companion multiplier on influence gained; 1.0 for every companion, so it changes nothing in 7.x."
+ },
+ "400003d334787442": {
+  "confidence": "proved",
+  "meaning": "qstEraQuestOrder: the ordered quest list of one era spec in qstErasPrototype (the Story tab of the mission log).",
+  "evidence": "22 era specs, 783 slots, 732 distinct quests, all resolving to extracted Quests. Sith Warrior era 1 runs korriban.class.sith_warrior.arm_yourself .. act_3 retribution (64); KotFE ep_01_the_hunt .. ep_16; KotET ep_01 .. ep_09. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "400003d34a017460": {
+  "confidence": "proved",
+  "meaning": "qstEraRequirementsConditionalId: the Condition that unlocks an era spec, cnd.quests.eras.restrictions.<era> (previous era complete, plus content access).",
+  "evidence": "14 era specs (eras 2-9) carry one of the 8 restrictions.* conditions; the 8 era-1 class specs carry none. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "400000459584dda9": {
+  "confidence": "proved",
+  "meaning": "qstEraVisibilityConditionalId: who sees an era spec: cnd.global.is_<class> on the 8 era-1 specs, is_imp / is_rep on faction specs, iokath empire/republic_era_is_visible on Iokath.",
+  "evidence": "20 of 22 specs; KotFE and KotET (one spec each) have none. RESEARCH 01a1c2f6-a868 rev 5."
+ },
+ "400000459584dda1": {
+  "confidence": "proved",
+  "meaning": "qstErasOrderMap: era order 1..9 -> the era spec ids at that order (8 class specs at 1, one or two faction specs after).",
+  "evidence": "Keys 1-9 hold 8, 2, 2, 2, 1, 1, 2, 2, 2 spec ids, each a key of qstErasMap 400000459584dda3; qstEraHighestOrder 400003d349602b50 = 9. RESEARCH 01a1c2f6-a868 rev 5."
  }
 }
