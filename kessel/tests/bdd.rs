@@ -2,7 +2,7 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks and FR-KESSEL-025 c1 to c10. The `@local`
+//! code: the `@smoke` checks, FR-KESSEL-025 c1 to c10 and FR-KESSEL-026 c1 to c9. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -39,6 +39,23 @@ struct World {
     casts: Vec<(i64, [f64; 3])>,
     /// The answer: one line per fact found.
     answer: Vec<String>,
+    /// FR-KESSEL-026: the build a scenario extracts.
+    build: Build,
+}
+
+/// A synthetic build for FR-KESSEL-026: its archive entries, the objects the extract keeps and
+/// those it leaves out, the string tables it reads, and the extraction it is compared with.
+#[derive(Default)]
+struct Build {
+    entries: Vec<(String, u64, Vec<u8>)>,
+    kept: Vec<kessel::pbuk::GomObject>,
+    left_out: Vec<kessel::pbuk::GomObject>,
+    tables_read: Vec<u64>,
+    previous: Option<std::path::PathBuf>,
+    name_previous: bool,
+    /// The extracted output, and whether the report was written.
+    output: Option<std::path::PathBuf>,
+    reported: bool,
 }
 
 #[rstest::fixture]
@@ -1485,6 +1502,405 @@ fn c9_use_casts_answer_what_the_placeable_triggers() {
     }
 }
 
+// FR-KESSEL-026: each extraction reports what in the build it did not read. CI has no game
+// data, so a scenario's build is synthetic: archive entries, objects and string tables, fed to
+// the same collector and report the extraction runs.
+
+const FIELD_A: u64 = 0x4000_0041_0000_00a1;
+const FIELD_B: u64 = 0x4000_0041_0000_00b2;
+const FIELD_C: u64 = 0x4000_0041_0000_00c3;
+const GLOBAL: &str = "swtor_en-us_global_1.tor";
+
+fn path_hash(path: &str) -> u64 {
+    let (ph, sh) = kessel::hash::hashlittle2(path.as_bytes(), 0, 0);
+    kessel::hash::combine_hash(ph, sh)
+}
+
+fn temp_path(label: &str) -> std::path::PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    std::env::temp_dir().join(format!(
+        "kessel_bdd_{label}_{}_{nanos}.sqlite",
+        std::process::id()
+    ))
+}
+
+/// A GOM object whose field stream holds `fields`: id, wire tag and value bytes.
+fn gom_object(fqn: &str, guid: u8, fields: &[(u64, u8, &[u8])]) -> kessel::pbuk::GomObject {
+    let mut header = vec![0u8; 42];
+    header[0] = guid;
+    header[32] = 1;
+    let mut payload = vec![0x00, u8::try_from(fields.len()).expect("few fields")];
+    let mut last = 0u64;
+    for (id, tag, value) in fields {
+        payload.push(0xCF);
+        payload.extend_from_slice(&(id - last).to_be_bytes());
+        last = *id;
+        payload.push(*tag);
+        payload.extend_from_slice(value);
+    }
+    kessel::pbuk::GomObject {
+        fqn: fqn.to_string(),
+        header,
+        payload,
+    }
+}
+
+/// A client.gom declaring each field's type tag.
+fn client_gom(declared: &[(u64, u8)]) -> Vec<u8> {
+    let mut data = vec![0u8; 8];
+    for (field, tag) in declared {
+        let mut record = vec![0u8; 40];
+        record[0] = 33;
+        let id = ((field & 0xFFFF_FFFF) << 32) | 0x1234_5678;
+        record[4..12].copy_from_slice(&id.to_le_bytes());
+        record[0x12] = 0x20;
+        record[0x20] = *tag;
+        data.extend_from_slice(&record);
+    }
+    data
+}
+
+/// A string table of one entry.
+fn string_table() -> Vec<u8> {
+    let mut data = vec![0x01, 0, 0, 1, 0, 0, 0];
+    let mut entry = [0u8; 26];
+    entry[14] = 2;
+    entry[18] = 33;
+    data.extend_from_slice(&entry);
+    data.extend_from_slice(b"hi");
+    data
+}
+
+fn area_dat() -> Vec<u8> {
+    let sig = b"AREA_DAT_BINARY_FORMAT_";
+    let mut data = u32::try_from(sig.len())
+        .expect("short")
+        .to_le_bytes()
+        .to_vec();
+    data.extend_from_slice(sig);
+    data
+}
+
+/// The kept object with a string under field A and a number under field B, and a client.gom
+/// declaring field A a string and field B nothing.
+fn field_values(world: &mut World) {
+    let b = &mut world.build;
+    b.entries.push((
+        "swtor_main_global_1.tor".into(),
+        path_hash("/resources/systemgenerated/client.gom"),
+        client_gom(&[(FIELD_A, 0x06)]),
+    ));
+    b.kept.push(gom_object(
+        "itm.test_kept.sword",
+        1,
+        &[(FIELD_A, 0x06, &[2, b'o', b'k']), (FIELD_B, 0x01, &[5])],
+    ));
+}
+
+fn output(world: &World) -> Connection {
+    let path = world
+        .build
+        .output
+        .as_ref()
+        .expect("the build was extracted");
+    Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).expect("open the output")
+}
+
+/// The report's rows for one check: status, subject, detail, count.
+fn report(world: &World, check: &str) -> Vec<(String, Option<String>, String, Option<i64>)> {
+    let conn = output(world);
+    let mut stmt = conn
+        .prepare("SELECT status, subject, detail, count FROM unknowns WHERE check_name = ?1 ORDER BY subject, detail")
+        .expect("the unknowns table");
+    stmt.query_map([check], |r| {
+        Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+    })
+    .expect("report rows")
+    .map(|r| r.expect("report row"))
+    .collect()
+}
+
+fn found(world: &World, check: &str, subject: &str, detail: &str) -> Option<i64> {
+    let rows = report(world, check);
+    rows.iter()
+        .find(|r| r.0 == "found" && r.1.as_deref() == Some(subject) && r.2.contains(detail))
+        .unwrap_or_else(|| panic!("{check}: no {subject} {detail:?} in {rows:?}"))
+        .3
+}
+
+#[given("a build whose objects carry field values")]
+fn build_with_field_values(world: &mut World) {
+    field_values(world);
+}
+
+#[given("a previous extraction whose recorded field facts differ from the build's")]
+fn previous_extraction(world: &mut World) {
+    // The previous run: field A declared 0x04 and read 0x04, field C read; field B absent.
+    field_values(world);
+    let path = temp_path("previous");
+    let conn = Connection::open(&path).expect("previous");
+    conn.execute_batch(&format!(
+        "CREATE TABLE field_facts (field_id TEXT, declared_tag INTEGER, read_tag INTEGER, count INTEGER);
+         INSERT INTO field_facts VALUES ('{FIELD_A:016x}', 4, 4, 3), ('{FIELD_C:016x}', NULL, 1, 2);"
+    ))
+    .expect("previous facts");
+    world.build.previous = Some(path);
+}
+
+#[given("a build holding an en-us string table kessel does not read")]
+fn unread_string_table(world: &mut World) {
+    let b = &mut world.build;
+    b.entries.push((GLOBAL.into(), 0x0bad_5eed, string_table()));
+    b.entries.push((GLOBAL.into(), 0x0000_0eed, string_table()));
+    b.tables_read.push(0x0000_0eed);
+}
+
+#[given("a build holding objects the extract leaves out")]
+fn left_out_objects(world: &mut World) {
+    let b = &mut world.build;
+    b.left_out
+        .push(gom_object("dec.stronghold.trophy_a", 2, &[]));
+    b.left_out
+        .push(gom_object("dec.stronghold.trophy_b", 3, &[]));
+    b.left_out.push(gom_object("npc.ability.thing", 4, &[]));
+}
+
+#[given("a build whose map data names an area with no area file, and holding an area file no map data names")]
+fn area_mismatch(world: &mut World) {
+    let b = &mut world.build;
+    b.kept.push(gom_object(
+        "world.areas.4611686019802841877.mapdata",
+        5,
+        &[],
+    ));
+    b.kept.push(gom_object(
+        "world.areas.4611686019802841878.mapdata",
+        6,
+        &[],
+    ));
+    b.entries.push((
+        "swtor_main_areas_1.tor".into(),
+        path_hash("/resources/world/areas/4611686019802841878/area.dat"),
+        area_dat(),
+    ));
+    b.entries
+        .push(("swtor_main_areas_1.tor".into(), 0x00a1_2ea0, area_dat()));
+}
+
+#[given("any build")]
+fn any_build(world: &mut World) {
+    field_values(world);
+}
+
+#[given("a build in which a check finds nothing to report")]
+fn clean_build(world: &mut World) {
+    // Nothing is left out.
+    field_values(world);
+}
+
+#[given("a build in which one check cannot run")]
+fn build_without_client_gom(world: &mut World) {
+    // No client.gom, so the declared tags cannot be read.
+    world.build.kept.push(gom_object(
+        "itm.test_kept.sword",
+        1,
+        &[(FIELD_A, 0x06, &[2, b'o', b'k'])],
+    ));
+}
+
+#[given(
+    "a build in which a field's read values do not fit the type tag its client dictionary declares"
+)]
+fn contradicting_build(world: &mut World) {
+    let b = &mut world.build;
+    b.entries.push((
+        "swtor_main_global_1.tor".into(),
+        path_hash("/resources/systemgenerated/client.gom"),
+        client_gom(&[(FIELD_A, 0x04)]),
+    ));
+    b.kept.push(gom_object(
+        "itm.test_kept.sword",
+        1,
+        &[(FIELD_A, 0x06, &[2, b'o', b'k'])],
+    ));
+    b.kept.push(gom_object(
+        "itm.test_kept.shield",
+        2,
+        &[(FIELD_A, 0x04, &[0, 0, 0x80, 0x3f])],
+    ));
+}
+
+/// The extraction's sweep and report over the synthetic build.
+fn extract(world: &mut World) {
+    let path = temp_path("extract");
+    let db = kessel::db::Database::with_grammar(&path, None).expect("output");
+    db.init_schema().expect("schema");
+    let b = &world.build;
+    let mut facts = kessel::unknowns::BuildFacts::default();
+    for (archive, hash, data) in &b.entries {
+        facts.note_entry(archive, *hash, data);
+    }
+    facts.tables_read.extend(&b.tables_read);
+    for obj in &b.kept {
+        db.insert_object(&kessel::schema::GameObject::from_gom_with_overrides(
+            obj, None,
+        ))
+        .expect("insert");
+    }
+    for obj in &b.left_out {
+        let game = kessel::schema::GameObject::from_gom_with_overrides(obj, None);
+        facts.note_left_out(&game.kind, &game.fqn, &obj.header, &obj.payload);
+    }
+    let previous = b.previous.as_deref().filter(|_| b.name_previous);
+    db.write_unknowns_report(&facts, &kessel::hash::HashDictionary::new(), previous)
+        .expect("the report never fails the extraction");
+    db.flush().expect("flush");
+    world.build.output = Some(path);
+    world.build.reported = true;
+}
+
+#[when("kessel extracts the build")]
+fn extracts(world: &mut World) {
+    extract(world);
+}
+
+#[when("kessel extracts the build naming that previous extraction")]
+fn extracts_naming_previous(world: &mut World) {
+    world.build.name_previous = true;
+    extract(world);
+}
+
+#[then("the output database holds, for each field id, the declared type tag or that none is declared, and the count of each value shape read")]
+fn field_facts_recorded(world: &mut World) {
+    let conn = output(world);
+    let mut stmt = conn
+        .prepare(
+            "SELECT field_id, declared_tag, read_tag, count FROM field_facts ORDER BY field_id",
+        )
+        .expect("field_facts");
+    let rows: Vec<(String, Option<i64>, i64, i64)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .expect("rows")
+        .map(|r| r.expect("row"))
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            (format!("{FIELD_A:016x}"), Some(6), 6, 1),
+            (format!("{FIELD_B:016x}"), None, 1, 1),
+        ]
+    );
+}
+
+#[then("each new or gone field id, each changed declared type tag and each appeared or disappeared value shape is reported")]
+fn field_changes_reported(world: &mut World) {
+    let (a, b, c) = (
+        format!("{FIELD_A:016x}"),
+        format!("{FIELD_B:016x}"),
+        format!("{FIELD_C:016x}"),
+    );
+    found(world, "field_changes", &b, "new field");
+    found(world, "field_changes", &c, "gone field");
+    found(world, "field_changes", &a, "declared tag 0x04 became 0x06");
+    assert_eq!(
+        found(world, "field_changes", &a, "read tag 0x06 appeared"),
+        Some(1)
+    );
+    assert_eq!(
+        found(world, "field_changes", &a, "read tag 0x04 disappeared"),
+        Some(3)
+    );
+}
+
+#[then("the table is reported with its path or hash")]
+fn table_reported(world: &mut World) {
+    found(world, "string_tables", "000000000bad5eed", GLOBAL);
+    assert_eq!(
+        report(world, "string_tables").len(),
+        1,
+        "the table read is not reported"
+    );
+}
+
+#[then("each kind and prefix left out is reported with the number of objects left out")]
+fn left_out_counted(world: &mut World) {
+    assert_eq!(found(world, "left_out", "dec", "kind dec"), Some(2));
+    assert_eq!(found(world, "left_out", "npc", "kind Npc"), Some(1));
+}
+
+#[then("both areas are reported")]
+fn both_areas(world: &mut World) {
+    found(world, "area_files", "4611686019802841877", "no area file");
+    found(
+        world,
+        "area_files",
+        "0000000000a12ea0",
+        "no map data names it",
+    );
+    assert_eq!(
+        report(world, "area_files").len(),
+        2,
+        "{:?}",
+        report(world, "area_files")
+    );
+}
+
+#[then("the output database holds the run's report of unknowns")]
+fn report_held(world: &mut World) {
+    for check in [
+        "field_facts",
+        "field_changes",
+        "declared_tag",
+        "string_tables",
+        "left_out",
+        "area_files",
+    ] {
+        assert!(!report(world, check).is_empty(), "no {check} in the report");
+    }
+}
+
+#[then("the report states that the check found nothing")]
+fn check_found_nothing(world: &mut World) {
+    assert_eq!(
+        report(world, "left_out"),
+        vec![("clean".to_string(), None, "found nothing".to_string(), None)]
+    );
+}
+
+#[then("the report states that the check could not run and why")]
+fn check_could_not_run(world: &mut World) {
+    let rows = report(world, "declared_tag");
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].0, "failed");
+    assert!(rows[0].2.contains("not read"), "{rows:?}");
+}
+
+#[then("the extraction completes and writes its data")]
+fn extraction_completes(world: &mut World) {
+    assert!(world.build.reported);
+    let n: i64 = output(world)
+        .query_row("SELECT COUNT(*) FROM objects", [], |r| r.get(0))
+        .expect("objects");
+    assert_eq!(n, 1);
+}
+
+#[then("the field is reported with the declared tag and the shapes read")]
+fn contradiction_reported(world: &mut World) {
+    let a = format!("{FIELD_A:016x}");
+    assert_eq!(
+        found(
+            world,
+            "declared_tag",
+            &a,
+            "declared 0x04, read 0x04 x1, 0x06 x1"
+        ),
+        Some(2)
+    );
+}
+
 scenarios!(
     "tests",
     tags = "@smoke or @criterion-FR-KESSEL-025-c1 or @criterion-FR-KESSEL-025-c2 \
@@ -1492,6 +1908,11 @@ scenarios!(
             or @criterion-FR-KESSEL-025-c5 or @criterion-FR-KESSEL-025-c6 \
             or @criterion-FR-KESSEL-025-c7 or @criterion-FR-KESSEL-025-c8 \
             or @criterion-FR-KESSEL-025-c9 \
-            or @criterion-FR-KESSEL-025-c10",
+            or @criterion-FR-KESSEL-025-c10 \
+            or @criterion-FR-KESSEL-026-c1 or @criterion-FR-KESSEL-026-c2 \
+            or @criterion-FR-KESSEL-026-c3 or @criterion-FR-KESSEL-026-c4 \
+            or @criterion-FR-KESSEL-026-c5 or @criterion-FR-KESSEL-026-c6 \
+            or @criterion-FR-KESSEL-026-c7 or @criterion-FR-KESSEL-026-c8 \
+            or @criterion-FR-KESSEL-026-c9",
     fixtures = [world: World]
 );
