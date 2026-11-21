@@ -542,11 +542,8 @@ impl Database {
         drop(stmt);
         drop(kind_fqn);
         tx.commit()?;
-        if unknown > 0 {
-            tracing::warn!(
-                "conversation_dialogue: {unknown} of {lines} line(s) have no known speaker"
-            );
-        }
+        // The unknown-speaker line count, as #286 required it logged.
+        eprintln!("  Conversation dialogue: {unknown} of {lines} lines have no known speaker");
         Ok((conversations, lines))
     }
 }
