@@ -20,6 +20,10 @@ const TEXT_MAP_FIELD: u32 = 0xa787_ee87;
 const TEXT_REF_FIELD: u32 = 0x5ce8_7488;
 /// `cnvForceRewardType` in the client's dictionary: 1 light side, 2 dark side.
 const FORCE_REWARD_FIELD: u32 = 0xa744_d62a;
+/// The GUID of who speaks a non-player line.
+const SPEAKER_FIELD: u32 = 0xada8_873c;
+/// The GUID of who a player line addresses.
+const ADDRESSEE_FIELD: u32 = 0xada8_873f;
 
 /// The side of the Force a player choice rewards.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,6 +59,10 @@ pub struct Node {
     /// For a link node: the node it jumps to.
     pub link_target: Option<i64>,
     pub alignment: Option<Alignment>,
+    /// The GUID of who speaks the line (`ada8873c`), on non-player lines.
+    pub speaker: Option<u64>,
+    /// The GUID of who a player line addresses (`ada8873f`).
+    pub addressee: Option<u64>,
 }
 
 /// A player choice at a decision point.
@@ -186,6 +194,8 @@ impl Node {
             alignment: node
                 .embedded_field(FORCE_REWARD_FIELD)
                 .and_then(Alignment::of_reward),
+            speaker: actor(node, SPEAKER_FIELD),
+            addressee: actor(node, ADDRESSEE_FIELD),
         }
     }
 }
@@ -208,6 +218,12 @@ pub(crate) fn dialog_nodes(root: &GomValue) -> Vec<(i64, &GomValue)> {
         .collect()
 }
 
+fn actor(node: &GomValue, field: u32) -> Option<u64> {
+    node.embedded_field(field)
+        .and_then(GomValue::as_i64)
+        .map(|guid| guid as u64)
+}
+
 fn children(node: &GomValue) -> Vec<i64> {
     node.embedded_field(CHILDREN_FIELD)
         .and_then(GomValue::as_list)
@@ -228,6 +244,7 @@ pub(crate) mod testing {
 
     fn tag(value: &GomValue) -> u8 {
         match value {
+            GomValue::I64(_) => 0x02,
             GomValue::Bool(_) => 0x03,
             GomValue::Enum(_) => 0x05,
             GomValue::Str(_) => 0x06,
@@ -242,6 +259,7 @@ pub(crate) mod testing {
     pub(crate) fn encode(value: &GomValue, out: &mut Vec<u8>) {
         match value {
             GomValue::U64(n) => number(out, *n),
+            GomValue::I64(n) if *n >= 0 => number(out, n.unsigned_abs()),
             GomValue::Bool(b) => out.push(u8::from(*b)),
             GomValue::Enum(i) => out.push(*i as u8 + 1),
             GomValue::Str(s) => {
@@ -301,11 +319,33 @@ pub(crate) mod testing {
             fields.push((0x259e_02f8, GomValue::Bool(true)));
         }
         if let Some(line) = line {
-            let slot = GomValue::Embedded(vec![(0x5ce8_7488, GomValue::U64(line | 0x11 << 32))]);
+            // The text slot as the build writes it: its absolute field id is the line-node
+            // marker, then the str.cnv base the line's text lives under.
+            let slot = GomValue::Embedded(vec![
+                (
+                    0x4000_0011_5ce8_7488,
+                    GomValue::I64((line | 0x11 << 32) as i64),
+                ),
+                (0x4000_0011_5ce8_7489, GomValue::Str("str.cnv.test".into())),
+            ]);
             fields.push((0xa787_ee87, GomValue::Map(vec![(GomValue::U64(id), slot)])));
         }
         fields.sort_by_key(|(field, _)| *field);
         (GomValue::U64(id), GomValue::Embedded(fields))
+    }
+
+    /// `entry` with `guid` in actor field `field` (the speaker or the addressee).
+    pub(crate) fn with_actor(
+        entry: (GomValue, GomValue),
+        field: u64,
+        guid: u64,
+    ) -> (GomValue, GomValue) {
+        let (id, GomValue::Embedded(mut fields)) = entry else {
+            panic!("not a node");
+        };
+        fields.push((field, GomValue::U64(guid)));
+        fields.sort_by_key(|(field, _)| *field);
+        (id, GomValue::Embedded(fields))
     }
 
     /// A link node jumping to `target`.
