@@ -518,6 +518,9 @@ pub(crate) fn create_tables(tx: &Transaction) -> Result<()> {
 mod tests {
     use super::*;
     use crate::db::testutil::*;
+    use crate::model::discipline::{
+        origin_combat_styles, DISCIPLINE_COMBAT_STYLE_MAP, PLAYER_ORIGINS,
+    };
     #[test]
     fn populate_origins_inserts_eight_canonical_rows() {
         let path = temp_db_path("origins");

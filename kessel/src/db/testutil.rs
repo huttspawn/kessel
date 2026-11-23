@@ -1,6 +1,7 @@
 //! Shared test harness (temp DB path + singleton seeding) for db domain tests.
 
 use crate::db::*;
+use crate::model::discipline::origin_combat_styles;
 use rusqlite::params;
 
 pub(crate) fn temp_db_path(label: &str) -> std::path::PathBuf {

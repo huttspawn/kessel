@@ -4,7 +4,6 @@
 //! of `Database` references so this stays a leaf module the domain files depend
 //! on (never the reverse).
 
-use crate::db::DISCIPLINE_COMBAT_STYLE_MAP;
 use anyhow::Result;
 use rusqlite::{Connection, Transaction};
 
@@ -245,38 +244,6 @@ pub(crate) fn title_case_from_snake(s: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
-}
-
-/// Origin -> 2 combat styles. Used to fan per-origin shared/utility pools
-/// (abl.<origin>.<name>, abl.<origin>.skill.utility.*, abl.<origin>.skill.mods.*,
-/// tal.<origin>.skill.utility.*) into combat_style_shared_abilities and
-/// class_utility_talents.
-pub(crate) fn origin_combat_styles(origin: &str) -> &'static [&'static str] {
-    match origin {
-        "sith_warrior" => &["juggernaut", "marauder"],
-        "sith_inquisitor" => &["assassin", "sorcerer"],
-        "bounty_hunter" => &["powertech", "mercenary"],
-        "agent" => &["operative", "sniper"],
-        "jedi_knight" => &["guardian", "sentinel"],
-        "jedi_consular" => &["shadow", "force_wizard"],
-        "trooper" => &["specialist", "commando"],
-        "smuggler" => &["scoundrel", "gunslinger"],
-        _ => &[],
-    }
-}
-
-pub(crate) fn combat_style_for(origin: &str, discipline: &str) -> Option<&'static str> {
-    DISCIPLINE_COMBAT_STYLE_MAP
-        .iter()
-        .find(|(o, d, _)| *o == origin && *d == discipline)
-        .map(|(_, _, cs)| *cs)
-}
-
-pub(crate) fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    if needle.is_empty() || needle.len() > haystack.len() {
-        return None;
-    }
-    haystack.windows(needle.len()).position(|w| w == needle)
 }
 
 /// Extract the destination planet component from a transit tracking/journal string.
