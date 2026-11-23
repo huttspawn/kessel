@@ -2,7 +2,8 @@
 //!
 //! A scenario with no matching step code fails `cargo test`, and the failure
 //! names the scenario. The tag filter below runs the scenarios that have step
-//! code: the `@smoke` checks, FR-KESSEL-025 c1 to c10 and FR-KESSEL-026 c1 to c9. The `@local`
+//! code: the `@smoke` checks, FR-KESSEL-025 c1 to c10, FR-KESSEL-026 c1 to c9 and issue #430's
+//! c1 to c4. The `@local`
 //! scenarios read a full local extract named by `KESSEL_SPICE` and real combat
 //! logs named by `KESSEL_COMBAT_LOG` (a file or a directory), and are skipped
 //! when those are unset (CI never has them).
@@ -41,6 +42,41 @@ struct World {
     answer: Vec<String>,
     /// FR-KESSEL-026: the build a scenario extracts.
     build: Build,
+    /// #430: the conversation a scenario reads.
+    cnv: Cnv,
+}
+
+/// #430: a conversation's nodes as its payload holds them, the line the scenario is about, and
+/// the script kessel extracted for it.
+#[derive(Default)]
+struct Cnv {
+    fqn: String,
+    nodes: Vec<CnvNode>,
+    line: u32,
+    script: Vec<ScriptLine>,
+}
+
+/// One node of a conversation, read straight from its payload's fields.
+#[derive(Clone)]
+struct CnvNode {
+    id: i64,
+    children: Vec<i64>,
+    line: Option<u32>,
+    player: bool,
+    speaker: Option<String>,
+    addressee: Option<String>,
+}
+
+/// One row of `conversation_dialogue`.
+#[derive(Debug)]
+struct ScriptLine {
+    line: u32,
+    role: String,
+    speaker_guid: Option<String>,
+    speaker_fqn: Option<String>,
+    speaker_npc_fqn: Option<String>,
+    addressee_guid: Option<String>,
+    addressee_fqn: Option<String>,
 }
 
 /// A synthetic build for FR-KESSEL-026: its archive entries, the objects the extract keeps and
@@ -1901,6 +1937,269 @@ fn contradiction_reported(world: &mut World) {
     );
 }
 
+// #430: each dialogue line is spoken by the speaker its node names.
+
+/// A conversation payload's nodes, read with the field ids #430 names: 6683c66d holds the
+/// nodes, 24c978e5 is a node's id, 24c978b9 its children, a787ee87/5ce87488 its line,
+/// 259e02f8 a player line, ada8873c the speaker and ada8873f the addressee.
+fn cnv_nodes(payload_b64: &str) -> Option<Vec<CnvNode>> {
+    use base64::Engine as _;
+    use kessel::gom_reader::{GomValue, Reader};
+    let payload = base64::engine::general_purpose::STANDARD
+        .decode(payload_b64)
+        .ok()?;
+    let mut reader = Reader::new(&payload, 33);
+    let root = reader.read_value(0x09).ok()?;
+    if reader.pos() != payload.len() {
+        return None;
+    }
+    let guid = |node: &GomValue, field: u32| {
+        node.embedded_field(field)
+            .and_then(GomValue::as_i64)
+            .map(|g| format!("{:016X}", g as u64))
+    };
+    let nodes = root.embedded_field(0x6683_c66d)?.as_map()?;
+    Some(
+        nodes
+            .iter()
+            .filter_map(|(_, node)| {
+                Some(CnvNode {
+                    id: node.embedded_field(0x24c9_78e5)?.as_i64()?,
+                    children: node
+                        .embedded_field(0x24c9_78b9)
+                        .and_then(GomValue::as_list)
+                        .unwrap_or(&[])
+                        .iter()
+                        .filter_map(GomValue::as_i64)
+                        .collect(),
+                    line: node
+                        .embedded_field(0xa787_ee87)
+                        .and_then(GomValue::as_map)
+                        .into_iter()
+                        .flatten()
+                        .find_map(|(_, slot)| slot.embedded_field(0x5ce8_7488)?.as_i64())
+                        .map(|l| l as u32),
+                    player: matches!(node.embedded_field(0x259e_02f8), Some(GomValue::Bool(true))),
+                    speaker: guid(node, 0xada8_873c),
+                    addressee: guid(node, 0xada8_873f),
+                })
+            })
+            .collect(),
+    )
+}
+
+/// The kind and FQN of the object a GUID names, if the build holds one.
+fn object_of(conn: &Connection, guid: &str) -> Option<(String, String)> {
+    conn.query_row(
+        "SELECT kind, fqn FROM objects WHERE guid = ?1 ORDER BY is_canonical DESC LIMIT 1",
+        [guid],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )
+    .ok()
+}
+
+/// The first conversation, in FQN order, holding a line node `pick` chooses. Sets the
+/// conversation, its nodes and the chosen line.
+fn find_cnv_line(world: &mut World, pick: impl Fn(&Connection, &[CnvNode]) -> Option<u32>) {
+    let conn = spice(world);
+    let mut stmt = conn
+        .prepare(
+            "SELECT fqn, json_extract(json, '$.payload_b64') FROM objects \
+             WHERE kind = 'Conversation' AND is_canonical = 1 \
+             AND json_extract(json, '$.payload_b64') IS NOT NULL ORDER BY fqn",
+        )
+        .expect("conversations query");
+    let rows = stmt
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+        .expect("conversation rows");
+    let mut found = None;
+    for row in rows {
+        let (fqn, b64) = row.expect("conversation row");
+        let Some(nodes) = cnv_nodes(&b64) else {
+            continue;
+        };
+        if let Some(line) = pick(conn, &nodes) {
+            found = Some((fqn, nodes, line));
+            break;
+        }
+    }
+    drop(stmt);
+    let (fqn, nodes, line) = found.expect("a conversation with such a line");
+    world.cnv.fqn = fqn;
+    world.cnv.nodes = nodes;
+    world.cnv.line = line;
+}
+
+fn npc_of(conn: &Connection, guid: Option<&String>) -> Option<String> {
+    match object_of(conn, guid?) {
+        Some((kind, fqn)) if kind == "Npc" => Some(fqn),
+        _ => None,
+    }
+}
+
+#[given("a build holding a conversation with a player choice")]
+fn cnv_with_player_choice(world: &mut World) {
+    find_cnv_line(world, |conn, nodes| {
+        nodes
+            .iter()
+            .find(|n| n.player && n.line.is_some() && npc_of(conn, n.addressee.as_ref()).is_some())
+            .and_then(|n| n.line)
+    });
+}
+
+#[given("a build holding a conversation where two NPCs speak in turn")]
+fn cnv_with_two_npcs(world: &mut World) {
+    find_cnv_line(world, |conn, nodes| {
+        nodes.iter().find_map(|a| {
+            let a_npc =
+                npc_of(conn, a.speaker.as_ref()).filter(|_| !a.player && a.line.is_some())?;
+            a.children.iter().find_map(|child| {
+                let b = nodes.iter().find(|n| n.id == *child)?;
+                let b_npc = npc_of(conn, b.speaker.as_ref())?;
+                (!b.player && b.line.is_some() && b_npc != a_npc).then_some(a.line)?
+            })
+        })
+    });
+}
+
+#[given("a build holding a conversation spoken by a terminal")]
+fn cnv_spoken_by_terminal(world: &mut World) {
+    find_cnv_line(world, |conn, nodes| {
+        nodes.iter().filter(|n| !n.player).find_map(|n| {
+            let (kind, fqn) = object_of(conn, n.speaker.as_ref()?)?;
+            (kind == "Placeable" && fqn.contains("terminal")).then_some(n.line)?
+        })
+    });
+}
+
+#[given("a build holding a conversation line whose speaker is not an extracted object")]
+fn cnv_with_absent_speaker(world: &mut World) {
+    find_cnv_line(world, |conn, nodes| {
+        nodes.iter().filter(|n| !n.player).find_map(|n| {
+            object_of(conn, n.speaker.as_ref()?)
+                .is_none()
+                .then_some(n.line)?
+        })
+    });
+}
+
+#[when("kessel's agent reads that conversation's script")]
+fn read_cnv_script(world: &mut World) {
+    let fqn = world.cnv.fqn.clone();
+    let mut stmt = spice(world)
+        .prepare(
+            "SELECT line_id, speaker_role, speaker_guid, speaker_fqn, speaker_npc_fqn, \
+             addressee_guid, addressee_fqn FROM conversation_dialogue WHERE cnv_fqn = ?1 \
+             ORDER BY seq",
+        )
+        .expect("conversation script query");
+    let script = stmt
+        .query_map([&fqn], |r| {
+            Ok(ScriptLine {
+                line: r.get(0)?,
+                role: r.get(1)?,
+                speaker_guid: r.get(2)?,
+                speaker_fqn: r.get(3)?,
+                speaker_npc_fqn: r.get(4)?,
+                addressee_guid: r.get(5)?,
+                addressee_fqn: r.get(6)?,
+            })
+        })
+        .expect("conversation script rows")
+        .map(|r| r.expect("conversation script row"))
+        .collect();
+    drop(stmt);
+    world.cnv.script = script;
+}
+
+impl Cnv {
+    fn node(&self, line: u32) -> &CnvNode {
+        self.nodes
+            .iter()
+            .find(|n| n.line == Some(line))
+            .unwrap_or_else(|| panic!("{}: no node holds line {line}", self.fqn))
+    }
+
+    fn script_line(&self, line: u32) -> &ScriptLine {
+        self.script
+            .iter()
+            .find(|s| s.line == line)
+            .unwrap_or_else(|| panic!("{}: the script has no line {line}", self.fqn))
+    }
+}
+
+#[then("the choice is spoken by the player")]
+fn choice_spoken_by_player(world: &World) {
+    let row = world.cnv.script_line(world.cnv.line);
+    assert_eq!(row.role, "player", "{}: {row:?}", world.cnv.fqn);
+}
+
+#[then("it names the NPC the player is talking to")]
+fn names_addressee(world: &mut World) {
+    let addressee = world.cnv.node(world.cnv.line).addressee.clone();
+    let npc = npc_of(spice(world), addressee.as_ref());
+    let row = world.cnv.script_line(world.cnv.line);
+    assert_eq!(row.addressee_guid, addressee, "{}: {row:?}", world.cnv.fqn);
+    assert_eq!(row.addressee_fqn, npc, "{}: {row:?}", world.cnv.fqn);
+}
+
+#[then("each NPC line names the NPC its own node names as speaker")]
+fn npc_lines_name_their_node_speaker(world: &mut World) {
+    let nodes = world.cnv.nodes.clone();
+    let mut checked = 0;
+    for node in nodes.iter().filter(|n| !n.player) {
+        let (Some(line), Some(npc)) = (node.line, npc_of(spice(world), node.speaker.as_ref()))
+        else {
+            continue;
+        };
+        let row = world.cnv.script_line(line);
+        assert_eq!(row.role, "npc", "{} line {line}: {row:?}", world.cnv.fqn);
+        assert_eq!(
+            row.speaker_guid, node.speaker,
+            "{} line {line}: {row:?}",
+            world.cnv.fqn
+        );
+        assert_eq!(
+            row.speaker_npc_fqn.as_ref(),
+            Some(&npc),
+            "{} line {line}: {row:?}",
+            world.cnv.fqn
+        );
+        checked += 1;
+    }
+    assert!(checked >= 2, "{}: {checked} NPC line(s)", world.cnv.fqn);
+}
+
+#[then("the terminal's line names the terminal as its speaker")]
+fn terminal_line_names_terminal(world: &mut World) {
+    let speaker = world.cnv.node(world.cnv.line).speaker.clone();
+    let terminal = speaker
+        .as_ref()
+        .and_then(|g| object_of(spice(world), g))
+        .map(|(_, fqn)| fqn);
+    let row = world.cnv.script_line(world.cnv.line);
+    assert_eq!(row.role, "object", "{}: {row:?}", world.cnv.fqn);
+    assert_eq!(row.speaker_guid, speaker, "{}: {row:?}", world.cnv.fqn);
+    assert_eq!(row.speaker_fqn, terminal, "{}: {row:?}", world.cnv.fqn);
+    assert_eq!(row.speaker_npc_fqn, None, "{}: {row:?}", world.cnv.fqn);
+}
+
+#[then("the line keeps its speaker's GUID")]
+fn line_keeps_speaker_guid(world: &World) {
+    let speaker = world.cnv.node(world.cnv.line).speaker.clone();
+    let row = world.cnv.script_line(world.cnv.line);
+    assert!(speaker.is_some());
+    assert_eq!(row.speaker_guid, speaker, "{}: {row:?}", world.cnv.fqn);
+}
+
+#[then("it names no speaker")]
+fn names_no_speaker(world: &World) {
+    let row = world.cnv.script_line(world.cnv.line);
+    assert_eq!(row.role, "unknown", "{}: {row:?}", world.cnv.fqn);
+    assert_eq!(row.speaker_fqn, None, "{}: {row:?}", world.cnv.fqn);
+    assert_eq!(row.speaker_npc_fqn, None, "{}: {row:?}", world.cnv.fqn);
+}
+
 scenarios!(
     "tests",
     tags = "@smoke or @criterion-FR-KESSEL-025-c1 or @criterion-FR-KESSEL-025-c2 \
@@ -1913,6 +2212,7 @@ scenarios!(
             or @criterion-FR-KESSEL-026-c3 or @criterion-FR-KESSEL-026-c4 \
             or @criterion-FR-KESSEL-026-c5 or @criterion-FR-KESSEL-026-c6 \
             or @criterion-FR-KESSEL-026-c7 or @criterion-FR-KESSEL-026-c8 \
-            or @criterion-FR-KESSEL-026-c9",
+            or @criterion-FR-KESSEL-026-c9 \
+            or @criterion-1 or @criterion-2 or @criterion-3 or @criterion-4",
     fixtures = [world: World]
 );

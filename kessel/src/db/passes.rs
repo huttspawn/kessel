@@ -370,7 +370,8 @@ pub fn run_passes(db: &Database, ctx: &PassCtx) -> Result<PassCounts> {
     );
 
     // Ordered dialogue script (#285): decode each Conversation NODE payload's
-    // line-node markers (byte order == dialogue order) into conversation_dialogue.
+    // line-node markers (byte order == dialogue order) into conversation_dialogue,
+    // each line spoken by the speaker its node names (#430).
     let (cnv_dialogue_convs, cnv_dialogue_lines) =
         timed!("conversation_dialogue", db.populate_conversation_dialogue())?;
     println!(
