@@ -47,6 +47,8 @@ mod tag {
     /// `<delta_id><tag><value>` per field.
     pub const EMBEDDED_STRUCT: u8 = 0x18;
     pub const CLASS_REF: u8 = 0x0F;
+    /// Vector3: three little-endian f32 (seen in world.areas.*.mapdata).
+    pub const VECTOR3: u8 = 0x12;
 }
 
 /// A decoded GOM value. Enums carry the zero-based member index (the engine
@@ -254,6 +256,11 @@ impl<'a> Reader<'a> {
             tag::MAP => self.read_map(),
             tag::EMBEDDED | tag::EMBEDDED_STRUCT => self.read_object(),
             tag::CLASS_REF => Ok(GomValue::ClassRef(self.read_number()?)),
+            tag::VECTOR3 => Ok(GomValue::List(vec![
+                GomValue::F32(self.read_f32()?),
+                GomValue::F32(self.read_f32()?),
+                GomValue::F32(self.read_f32()?),
+            ])),
             other => bail!(
                 "gom_reader: unsupported type tag 0x{other:02X} at offset {}",
                 self.pos - 1
