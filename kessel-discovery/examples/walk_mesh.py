@@ -5,22 +5,30 @@ gr2/). The client holds no navmesh; it holds the two surfaces a character
 stands on and is stopped by:
 
   * terrain: each `\\engine\\heightmap.hms` instance carries a heightmap blob
-    (property a3ab26ae) with a hole bitmap; a hole removes the terrain there.
+    (property a3ab26ae) with an optional bitmap. The bitmap is a PRESENCE mask:
+    one bit per grid point, z fastest (the order of the inner heights), a set
+    bit means terrain is there and a clear bit is a hole (walk_holes.py proves
+    it: 382 of 385 Tython and 430 of 475 Hutta terrain-standing points land on
+    set bits; the other 45 on Hutta stand on a building floor over the hole).
   * collision meshes: almost every placed `.gr2` model carries a mesh named
     `generated_collision` (vertex size 12, flag2 1, position only), in the
     model's own frame. Placed by the instance transform (position 4f77e269,
     Euler degrees 8c64af1e composed R = Ry Rx Rz, scale b181622a, parent
     40865e7f), it is the model's solid shape in the world.
 
-Walkability is derived, as a character controller does: a surface is a floor
-where its upward normal is within the slope limit, and a floor is standable
-where no solid lies between step height and head height above it. Cells are
+The client ships no navmesh. The engine's pathfinding is Autodesk Kynapse; its
+build configs (/resources/engine/kynapse/generatepath*.xml) write the path data
+(sectors.xml, *.hpd, *.pdl, UIDMap.xml) to BioWare's build share, and none of
+it is in the archives. Walkability is derived here with the same settings the
+Kynapse build uses: a surface is a floor where its upward normal is within
+GroundSlopeMax, and a floor is standable where no solid lies between StepMax
+and EntityHeight above it. Cells are
 0.05 world units (0.5 m). The drawing is in the map frame: world x to the
 right, world z down the page, as the game's map pages are laid out (x, z).
 
 Usage:
   python3 walk_mesh.py <extract dir> <area dir id> <spice.sqlite> <logs dir>
-         <x0> <z0> <x1> <z1> <out.png> [--holes set|clear] [--slope DEG]
+         <x0> <z0> <x1> <z1> <out.png> [--holes clear|set] [--hole-order x|z] [--slope DEG]
          [--rot zxy|xyz|yxz] [--report out.json]
 """
 import argparse
@@ -42,8 +50,12 @@ POS, ROT, SCALE, PARENT = "6:4f77e269", "6:8c64af1e", "6:b181622a", "5:40865e7f"
 HEIGHTMAP = "9:a3ab26ae"
 SPACING = 0.2
 CELL = 0.05
-STEP = 0.05  # 0.5 m: solids this close above a floor are stepped over
-HEAD = 0.20  # 2 m: a floor needs this much clear space above it
+# The client's own pathfinding build settings (/resources/engine/kynapse/
+# generatepath.xml, Autodesk Kynapse, OneMeter = 0.1 world units): EntityHeight
+# 2.0 m, StepMax 1.1 m, GroundSlopeMax 46 degrees, EntityRadius 0.75 m.
+STEP = 0.11  # StepMax 1.1 m: solids this close above a floor are stepped over
+HEAD = 0.20  # EntityHeight 2 m: a floor needs this much clear space above it
+SLOPE = 46.0  # GroundSlopeMax
 
 
 def decompress(b):
@@ -56,6 +68,9 @@ def decompress(b):
         from compression import zstd
         return zstd.decompress(b)
     raise ValueError(f"heightmap compression {tag:04x}")
+
+
+HOLE_ORDER = "x"  # "x": z fastest, as the inner heights (proved); "z": x fastest (control)
 
 
 def decode_heights(raw):
@@ -71,7 +86,8 @@ def decode_heights(raw):
     if raw[p]:
         n = (w * d + 7) >> 3
         bits = np.unpackbits(np.frombuffer(raw, np.uint8, n, p + 1), bitorder="little")
-        holes = bits[: w * d].reshape(d, w).astype(bool)
+        bits = bits[: w * d].astype(bool)
+        holes = bits.reshape(d, w) if HOLE_ORDER == "z" else bits.reshape(w, d).T
         p += n
     p += 1
     h = np.zeros((d, w), np.float32)
@@ -130,7 +146,7 @@ def terrain_tris(ext_dir, insts, xf, box, hole_bit_means):
     """World triangles (N,3,3) of every heightmap inside box, holes removed."""
     x0, z0, x1, z1 = box
     tris = []
-    stats = {"patches": 0, "hole_points": 0, "points": 0}
+    stats = {"patches": 0, "set_bits": 0, "points": 0}
     for iid, o in insts.items():
         if HEIGHTMAP not in o["props"]:
             continue
@@ -145,7 +161,7 @@ def terrain_tris(ext_dir, insts, xf, box, hole_bit_means):
         stats["points"] += w * d
         solid = np.ones((d, w), bool)
         if holes is not None:
-            stats["hole_points"] += int(holes.sum())
+            stats["set_bits"] += int(holes.sum())
             solid = ~holes if hole_bit_means == "set" else holes
         xs = gx0 + SPACING * np.arange(w)
         zs = gz0 + SPACING * np.arange(d)
@@ -198,8 +214,16 @@ def collision_tris(ext_dir, insts, xf, box, use_render_without_collision):
     return (np.concatenate(tris) if tris else np.zeros((0, 3, 3))), stats
 
 
-def sample_tris(tris, box, slope_deg):
-    """Point samples (cell index, height, is_floor) covering every triangle."""
+BATCH_POINTS = 2_000_000  # sample points held at once; bounds memory to a few hundred MB
+
+
+def sample_keys(tris, box, slope_deg):
+    """Unique surface keys covering every triangle, built in bounded batches.
+
+    A key packs (cell index, height in cm, is_floor) into one int64:
+    cell << 24 | (cm + 2**22) << 1 | floor. Samples of one surface in one cell
+    collapse to one key, so memory follows the surface count, not the samples.
+    """
     x0, z0, x1, z1 = box
     nx, nz = int(round((x1 - x0) / CELL)), int(round((z1 - z0) / CELL))
     keep = ((tris[:, :, 0].max(1) >= x0) & (tris[:, :, 0].min(1) <= x1)
@@ -211,36 +235,50 @@ def sample_tris(tris, box, slope_deg):
     tris, n, ln = tris[ok], n[ok], ln[ok]
     ny = np.abs(n[:, 1]) / ln  # winding is not trusted; a floor faces up or down
     floor = ny >= math.cos(math.radians(slope_deg))
+    del n, ln
     ext = np.maximum(np.ptp(tris[:, :, 0], 1), np.ptp(tris[:, :, 2], 1))
     k = np.clip(np.ceil(ext / CELL * 2).astype(int), 1, 400)
-    cells, hs, fl = [], [], []
+    parts = []
+    merged = np.zeros(0, np.int64)
+    pending = 0
     for kk in np.unique(k):
-        sel = k == kk
-        T = tris[sel]
+        idx = np.flatnonzero(k == kk)
         i, j = np.meshgrid(np.arange(kk + 1), np.arange(kk + 1))
         mask = (i + j) <= kk
         u, v = (i[mask] / kk), (j[mask] / kk)
-        P = (T[:, None, 0] * (1 - u - v)[None, :, None] + T[:, None, 1] * u[None, :, None]
-             + T[:, None, 2] * v[None, :, None])
-        cx = np.floor((P[..., 0] - x0) / CELL).astype(np.int64)
-        cz = np.floor((P[..., 2] - z0) / CELL).astype(np.int64)
-        inside = (cx >= 0) & (cx < nx) & (cz >= 0) & (cz < nz)
-        cells.append((cz * nx + cx)[inside])
-        hs.append(P[..., 1][inside])
-        fl.append(np.broadcast_to(floor[sel][:, None], inside.shape)[inside])
-    if not cells:
-        return nx, nz, np.zeros(0, np.int64), np.zeros(0), np.zeros(0, bool)
-    return nx, nz, np.concatenate(cells), np.concatenate(hs), np.concatenate(fl)
+        w0 = 1 - u - v
+        per = max(1, BATCH_POINTS // len(u))
+        for s in range(0, len(idx), per):
+            sel = idx[s:s + per]
+            T = tris[sel]
+            P = (T[:, None, 0] * w0[None, :, None] + T[:, None, 1] * u[None, :, None]
+                 + T[:, None, 2] * v[None, :, None])
+            cx = np.floor((P[..., 0] - x0) / CELL).astype(np.int64)
+            cz = np.floor((P[..., 2] - z0) / CELL).astype(np.int64)
+            inside = (cx >= 0) & (cx < nx) & (cz >= 0) & (cz < nz)
+            cm = np.round(P[..., 1] * 100).astype(np.int64)[inside]
+            f = np.broadcast_to(floor[sel][:, None], inside.shape)[inside].astype(np.int64)
+            key = ((cz * nx + cx)[inside] << 24) | ((cm + (1 << 22)) << 1) | f
+            parts.append(np.unique(key))
+            pending += len(parts[-1])
+            del P, cx, cz, inside, cm, f, key
+            if pending > 8_000_000:
+                merged = np.unique(np.concatenate([merged] + parts))
+                parts, pending = [], 0
+    keys = np.unique(np.concatenate([merged] + parts))
+    return nx, nz, keys
 
 
-def classify(nx, nz, cells, hs, fl):
+def unpack(keys):
+    cells = keys >> 24
+    hs = (((keys >> 1) & ((1 << 23) - 1)) - (1 << 22)) / 100.0
+    fl = (keys & 1).astype(bool)
+    return cells, hs, fl
+
+
+def classify(nx, nz, keys):
     """Per cell: top standable floor height (nan if none), top surface height, any wall."""
-    order = np.lexsort((hs, cells))
-    cells, hs, fl = cells[order], hs[order], fl[order]
-    # Quantise heights to 1 cm so repeated samples of one surface collapse.
-    q = np.round(hs, 2)
-    key = np.unique(np.stack([cells, (q * 100).astype(np.int64), fl.astype(np.int64)], 1), axis=0)
-    cells, hs, fl = key[:, 0], key[:, 1] / 100.0, key[:, 2].astype(bool)
+    cells, hs, fl = unpack(keys)  # sorted by cell, then height
     stand = np.full(nx * nz, np.nan)
     floors_all = {}
     top = np.full(nx * nz, np.nan)
@@ -261,7 +299,7 @@ def classify(nx, nz, cells, hs, fl):
                 good.append(h)
         if good:
             stand[c] = good[-1]
-            floors_all[c] = good
+            floors_all[int(c)] = good
     return stand, top, wall, floors_all
 
 
@@ -294,22 +332,34 @@ def main():
     ap.add_argument("logs")
     ap.add_argument("box", nargs=4, type=float)
     ap.add_argument("out")
-    ap.add_argument("--holes", default="set")
-    ap.add_argument("--slope", type=float, default=45.0)
+    ap.add_argument("--holes", default="clear",
+                    help="clear: a clear bit is a hole (proved); set: a set bit is a hole (control)")
+    ap.add_argument("--slope", type=float, default=SLOPE)
+    ap.add_argument("--hole-order", default="x", choices=["z", "x"])
     ap.add_argument("--rot", default="zxy")
     ap.add_argument("--render-fallback", action="store_true")
+    ap.add_argument("--no-collision", action="store_true",
+                    help="terrain only: the control for what the collision meshes add")
     ap.add_argument("--report")
     a = ap.parse_args()
     box = a.box
+    global HOLE_ORDER
+    HOLE_ORDER = a.hole_order
     insts = load_instances(a.ext)
     xf = world_transforms(insts, a.rot)
     tt, tstats = terrain_tris(a.ext, insts, xf, box, a.holes)
-    ct, cstats = collision_tris(a.ext, insts, xf, box, a.render_fallback)
-    nx, nz, cells, hs, fl = sample_tris(np.concatenate([tt, ct]), box, a.slope)
-    stand, top, wall, floors = classify(nx, nz, cells, hs, fl)
-    _, _, tc, th, _ = sample_tris(tt, box, 90.0)
+    if a.no_collision:
+        ct, cstats = np.zeros((0, 3, 3)), {}
+    else:
+        ct, cstats = collision_tris(a.ext, insts, xf, box, a.render_fallback)
+    nx, nz, keys = sample_keys(np.concatenate([tt, ct]), box, a.slope)
+    n_ct = len(ct)
+    del ct
+    stand, top, wall, floors = classify(nx, nz, keys)
+    del keys
+    _, _, tkeys = sample_keys(tt, box, 90.0)
     terrain_cell = np.zeros(nx * nz, bool)
-    terrain_cell[tc] = True
+    terrain_cell[tkeys >> 24] = True
 
     db = sqlite3.connect(f"file:{a.spice}?mode=ro", uri=True)
     log_id = db.execute("SELECT log_area_id FROM area_log_ids WHERE area_dir_id=? LIMIT 1",
@@ -337,7 +387,9 @@ def main():
     def score(points):
         res = [nearest_floor(x, h, z) for x, h, z in points]
         on = [r for r in res if r is not None and -0.05 <= r <= 0.1]
-        return {"n": len(points), "on_standable_floor": len(on),
+        miss = [[round(p[0], 2), round(p[1], 2), round(p[2], 2), None if r is None else round(r, 3)]
+                for p, r in zip(points, res) if not (r is not None and -0.05 <= r <= 0.1)]
+        return {"misses": miss[:40],"n": len(points), "on_standable_floor": len(on),
                 "no_floor_within_0.05": len(points) - len(on),
                 "median_abs_dz": float(np.median([abs(r) for r in res if r is not None])) if any(
                     r is not None for r in res) else None}
@@ -345,10 +397,14 @@ def main():
     creature = [(x, y, z) for x, y, z, t, _ in places if t == "creature"]
     report = {
         "box": box, "cell": CELL, "slope_deg": a.slope, "step": STEP, "head": HEAD,
-        "holes_bit": a.holes, "rotation": a.rot, "terrain": tstats, "collision": cstats,
-        "terrain_tris": int(len(tt)), "collision_tris": int(len(ct)),
+        "holes_bit": a.holes, "hole_order": a.hole_order, "rotation": a.rot, "terrain": tstats, "collision": cstats,
+        "terrain_tris": int(len(tt)), "collision_tris": int(n_ct),
         "cells": nx * nz, "standable_cells": int(np.isfinite(stand).sum()),
         "log_positions": score(logs), "creature_spawns": score(creature),
+        # Controls: the same points moved 0.3 units (3 m) up and down must not fit.
+        "log_positions_up_0.3": score([(x, h + 0.3, z) for x, h, z in logs]),
+        "log_positions_down_0.3": score([(x, h - 0.3, z) for x, h, z in logs]),
+        "creature_spawns_up_0.3": score([(x, h + 0.3, z) for x, h, z in creature]),
         "all_placements": len(places),
     }
 

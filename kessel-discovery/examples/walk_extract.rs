@@ -18,6 +18,10 @@
 //!     reference into <out>/gr2/<asset id>.gr2. walk_mesh.py turns that into
 //!     the walkable-surface drawing.
 //!
+//!   walk_extract kinds <assets dir> <hashes_filename.txt> <out.json>
+//!     Every area's room instances counted by engine asset type, and every
+//!     blob property per type (only the dictionary's area list is used).
+//!
 //! GR2 (SWTOR "GAWB", read after the SWTOR Slicers Blender add-on's importer,
 //! io_scene_gr2/ops/import_gr2.py): u32 magic 0x42574147, u32 version (4, or 5 =
 //! 64-bit offsets), u32 type at 0x14, u16 mesh count at 0x18, u16 material count
@@ -390,11 +394,111 @@ fn area(assets: &str, area_id: &str, out_dir: &str) -> Result<()> {
     Ok(())
 }
 
+/// Every area's room instances, by engine asset type, with each blob property
+/// key per type: shows whether any room carries a navmesh-like blob.
+fn kinds(assets: &str, dict_path: &str, out: &str) -> Result<()> {
+    let mut dict = HashDictionary::new();
+    dict.load(dict_path)?;
+    let mut ids: Vec<String> = dict
+        .paths_matching("/resources/world/areas/")
+        .into_iter()
+        .filter_map(|(_, p)| {
+            p.strip_prefix("/resources/world/areas/")?
+                .strip_suffix("/area.dat")
+                .map(str::to_string)
+        })
+        .collect();
+    ids.sort();
+    ids.dedup();
+    let mut arc = Archives::open(assets)?;
+    // ext -> (instances, areas)
+    let mut by_ext: BTreeMap<String, (u64, u64)> = BTreeMap::new();
+    // "ext key" -> (instances, bytes)
+    let mut blobs: BTreeMap<String, (u64, u64)> = BTreeMap::new();
+    let mut areas_read = 0u64;
+    let mut rooms_read = 0u64;
+    let mut rooms_missing = 0u64;
+    for id in &ids {
+        let root = format!("/resources/world/areas/{id}");
+        let Some(ad) = arc.read(&format!("{root}/area.dat")) else {
+            continue;
+        };
+        areas_read += 1;
+        let mut r = Rd { d: &ad, p: 0x56 };
+        let rooms = (0..r.u32()?)
+            .map(|_| r.lstr())
+            .collect::<Result<Vec<_>>>()?;
+        let mut tab: HashMap<u64, String> = HashMap::new();
+        for _ in 0..r.u32()? {
+            let a = r.u64()?;
+            tab.insert(a, r.lstr()?);
+        }
+        let mut seen: std::collections::HashSet<String> = Default::default();
+        for room in &rooms {
+            let Some(d) = arc.read(&format!("{root}/{}.dat", room.to_ascii_lowercase())) else {
+                rooms_missing += 1;
+                continue;
+            };
+            rooms_read += 1;
+            let mut r = Rd { d: &d, p: 0 };
+            r.lstr()?;
+            r.p = r.u32()? as usize;
+            for _ in 0..r.u32()? {
+                anyhow::ensure!(r.u32()? == 0xABCD1234, "instance magic");
+                r.u8()?;
+                r.u64()?;
+                let asset = r.u64()?;
+                r.u8()?;
+                let count = r.u32()?;
+                r.u32()?;
+                r.u8()?;
+                let e = tab
+                    .get(&asset)
+                    .and_then(|p| p.rsplit_once('.').map(|x| x.1.to_string()))
+                    .unwrap_or_else(|| "(none)".into());
+                let ent = by_ext.entry(e.clone()).or_default();
+                ent.0 += 1;
+                if seen.insert(e.clone()) {
+                    ent.1 += 1;
+                }
+                for _ in 0..count {
+                    let t = r.u8()?;
+                    let key = r.u32()?;
+                    match t {
+                        0 => r.p += 1,
+                        1..=4 => r.p += 4,
+                        5 => r.p += 8,
+                        6 => r.p += 12,
+                        7 => r.p += 16,
+                        8 => {
+                            let n = r.u32()? as usize;
+                            r.p += n;
+                        }
+                        9 => {
+                            let n = r.u32()? as usize;
+                            r.p += n;
+                            let b = blobs.entry(format!("{e} {key:08x}")).or_default();
+                            b.0 += 1;
+                            b.1 += n as u64;
+                        }
+                        _ => anyhow::bail!("property type {t}"),
+                    }
+                }
+            }
+        }
+    }
+    let v = json!({"areas": ids.len(), "areas_read": areas_read, "rooms_read": rooms_read,
+        "rooms_missing": rooms_missing, "instances_by_type": by_ext, "blob_properties": blobs});
+    std::fs::write(out, serde_json::to_string_pretty(&v)?)?;
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let a: Vec<String> = std::env::args().collect();
     match a.get(1).map(String::as_str) {
         Some("census") if a.len() == 5 => census(&a[2], &a[3], &a[4]),
         Some("area") if a.len() == 5 => area(&a[2], &a[3], &a[4]),
+        Some("kinds") if a.len() == 5 => kinds(&a[2], &a[3], &a[4]),
         _ => anyhow::bail!(
             "usage: walk_extract census <assets> <hashes> <out.json> | area <assets> <area id> <out dir>"
         ),

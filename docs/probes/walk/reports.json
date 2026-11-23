@@ -1,0 +1,429 @@
+{
+ "T0": {
+  "box": [
+   -40.0,
+   -60.0,
+   0.0,
+   -20.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 20,
+   "set_bits": 29011,
+   "points": 81920
+  },
+  "collision": {
+   "model_instances": 1874,
+   "with_collision": 1560,
+   "without_collision": 314,
+   "no_file": 0
+  },
+  "terrain_tris": 134684,
+  "collision_tris": 322743,
+  "cells": 640000,
+  "standable_cells": 617372,
+  "log_positions": {
+   "n": 55,
+   "on_standable_floor": 55,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.003000000000001002
+  },
+  "creature_spawns": {
+   "n": 194,
+   "on_standable_floor": 193,
+   "no_floor_within_0.05": 1,
+   "median_abs_dz": 0.0032001304626465554
+  },
+  "log_positions_up_0.3": {
+   "n": 55,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 55,
+   "median_abs_dz": 0.29800000000000004
+  },
+  "log_positions_down_0.3": {
+   "n": 55,
+   "on_standable_floor": 3,
+   "no_floor_within_0.05": 52,
+   "median_abs_dz": 0.28300000000000125
+  },
+  "creature_spawns_up_0.3": {
+   "n": 194,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 194,
+   "median_abs_dz": 0.2972998428344722
+  },
+  "all_placements": 263
+ },
+ "TA": {
+  "box": [
+   -40.0,
+   -120.0,
+   0.0,
+   -80.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 16,
+   "set_bits": 0,
+   "points": 65536
+  },
+  "collision": {
+   "model_instances": 950,
+   "with_collision": 835,
+   "without_collision": 115,
+   "no_file": 0
+  },
+  "terrain_tris": 127008,
+  "collision_tris": 208961,
+  "cells": 640000,
+  "standable_cells": 625332,
+  "log_positions": {
+   "n": 83,
+   "on_standable_floor": 83,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0030000000000001137
+  },
+  "creature_spawns": {
+   "n": 110,
+   "on_standable_floor": 108,
+   "no_floor_within_0.05": 2,
+   "median_abs_dz": 0.003498682975769052
+  },
+  "log_positions_up_0.3": {
+   "n": 83,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 83,
+   "median_abs_dz": 0.2949999999999995
+  },
+  "log_positions_down_0.3": {
+   "n": 83,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 83,
+   "median_abs_dz": 0.2849999999999997
+  },
+  "creature_spawns_up_0.3": {
+   "n": 110,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 110,
+   "median_abs_dz": 0.29129998207092256
+  },
+  "all_placements": 145
+ },
+ "TB": {
+  "box": [
+   -40.0,
+   0.0,
+   0.0,
+   40.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 16,
+   "set_bits": 12174,
+   "points": 65536
+  },
+  "collision": {
+   "model_instances": 1110,
+   "with_collision": 792,
+   "without_collision": 318,
+   "no_file": 0
+  },
+  "terrain_tris": 126666,
+  "collision_tris": 201857,
+  "cells": 640000,
+  "standable_cells": 632409,
+  "log_positions": {
+   "n": 54,
+   "on_standable_floor": 54,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0030000000000001137
+  },
+  "creature_spawns": {
+   "n": 96,
+   "on_standable_floor": 96,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0027514052391051994
+  },
+  "log_positions_up_0.3": {
+   "n": 54,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 54,
+   "median_abs_dz": 0.30099999999999993
+  },
+  "log_positions_down_0.3": {
+   "n": 54,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 54,
+   "median_abs_dz": 0.29149999999999987
+  },
+  "creature_spawns_up_0.3": {
+   "n": 96,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 96,
+   "median_abs_dz": 0.28880013987421993
+  },
+  "all_placements": 142
+ },
+ "TC": {
+  "box": [
+   0.0,
+   -40.0,
+   40.0,
+   0.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 16,
+   "set_bits": 16273,
+   "points": 65536
+  },
+  "collision": {
+   "model_instances": 2264,
+   "with_collision": 1960,
+   "without_collision": 304,
+   "no_file": 0
+  },
+  "terrain_tris": 126666,
+  "collision_tris": 369063,
+  "cells": 640000,
+  "standable_cells": 618593,
+  "log_positions": {
+   "n": 43,
+   "on_standable_floor": 43,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0020000000000000018
+  },
+  "creature_spawns": {
+   "n": 227,
+   "on_standable_floor": 227,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0028000307083129172
+  },
+  "log_positions_up_0.3": {
+   "n": 43,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 43,
+   "median_abs_dz": 0.292
+  },
+  "log_positions_down_0.3": {
+   "n": 43,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 43,
+   "median_abs_dz": 0.28
+  },
+  "creature_spawns_up_0.3": {
+   "n": 227,
+   "on_standable_floor": 2,
+   "no_floor_within_0.05": 225,
+   "median_abs_dz": 0.2882999968528748
+  },
+  "all_placements": 276
+ },
+ "TD": {
+  "box": [
+   40.0,
+   -40.0,
+   80.0,
+   0.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 18,
+   "set_bits": 12169,
+   "points": 73728
+  },
+  "collision": {
+   "model_instances": 994,
+   "with_collision": 926,
+   "without_collision": 68,
+   "no_file": 0
+  },
+  "terrain_tris": 142544,
+  "collision_tris": 204488,
+  "cells": 640000,
+  "standable_cells": 547606,
+  "log_positions": {
+   "n": 23,
+   "on_standable_floor": 22,
+   "no_floor_within_0.05": 1,
+   "median_abs_dz": 0.0030000000000001137
+  },
+  "creature_spawns": {
+   "n": 80,
+   "on_standable_floor": 80,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0027000331878661576
+  },
+  "log_positions_up_0.3": {
+   "n": 23,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 23,
+   "median_abs_dz": 0.2939999999999996
+  },
+  "log_positions_down_0.3": {
+   "n": 23,
+   "on_standable_floor": 1,
+   "no_floor_within_0.05": 22,
+   "median_abs_dz": 0.26599999999999957
+  },
+  "creature_spawns_up_0.3": {
+   "n": 80,
+   "on_standable_floor": 2,
+   "no_floor_within_0.05": 78,
+   "median_abs_dz": 0.28530004978179935
+  },
+  "all_placements": 92
+ },
+ "TE": {
+  "box": [
+   -40.0,
+   -80.0,
+   0.0,
+   -40.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 16,
+   "set_bits": 13643,
+   "points": 65536
+  },
+  "collision": {
+   "model_instances": 1067,
+   "with_collision": 858,
+   "without_collision": 209,
+   "no_file": 0
+  },
+  "terrain_tris": 105202,
+  "collision_tris": 244851,
+  "cells": 640000,
+  "standable_cells": 624378,
+  "log_positions": {
+   "n": 29,
+   "on_standable_floor": 29,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.003000000000001002
+  },
+  "creature_spawns": {
+   "n": 130,
+   "on_standable_floor": 129,
+   "no_floor_within_0.05": 1,
+   "median_abs_dz": 0.003599586486816797
+  },
+  "log_positions_up_0.3": {
+   "n": 29,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 29,
+   "median_abs_dz": 0.30299999999999994
+  },
+  "log_positions_down_0.3": {
+   "n": 29,
+   "on_standable_floor": 2,
+   "no_floor_within_0.05": 27,
+   "median_abs_dz": 0.2789999999999999
+  },
+  "creature_spawns_up_0.3": {
+   "n": 130,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 130,
+   "median_abs_dz": 0.2957000923156734
+  },
+  "all_placements": 172
+ },
+ "H0": {
+  "box": [
+   -50.0,
+   10.0,
+   -30.0,
+   30.0
+  ],
+  "cell": 0.05,
+  "slope_deg": 46.0,
+  "step": 0.11,
+  "head": 0.2,
+  "holes_bit": "clear",
+  "hole_order": "x",
+  "rotation": "zxy",
+  "terrain": {
+   "patches": 13,
+   "set_bits": 5744,
+   "points": 16834
+  },
+  "collision": {
+   "model_instances": 712,
+   "with_collision": 675,
+   "without_collision": 37,
+   "no_file": 0
+  },
+  "terrain_tris": 28586,
+  "collision_tris": 130127,
+  "cells": 160000,
+  "standable_cells": 146708,
+  "log_positions": {
+   "n": 4,
+   "on_standable_floor": 4,
+   "no_floor_within_0.05": 0,
+   "median_abs_dz": 0.0030000000000001137
+  },
+  "creature_spawns": {
+   "n": 113,
+   "on_standable_floor": 112,
+   "no_floor_within_0.05": 1,
+   "median_abs_dz": 0.0019500398635865501
+  },
+  "log_positions_up_0.3": {
+   "n": 4,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 4,
+   "median_abs_dz": 0.29599999999999993
+  },
+  "log_positions_down_0.3": {
+   "n": 4,
+   "on_standable_floor": 0,
+   "no_floor_within_0.05": 4,
+   "median_abs_dz": 0.29600000000000004
+  },
+  "creature_spawns_up_0.3": {
+   "n": 113,
+   "on_standable_floor": 7,
+   "no_floor_within_0.05": 106,
+   "median_abs_dz": 0.2961000394821166
+  },
+  "all_placements": 123
+ }
+}
