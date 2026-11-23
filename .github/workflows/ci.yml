@@ -8,41 +8,47 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # intel_tex_2 compiles C++ but doesn't link libstdc++ on Linux
-  RUSTFLAGS: "-C link-arg=-lstdc++"
 
+# Every cargo step waits for a workspace: until the first crate lands there is
+# no Cargo.toml, and cargo fails on an empty tree.
 jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y g++
       - uses: dtolnay/rust-toolchain@stable
+        if: hashFiles('Cargo.toml') != ''
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check
+        if: hashFiles('Cargo.toml') != ''
+      - run: cargo check --workspace --all-targets
+        if: hashFiles('Cargo.toml') != ''
 
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y g++
       - uses: dtolnay/rust-toolchain@stable
+        if: hashFiles('Cargo.toml') != ''
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test -p kessel
+        if: hashFiles('Cargo.toml') != ''
+      - run: cargo test --workspace
+        if: hashFiles('Cargo.toml') != ''
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y g++
       - uses: dtolnay/rust-toolchain@stable
+        if: hashFiles('Cargo.toml') != ''
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy -p kessel -- -D warnings
+        if: hashFiles('Cargo.toml') != ''
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+        if: hashFiles('Cargo.toml') != ''
 
   fmt:
     name: Format
@@ -50,6 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
+        if: hashFiles('Cargo.toml') != ''
         with:
           components: rustfmt
-      - run: cargo fmt --check
+      - run: cargo fmt --all --check
+        if: hashFiles('Cargo.toml') != ''
