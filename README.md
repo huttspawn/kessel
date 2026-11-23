@@ -1,112 +1,15 @@
 # Kessel
 
-SWTOR data miner — extracts game objects, localized strings, and icons from `.tor` archives into SQLite.
+Kessel mines the SWTOR client: it reads what the game ships and turns it into knowledge that huttspawn and warden can use.
 
 Named after the spice mines of Kessel.
 
-## What it does
+## Status
 
-Kessel reads SWTOR's `.tor` archive files and produces:
+The repository is restarting. The extractor that produced `spice.sqlite` through 2026 is kept whole on the `oracle` branch; this tree starts empty and grows as the new design asks for each piece.
 
-- **SQLite database** with 260k+ game objects (abilities, items, NPCs, quests, talents, and more)
-- **558k+ localized strings** extracted from STB string tables
-- **WebP icons** converted from DDS textures, named by deterministic `game_id`
+The new design has three stores, in refining order:
 
-Descriptions are automatically cleaned via embedded grammar rules that strip SWTOR's template syntax (`<<1[%d seconds/%d second/%d seconds]>>` → natural English).
-
-## Quick start
-
-```bash
-cargo build --release
-
-./target/release/kessel \
-  --input ~/swtor/Assets \
-  --output spice.sqlite \
-  --icons \
-  --icons-output ./icons
-```
-
-No hash dictionary is needed: kessel finds every file it reads by its content or a path derived from extracted data. See [docs/cli.md](docs/cli.md) for all flags.
-
-## Data pipeline
-
-```mermaid
-flowchart LR
-    TOR[".tor archives\n(MYP format)"]
-    PBUK["PBUK containers\n(GOM object bundles)"]
-    GOM["GOM objects\n(header + FQN + payload)"]
-    STB["STB string tables\n(.stb files)"]
-    DDS["DDS textures\n(/gfx/icons/)"]
-    DB[("SQLite\nspice.sqlite")]
-    ICONS["WebP icons\n{game_id}.webp"]
-
-    TOR -->|"content magic\nidentifies entries"| PBUK
-    PBUK -->|"zstd decompress\nDRLB blocks"| GOM
-    TOR --> STB
-    TOR --> DDS
-    GOM -->|"schema extraction\nguid, fqn, kind,\nicon_name, string_id"| DB
-    STB -->|"grammar rules\nclean template syntax"| DB
-    DDS -->|"DDS → WebP\nnamed by game_id"| ICONS
-```
-
-## Output
-
-### Database tables
-
-Core: `objects`, `strings`
-
-Quest graph: `quest_details`, `quest_chain`, `quest_npcs`, `quest_phases`, `quest_prerequisites`
-
-Missions: `missions`, `mission_npcs`, `mission_rewards`
-
-Disciplines: `disciplines`, `discipline_abilities`, `talent_abilities`
-
-Conquest: `conquest_objectives`, `conquest_events`, `conquest_schedule`
-
-Reference: `companions`, `armor_classes`, `stat_curve_values`, `gsf_crew`, `spawn_runtime_ids`
-
-Views: `abilities`, `items`, `npcs`, `quests`, `phases`, `quest_descriptions`, `bonus_missions`, `conquest_invasion_bonuses`, `conquest_theme_strings`
-
-See [docs/schema.md](docs/schema.md) for full column definitions and join patterns.
-
-### Icons
-
-```
-icons/
-  abilities/   {game_id}.webp
-  items/       {game_id}.webp
-  talents/     {game_id}.webp
-```
-
-## Project structure
-
-```
-kessel/
-  Cargo.toml
-  grammar.toml          # Description cleanup rules (embedded at compile time)
-  icon_overrides.toml   # FQN → icon_name overrides for abilities without embedded icon refs
-  docs/
-    cli.md              # CLI flags and examples
-    schema.md           # Full database schema reference
-  src/
-    main.rs             # CLI entry point and extraction pipeline
-    lib.rs              # Library exports
-    myp.rs              # MYP archive reader (.tor files)
-    pbuk.rs             # PBUK/DBLB parser (GOM objects)
-    stb.rs              # STB string table parser
-    db.rs               # SQLite (batch inserts, grammar application, derived tables)
-    dds.rs              # DDS to WebP conversion
-    hash.rs             # Path hashing, optional hash dictionary, game_id
-    grammar.rs          # Template/literal/cleanup rule processor
-    icon_overrides.rs   # Compile-time FQN → icon_name override map
-    gifts.rs            # Gift item FQN classification
-    unknowns.rs         # Unknown pattern tracking
-    schema/mod.rs       # GameObject struct and binary payload extraction
-    bin/
-      dump_npp.rs       # Debug utility: dump GOM objects by FQN prefix or exact match
-  tests/
-```
-
-## License
-
-MIT
+- **spice:** what each artifact in the client says, decoded, with its bytes kept where a patch would otherwise lose them.
+- **ryll:** the whole game, normalized into nodes and edges of knowledge across builds, with outside sources such as patch notes and guides riding along.
+- **glitterstim:** the here and now, denormalized for what huttspawn and warden publish and build.

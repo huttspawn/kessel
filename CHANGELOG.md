@@ -7,6 +7,10 @@ Versions follow [Cargo semver](https://doc.rust-lang.org/cargo/reference/semver.
 
 ## [Unreleased]
 
+### Removed
+
+- **The repository restarts empty (#432)** -- the extractor, its discovery tools, toys and docs leave the tree for the three-store rebuild (spice, ryll, glitterstim). The previous tree is kept whole on the `oracle` branch, and code returns only as the new design asks for it. The entries below describe that previous tree.
+
 ### Changed
 
 - **No hash dictionary needed (#295)** -- extraction no longer downloads the Jedipedia dictionary or picks up a `hashes_filename.txt` next to the output; `-H` is optional and only adds names. A run with no dictionary matches a dictionary-backed run in every table.
