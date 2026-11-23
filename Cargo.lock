@@ -975,6 +975,9 @@ dependencies = [
  "image 0.25.10",
  "image_dds",
  "indicatif",
+ "kessel-gom",
+ "kessel-text",
+ "kessel-tor",
  "quick-xml",
  "rayon",
  "regex",
@@ -1008,6 +1011,38 @@ dependencies = [
  "serde_json",
  "tracing",
  "tracing-subscriber",
+ "zstd",
+]
+
+[[package]]
+name = "kessel-gom"
+version = "0.0.6"
+dependencies = [
+ "anyhow",
+ "hex",
+ "kessel-tor",
+ "tracing",
+ "zstd",
+ "zstd-safe",
+]
+
+[[package]]
+name = "kessel-text"
+version = "0.0.6"
+dependencies = [
+ "anyhow",
+ "regex",
+ "serde",
+ "toml",
+]
+
+[[package]]
+name = "kessel-tor"
+version = "0.0.6"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "tracing",
  "zstd",
 ]
 

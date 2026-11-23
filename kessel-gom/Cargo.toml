@@ -1,0 +1,17 @@
+[package]
+name = "kessel-gom"
+version = "0.0.6"
+edition.workspace = true
+license.workspace = true
+description = "SWTOR GOM decoder: PBUK/DBLB buckets, PROT prototype nodes, PINF registry, typed value reader"
+
+[dependencies]
+kessel-tor = { path = "../kessel-tor" }
+anyhow.workspace = true
+hex.workspace = true
+zstd.workspace = true
+zstd-safe.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

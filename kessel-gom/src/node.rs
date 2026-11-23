@@ -20,10 +20,10 @@
 //!
 //! Discovery reflection: legion `019dd668-d09c-7a20-b835-791e29f8e511`.
 
-use crate::hash::HashDictionary;
-use crate::myp::Archive;
 use crate::prototypes_info::PrototypeInfo;
 use anyhow::{anyhow, bail, Result};
+use kessel_tor::hash::HashDictionary;
+use kessel_tor::myp::Archive;
 use std::collections::{HashMap, HashSet};
 
 const PROT_MAGIC: [u8; 4] = *b"PROT";

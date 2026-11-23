@@ -6,25 +6,22 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use kessel_gom::{gom_reader, pbuk};
+use kessel_text::{grammar, stb, xml_utf16};
+use kessel_tor::myp;
+
 mod buckets_info;
 mod db;
 mod dds;
 mod gifts;
-mod gom_reader;
 mod gom_schema;
-mod grammar;
 mod gsf_stat_dictionary;
 mod hash;
 mod icon_overrides;
-mod myp;
-mod pbuk;
-mod prototypes_info;
 mod quest;
 mod schema;
 mod scpt;
-mod stb;
 mod unknowns;
-mod xml_utf16;
 
 #[derive(Parser, Debug)]
 #[command(name = "kessel")]
