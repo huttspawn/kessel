@@ -18,6 +18,8 @@ import os
 import struct
 import sys
 
+import numpy as np
+
 
 def check(d, c):
     tail = struct.unpack_from('<I', d, 0x0C)[0]
@@ -49,12 +51,13 @@ def check(d, c):
         h = mo + 64 * m
         vflags, vsize, nv = struct.unpack_from('<III', d, h + 16)
         vo = struct.unpack_from('<Q', d, h + 32)[0]
-        if vflags & 1:
-            for v in range(nv):
-                p = struct.unpack_from('<3f', d, vo + v * vsize)
-                if any(p[k] < bb[k] - 1e-3 or p[k] > bb[k + 3] + 1e-3 for k in range(3)):
-                    inside = False
-                    break
+        if vflags & 1 and nv:
+            raw = np.frombuffer(d, dtype=np.uint8, count=nv * vsize, offset=vo).reshape(nv, vsize)
+            p = raw[:, :12].copy().view('<f4')
+            lo = np.array(bb[:3], dtype=np.float32) - 1e-3
+            hi = np.array(bb[3:], dtype=np.float32) + 1e-3
+            if not ((p >= lo) & (p <= hi)).all():
+                inside = False
     c['mesh bounds hold their vertices' if inside else 'x a vertex outside its mesh bounds'] += 1
     o += 24 * nm
     if struct.unpack_from('<I', d, o)[0] != 0:
