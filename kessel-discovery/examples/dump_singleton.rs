@@ -57,7 +57,12 @@ fn main() -> Result<()> {
     let object = args.iter().any(|a| a == "--object");
 
     let conn = Connection::open(db_path)?;
-    let sql = if object {
+    // A 16-hex-digit argument names one object by GUID, which picks a
+    // non-canonical variant out of the rows that share an FQN.
+    let by_guid = object && fqn.len() == 16 && fqn.chars().all(|c| c.is_ascii_hexdigit());
+    let sql = if by_guid {
+        "SELECT json_extract(json, '$.payload_b64') FROM objects WHERE upper(guid) = upper(?1) LIMIT 1"
+    } else if object {
         "SELECT json_extract(json, '$.payload_b64') FROM objects \
          WHERE fqn = ?1 AND is_canonical = 1 LIMIT 1"
     } else {
@@ -71,11 +76,24 @@ fn main() -> Result<()> {
     let mut guids = HashMap::new();
     let mut stmt = conn.prepare("SELECT guid, fqn FROM objects")?;
     let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+    let mut per_fqn: HashMap<String, usize> = HashMap::new();
+    let mut all = Vec::new();
     for row in rows {
         let (g, f) = row?;
         if let Ok(n) = u64::from_str_radix(&g, 16) {
-            guids.insert(n, f);
+            *per_fqn.entry(f.clone()).or_default() += 1;
+            all.push((n, f));
         }
+    }
+    // An FQN shared by several GUIDs (ability variants) is rendered with its
+    // GUID, so each reference names one object.
+    for (n, f) in all {
+        let name = if per_fqn.get(&f).copied().unwrap_or(0) > 1 {
+            format!("{f}#{n:016X}")
+        } else {
+            f
+        };
+        guids.insert(n, name);
     }
 
     let value = if first_field {
