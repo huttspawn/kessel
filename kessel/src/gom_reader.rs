@@ -46,6 +46,9 @@ mod tag {
     /// Same wire layout as `EMBEDDED`: script type, field count, then
     /// `<delta_id><tag><value>` per field.
     pub const EMBEDDED_STRUCT: u8 = 0x18;
+    /// Three little-endian f32 (x, y, z). Seen in `world.areas.*.mapdata`
+    /// map-page bounds.
+    pub const VECTOR3: u8 = 0x12;
     pub const CLASS_REF: u8 = 0x0F;
 }
 
@@ -66,6 +69,7 @@ pub enum GomValue {
     Map(Vec<(GomValue, GomValue)>),
     Embedded(Vec<(u64, GomValue)>),
     ClassRef(u64),
+    Vec3([f32; 3]),
 }
 
 impl GomValue {
@@ -254,6 +258,11 @@ impl<'a> Reader<'a> {
             tag::MAP => self.read_map(),
             tag::EMBEDDED | tag::EMBEDDED_STRUCT => self.read_object(),
             tag::CLASS_REF => Ok(GomValue::ClassRef(self.read_number()?)),
+            tag::VECTOR3 => Ok(GomValue::Vec3([
+                self.read_f32()?,
+                self.read_f32()?,
+                self.read_f32()?,
+            ])),
             other => bail!(
                 "gom_reader: unsupported type tag 0x{other:02X} at offset {}",
                 self.pos - 1

@@ -41,6 +41,7 @@ fn render(v: &GomValue, guids: &HashMap<u64, String>) -> Value {
             Value::Object(obj)
         }
         GomValue::ClassRef(c) => json!({ "class": format!("{c:016x}") }),
+        GomValue::Vec3(v) => json!(v),
     }
 }
 
