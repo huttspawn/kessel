@@ -1,0 +1,13 @@
+[package]
+name = "kessel-bytes"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "A bounds-checked little-endian byte reader for SWTOR's binary formats."
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror = { workspace = true }

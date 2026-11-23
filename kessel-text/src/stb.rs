@@ -1,0 +1,1 @@
+//! String tables (.stb).

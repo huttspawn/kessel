@@ -1,0 +1,15 @@
+[package]
+name = "kessel-tor"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kessel-bytes = { workspace = true }
+thiserror = { workspace = true }
+flate2 = { workspace = true }
+zstd = { workspace = true }

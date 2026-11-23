@@ -1,50 +1,46 @@
 [workspace]
-members = ["kessel", "kessel-discovery"]
+members = ["kessel-bytes", "kessel-tor", "kessel-gom", "kessel-text", "kessel-model", "kessel-media", "kessel"]
 default-members = ["kessel"]
-# kessel-compare is a standalone local tooling crate (patch-changelog diff) with a
-# sibling-repo path dep on smugglr-core. Excluded so it never enters the kessel
-# crate's build or CI; build it on demand from its own directory.
-exclude = ["kessel-compare"]
 resolver = "2"
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 license = "MIT"
 
-# Lint policy. The production `kessel` crate opts in (`[lints] workspace = true`);
-# the build-on-demand `kessel-discovery` examples are intentionally exempt.
 [workspace.lints.rust]
 unsafe_code = "forbid"
+missing_docs = "deny"
+unreachable_pub = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
 
 [workspace.lints.clippy]
-all = "deny"
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+# no panic reachable from game bytes
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+# pedantic lints that fight the domain's own vocabulary
+module_name_repetitions = "allow"
 
 [workspace.dependencies]
-# Shared deps; both crates inherit via `dep = { workspace = true }`
 anyhow = "1.0"
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-quick-xml = "0.31"
-rusqlite = { version = "0.31", features = ["bundled"] }
 clap = { version = "4.4", features = ["derive"] }
 flate2 = "1.0"
 zstd = "0.13"
-zstd-safe = "7.2"
-toml = "0.8"
-regex = "1.10"
-hex = "0.4"
-base64 = "0.22"
-sha2 = "0.10"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-ureq = "2.9"
-indicatif = "0.17"
-rayon = "1.8"
-image = { version = "0.25", features = ["webp"] }
-image_dds = { version = "0.4", default-features = false, features = ["ddsfile", "image", "decode", "strum"] }
-
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
+kessel-bytes = { path = "kessel-bytes" }
+kessel-tor = { path = "kessel-tor" }
+kessel-gom = { path = "kessel-gom" }
+kessel-text = { path = "kessel-text" }
+kessel-model = { path = "kessel-model" }
+kessel-media = { path = "kessel-media" }

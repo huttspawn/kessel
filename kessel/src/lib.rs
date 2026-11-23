@@ -1,24 +1,7 @@
-//! Kessel - SWTOR data miner library
-//!
-//! Extracts game objects from .tor archives to SQLite.
+//! Kessel: loads each build into a rannoch graph, keeps learning through its subscribers, and answers agents on the command line.
 
-pub mod buckets_info;
-pub mod db;
-pub mod dds;
-pub mod gifts;
-pub mod gom_reader;
-pub mod gom_schema;
-pub mod grammar;
-pub mod gsf_stat_dictionary;
-pub mod hash;
-pub mod icon_overrides;
-pub mod myp;
-pub mod node;
-pub mod pbuk;
-pub mod prototypes_info;
-pub mod quest;
-pub mod schema;
-pub mod scpt;
-pub mod stb;
-pub mod xml_parser;
-pub mod xml_utf16;
+pub mod export;
+pub mod load;
+pub mod queries;
+pub mod store;
+pub mod subscribers;
